@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
-project(LogReader VERSION 1.0 LANGUAGES CXX)
+project(LogManager VERSION 1.0 LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Qt6 COMPONENTS Core Gui Widgets REQUIRED)
@@ -22,15 +22,15 @@ file(GLOB RESOURCE_FILE qtres/*.qrc)
 file(GLOB UI_FILES ui/*.ui src/*.ui)
 file(GLOB RESOURCES res/*)
 
-add_executable(LogReader ${SOURCES} ${HEADERS} ${RESOURCE_FILE} ${UI_FILES} ${TS_FILES} ${RESOURCES})
+add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${RESOURCE_FILE} ${UI_FILES} ${TS_FILES} ${RESOURCES})
 
-target_compile_definitions(LogReader PRIVATE APPLICATION_NAME="${PROJECT_NAME}"
+target_compile_definitions(${PROJECT_NAME} PRIVATE APPLICATION_NAME="${PROJECT_NAME}"
     APPLICATION_VERSION="${PROJECT_VERSION}"
-    QT_NO_KEYWORDS)
+)
 
-target_include_directories(LogReader PRIVATE ${PROJECT_SOURCE_DIR})
+target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/src)
 
-target_link_libraries(LogReader Qt6::Core Qt6::Gui Qt6::Widgets)
+target_link_libraries(${PROJECT_NAME} Qt6::Core Qt6::Gui Qt6::Widgets)
 
 get_target_property(_qt5_qmake_location Qt::qmake IMPORTED_LOCATION)
 
@@ -42,9 +42,9 @@ execute_process(
 )
 
 set(imported_location "${qt5_install_prefix}/bin/windeployqt.exe")
-add_custom_command(TARGET LogReader
+add_custom_command(TARGET ${PROJECT_NAME}
     POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E remove_directory "$$<TARGET_FILE_DIR:LogReader>"
-    COMMAND ${imported_location} --dir "$<TARGET_FILE_DIR:LogReader>" "$<TARGET_FILE_DIR:LogReader>/$<TARGET_FILE_NAME:LogReader>"
+    COMMAND ${CMAKE_COMMAND} -E remove_directory "$$<TARGET_FILE_DIR:${PROJECT_NAME}>"
+    COMMAND ${imported_location} --dir "$<TARGET_FILE_DIR:${PROJECT_NAME}>" "$<TARGET_FILE_DIR:${PROJECT_NAME}>/$<TARGET_FILE_NAME:${PROJECT_NAME}>"
     COMMENT "Deploy Qt libraries"
 )

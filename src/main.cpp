@@ -1,12 +1,11 @@
 
+#include "Application.h"
 #include "MainWindow.h"
-
-#include <QApplication>
 
 
 int main(int argc, char *argv[])
 {
-    QApplication app(argc, argv);
+    Application app(argc, argv);
 
     app.setApplicationName(APPLICATION_NAME);
     app.setApplicationVersion(APPLICATION_VERSION);
