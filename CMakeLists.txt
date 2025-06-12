@@ -34,7 +34,7 @@ target_include_directories(${PROJECT_NAME}
         ${CMAKE_BINARY_DIR}/${PROJECT_NAME}_autogen
 )
 
-target_link_libraries(${PROJECT_NAME} Qt6::Core Qt6::Gui Qt6::Widgets)
+target_link_libraries(${PROJECT_NAME} PUBLIC Qt6::Core Qt6::Gui Qt6::Widgets)
 
 get_target_property(_qt5_qmake_location Qt::qmake IMPORTED_LOCATION)
 
@@ -48,9 +48,10 @@ execute_process(
 set(imported_location "${qt5_install_prefix}/bin/windeployqt.exe")
 add_custom_command(TARGET ${PROJECT_NAME}
     POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E remove_directory "$$<TARGET_FILE_DIR:${PROJECT_NAME}>"
-    COMMAND ${imported_location} --dir "$<TARGET_FILE_DIR:${PROJECT_NAME}>/deploy_folder" "$<TARGET_FILE_DIR:${PROJECT_NAME}>/$<TARGET_FILE_NAME:${PROJECT_NAME}>"
-    COMMENT "Deploy Qt libraries"
+    COMMAND ${CMAKE_COMMAND} -E remove_directory "$<TARGET_FILE_DIR:${PROJECT_NAME}>/deploy_folder"
+    COMMAND ${imported_location} --dir "${CMAKE_BINARY_DIR}/deploy_folder" "$<TARGET_FILE_DIR:${PROJECT_NAME}>/$<TARGET_FILE_NAME:${PROJECT_NAME}>"
+    COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:${PROJECT_NAME}>" "${CMAKE_BINARY_DIR}/deploy_folder"
+    COMMENT "Deploy libraries"
 )
 
 install(TARGETS ${PROJECT_NAME}
