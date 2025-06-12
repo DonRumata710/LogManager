@@ -45,6 +45,32 @@ set(imported_location "${qt5_install_prefix}/bin/windeployqt.exe")
 add_custom_command(TARGET ${PROJECT_NAME}
     POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E remove_directory "$$<TARGET_FILE_DIR:${PROJECT_NAME}>"
-    COMMAND ${imported_location} --dir "$<TARGET_FILE_DIR:${PROJECT_NAME}>" "$<TARGET_FILE_DIR:${PROJECT_NAME}>/$<TARGET_FILE_NAME:${PROJECT_NAME}>"
+    COMMAND ${imported_location} --dir "$<TARGET_FILE_DIR:${PROJECT_NAME}>/deploy_folder" "$<TARGET_FILE_DIR:${PROJECT_NAME}>/$<TARGET_FILE_NAME:${PROJECT_NAME}>"
     COMMENT "Deploy Qt libraries"
+)
+
+install(TARGETS ${PROJECT_NAME}
+    DESTINATION .
+)
+
+install(DIRECTORY "${CMAKE_BINARY_DIR}/deploy_folder/"
+    DESTINATION .
+    FILES_MATCHING PATTERN "*"
+)
+
+include (CPackComponent)
+
+set(outputDir "${CMAKE_BINARY_DIR}/output")
+set(outputFile "${outputFile}.zip")
+
+set(CPACK_GENERATOR "ZIP")
+set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY OFF)
+set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
+set(CPACK_COMPONENTS_GROUPING ONE_PER_GROUP)
+set(CPACK_OUTPUT_FILE_PREFIX "${outputDir}")
+
+include(CPack)
+
+add_custom_target(release_packet
+    COMMAND cpack --verbose --debug
 )
