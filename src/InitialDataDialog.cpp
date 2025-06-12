@@ -1,6 +1,10 @@
 #include "InitialDataDialog.h"
 #include "ui_InitialDataDialog.h"
 
+#include "Utils.h"
+
+#include <QPushButton>
+
 
 InitialDataDialog::InitialDataDialog(const LogManager::ScanResult& scanResult, QWidget* parent) :
     QDialog(parent),
@@ -33,7 +37,10 @@ InitialDataDialog::InitialDataDialog(const LogManager::ScanResult& scanResult, Q
         QListWidgetItem* item = new QListWidgetItem(module, ui->modulesListWidget);
         item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
         item->setCheckState(Qt::Unchecked);
+        connect(ui->modulesListWidget, SIGNAL(itemChanged(QListWidgetItem*)), this, SLOT(onModulesSelectionChanged()));
     }
+
+    updateOkButtonState(false);
 }
 
 InitialDataDialog::~InitialDataDialog()
@@ -63,4 +70,26 @@ std::unordered_set<QString> InitialDataDialog::getModules() const
             checkedItems.emplace(item->text());
     }
     return checkedItems;
+}
+
+void InitialDataDialog::onModulesSelectionChanged()
+{
+    QT_SLOT_BEGIN
+
+    bool flag = false;
+    for (int i = 0; i < ui->modulesListWidget->count(); ++i)
+    {
+        QListWidgetItem* item = ui->modulesListWidget->item(i);
+        if (item->checkState() == Qt::Checked)
+            flag = true;
+    }
+
+    updateOkButtonState(flag);
+
+    QT_SLOT_END
+}
+
+void InitialDataDialog::updateOkButtonState(bool state)
+{
+    ui->buttonBox->button(QDialogButtonBox::StandardButton::Ok)->setEnabled(state);
 }

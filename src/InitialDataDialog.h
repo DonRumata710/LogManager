@@ -23,6 +23,12 @@ public:
     std::chrono::system_clock::time_point getEndDate() const;
     std::unordered_set<QString> getModules() const;
 
+public slots:
+    void onModulesSelectionChanged();
+
+private:
+    void updateOkButtonState(bool state);
+
 private:
     Ui::InitialDataDialog *ui;
 };
