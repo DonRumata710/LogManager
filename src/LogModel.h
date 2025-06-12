@@ -21,6 +21,8 @@ public:
     bool canFetchDownMore() const;
     void fetchDownMore();
 
+    const std::vector<Format::Fields>& getFields() const;
+
     // Header:
     QVariant headerData(int section,
                         Qt::Orientation orientation,

@@ -104,11 +104,21 @@ const std::unordered_set<QString>& LogManager::getModules() const
     return modules;
 }
 
-void LogManager::setTimeRange(const std::chrono::system_clock::time_point& minTime, const std::chrono::system_clock::time_point& maxTime)
+void LogManager::setTimeRange(const std::chrono::system_clock::time_point& _minTime, const std::chrono::system_clock::time_point& _maxTime)
 {
+    minTime = _minTime;
+    maxTime = _maxTime;
+
+    setTimePoint(minTime);
+}
+
+void LogManager::setTimePoint(const std::chrono::system_clock::time_point& time)
+{
+    mergeHeap = std::priority_queue<HeapItem>();
+
     for (auto& module : docs)
     {
-        auto logIt = module.second.upper_bound(minTime);
+        auto logIt = module.second.upper_bound(time);
         if (logIt == module.second.begin())
             continue;
 
@@ -123,7 +133,7 @@ void LogManager::setTimeRange(const std::chrono::system_clock::time_point& minTi
 
         while (auto entry = getEntry(heapItem))
         {
-            if (entry->time >= minTime)
+            if (entry->time >= time)
             {
                 heapItem.entry = std::move(*entry);
                 mergeHeap.emplace(std::move(heapItem));

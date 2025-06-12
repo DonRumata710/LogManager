@@ -6,6 +6,8 @@
 #include "LogManager.h"
 #include "InitialDataDialog.h"
 #include "LogModel.h"
+#include "FilterHeader.h"
+#include "LogFilterModel.h"
 
 #include <QScrollBar>
 #include <QFileDialog>
@@ -36,6 +38,9 @@ MainWindow::MainWindow(QWidget *parent) :
     }
 
     setLogActionsEnabled(!selectedFormats.empty());
+
+    auto header = new FilterHeader(Qt::Horizontal, ui->logView);
+    ui->logView->setHeader(header);
 
     connect(ui->logView->verticalScrollBar(), &QScrollBar::valueChanged, [this](int value){
         QScrollBar* sb = ui->logView->verticalScrollBar();
@@ -80,22 +85,26 @@ void MainWindow::on_actionOpen_folder_triggered()
 
     if (startDate > endDate)
     {
-        qWarning() << tr("Start date cannot be later than end date.");
+        qWarning() << "Start date cannot be later than end date.";
         return;
     }
 
     if (modules.empty())
     {
-        qWarning() << tr("No modules selected.");
+        qWarning() << "No modules selected.";
         return;
     }
 
     manager->setTimeRange(startDate, endDate);
 
-    auto logModel = new LogModel(std::move(manager), this);
+    auto proxyModel = new LogFilterModel(this);
+
+    auto logModel = new LogModel(std::move(manager), proxyModel);
     logModel->setModules(modules);
 
-    switchModel(logModel);
+    proxyModel->setSourceModel(logModel);
+
+    switchModel(proxyModel);
     setCloseActionEnabled(true);
 
     QT_SLOT_END

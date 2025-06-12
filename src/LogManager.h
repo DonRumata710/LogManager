@@ -32,6 +32,8 @@ public:
 
     void setTimeRange(const std::chrono::system_clock::time_point& minTime, const std::chrono::system_clock::time_point& maxTime);
 
+    void setTimePoint(const std::chrono::system_clock::time_point& time);
+
     bool hasLogs() const;
     std::optional<LogEntry> next();
 

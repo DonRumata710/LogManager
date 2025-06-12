@@ -54,6 +54,11 @@ void LogModel::fetchDownMore()
     endInsertRows();
 }
 
+const std::vector<Format::Fields> &LogModel::getFields() const
+{
+    return fields;
+}
+
 QVariant LogModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
     if (section < 0 || section >= columnCount())
