@@ -11,6 +11,7 @@ struct Format
 {    
     std::unordered_set<QString> modules;
 
+    QString extension;
     std::optional<QStringConverter::Encoding> encoding;
 
     struct Comment

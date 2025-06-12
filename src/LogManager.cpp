@@ -40,7 +40,7 @@ LogManager::ScanResult LogManager::loadFolders(const std::vector<QString>& folde
             std::vector<std::shared_ptr<Format>> actualFormats;
             for (const auto& format : formats)
             {
-                if (format->modules.contains(module))
+                if (format->modules.contains(module) && format->extension.toStdString() == entry.path().extension())
                     actualFormats.push_back(format);
             }
 
@@ -50,6 +50,8 @@ LogManager::ScanResult LogManager::loadFolders(const std::vector<QString>& folde
             auto result = scanLogFile(filename, actualFormats);
             if (result.second == nullptr)
                 continue;
+
+            qDebug() << "File discovered:" << QString::fromStdString(entry.path().string());
 
             usedFormats.insert(result.second);
             modules.insert(module);

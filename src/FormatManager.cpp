@@ -30,6 +30,8 @@ void FormatManager::addFormat(const QString& name, const std::shared_ptr<Format>
             moduleArray.append(module);
         formatObj.insert("modules", moduleArray);
 
+        formatObj.insert("extension", format->extension);
+
         if (format->encoding)
             formatObj.insert("encoding", QStringConverter::nameForEncoding(format->encoding.value()));
 
@@ -121,6 +123,8 @@ void FormatManager::loadFormats()
             for (const auto& module : std::as_const(moduleArray))
                 format->modules.insert(module.toString());
 
+            if (formatObj.contains("extension"))
+                format->extension = formatObj.value("extension").toString();
             if (formatObj.contains("encoding"))
                 format->encoding = QStringConverter::encodingForName(formatObj.value("encoding").toString().toStdString().c_str());
 
