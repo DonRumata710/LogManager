@@ -7,6 +7,7 @@
 #include "InitialDataDialog.h"
 #include "LogModel.h"
 
+#include <QScrollBar>
 #include <QFileDialog>
 #include <QInputDialog>
 
@@ -33,6 +34,24 @@ MainWindow::MainWindow(QWidget *parent) :
 
         selectedFormats.insert(format.first);
     }
+
+    setLogActionsEnabled(!selectedFormats.empty());
+
+    connect(ui->logView->verticalScrollBar(), &QScrollBar::valueChanged, [this](int value){
+        QScrollBar* sb = ui->logView->verticalScrollBar();
+        int min = sb->minimum();
+        int max = sb->maximum();
+        int range = max - min;
+
+        LogModel* model = qobject_cast<LogModel*>(ui->logView->model());
+        if (!model)
+            qWarning() << "Unexpected model type in log view";
+
+        // TODO: upside fetching
+
+        if (value - min >= range * 0.95)
+            model->fetchDownMore();
+    });
 }
 
 MainWindow::~MainWindow()
@@ -76,21 +95,18 @@ void MainWindow::on_actionOpen_folder_triggered()
     auto logModel = new LogModel(std::move(manager), this);
     logModel->setModules(modules);
 
-    ui->tableView->setModel(logModel);
+    switchModel(logModel);
+    setCloseActionEnabled(true);
 
     QT_SLOT_END
-}
-
-void MainWindow::checkActions()
-{
-    setLogActionsEnabled(!selectedFormats.empty());
 }
 
 void MainWindow::on_actionClose_triggered()
 {
     QT_SLOT_BEGIN
 
-    ui->tableView->setModel(nullptr);
+    switchModel(nullptr);
+    setCloseActionEnabled(false);
 
     QT_SLOT_END
 }
@@ -139,6 +155,11 @@ void MainWindow::on_actionDeselect_all_triggered()
     updateFormatActions(false);
 }
 
+void MainWindow::checkActions()
+{
+    setLogActionsEnabled(!selectedFormats.empty());
+}
+
 void MainWindow::setLogActionsEnabled(bool enabled)
 {
     ui->actionOpen_file->setEnabled(enabled);
@@ -154,6 +175,14 @@ void MainWindow::updateFormatActions(bool enabled)
 {
     for (const auto& action : formatActions)
         action->setChecked(enabled);
+}
+
+void MainWindow::switchModel(QAbstractItemModel* model)
+{
+    auto oldModel = ui->logView->model();
+    ui->logView->setModel(model);
+    if (oldModel)
+        delete oldModel;
 }
 
 std::vector<std::shared_ptr<Format>> MainWindow::getSelectedFormats() const

@@ -50,7 +50,7 @@ void LogModel::fetchDownMore()
     }
 
     beginInsertRows(QModelIndex(), 0, newLogs.size() - 1);
-    logs.insert(logs.begin(), newLogs.begin(), newLogs.end());
+    logs.insert(logs.end(), newLogs.begin(), newLogs.end());
     endInsertRows();
 }
 

@@ -3,6 +3,7 @@
 #include "FormatManager.h"
 
 #include <QMainWindow>
+#include <QAbstractItemModel>
 
 
 namespace Ui {
@@ -30,6 +31,8 @@ private:
     void setLogActionsEnabled(bool enabled);
     void setCloseActionEnabled(bool enabled);
     void updateFormatActions(bool enabled);
+
+    void switchModel(QAbstractItemModel* model);
 
     std::vector<std::shared_ptr<Format>> getSelectedFormats() const;
 
