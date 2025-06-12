@@ -29,9 +29,11 @@ LogManager::ScanResult LogManager::loadFolders(const std::vector<QString>& folde
 
     for (const auto& folder : folders)
     {
-        for (const auto& entry : std::filesystem::directory_iterator(folder.toStdString()))
+        for (const auto& entry : std::filesystem::recursive_directory_iterator(folder.toStdString()))
         {
-            if (!entry.is_regular_file()) continue;
+            if (!entry.is_regular_file())
+                continue;
+
             auto filename = QString::fromStdString(entry.path().string());
             auto module = QString::fromStdString(entry.path().stem().string());
 
