@@ -4,11 +4,11 @@ project(LogManager VERSION 1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 COMPONENTS Core Gui Widgets REQUIRED)
-
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
+
+find_package(Qt6 COMPONENTS Core Gui Widgets REQUIRED)
 
 file(GLOB ts ${CMAKE_CURRENT_SOURCE_DIR}/translations/*)
 if (${ts} NOT STREQUAL "" AND QT6::LINGUIST_TOOLS_FOUND)
@@ -28,7 +28,11 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE APPLICATION_NAME="${PROJECT_N
     APPLICATION_VERSION="${PROJECT_VERSION}"
 )
 
-target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_include_directories(${PROJECT_NAME}
+    PRIVATE
+        ${PROJECT_SOURCE_DIR}/src
+        ${CMAKE_BINARY_DIR}/${PROJECT_NAME}_autogen
+)
 
 target_link_libraries(${PROJECT_NAME} Qt6::Core Qt6::Gui Qt6::Widgets)
 
