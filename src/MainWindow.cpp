@@ -74,8 +74,10 @@ void MainWindow::on_actionOpen_folder_triggered()
 
     std::unique_ptr<LogManager> manager = std::make_unique<LogManager>();
     auto scanResult = manager->loadFolders({ folderPath }, getSelectedFormats());
+    if (!scanResult)
+        return;
 
-    InitialDataDialog dialog(scanResult);
+    InitialDataDialog dialog(scanResult.value(), this);
     if (dialog.exec() != QDialog::Accepted)
         return;
 

@@ -1,5 +1,15 @@
 cmake_minimum_required(VERSION 3.15)
-project(LogManager VERSION 1.0 LANGUAGES CXX)
+
+if (EXISTS "${CMAKE_SOURCE_DIR}/local.cmake")
+    include(local.cmake)
+    message(STATUS "Using local.cmake for configuration")
+endif()
+include(cmake/local_hints.cmake)
+include(cmake/version.cmake)
+
+get_git_tag_version(gitVersion dirtyFlag)
+
+project(LogManager VERSION ${gitVersion} LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -8,7 +18,10 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
+check_local_hints()
+
 find_package(Qt6 COMPONENTS Core Gui Widgets REQUIRED)
+find_package(QuaZip-Qt6 COMPONENTS QuaZip)
 
 file(GLOB ts ${CMAKE_CURRENT_SOURCE_DIR}/translations/*)
 if (${ts} NOT STREQUAL "" AND QT6::LINGUIST_TOOLS_FOUND)
@@ -34,7 +47,13 @@ target_include_directories(${PROJECT_NAME}
         ${CMAKE_BINARY_DIR}/${PROJECT_NAME}_autogen
 )
 
-target_link_libraries(${PROJECT_NAME} PUBLIC Qt6::Core Qt6::Gui Qt6::Widgets)
+target_link_libraries(${PROJECT_NAME}
+    PUBLIC
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Widgets
+        QuaZip::QuaZip
+)
 
 get_target_property(_qt5_qmake_location Qt::qmake IMPORTED_LOCATION)
 

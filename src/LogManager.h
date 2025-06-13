@@ -9,7 +9,6 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <map>
-#include <filesystem>
 #include <queue>
 
 
@@ -19,13 +18,14 @@ public:
     struct ScanResult
     {
         std::chrono::system_clock::time_point minTime;
-        std::chrono::system_clock::time_point maxTime;
+        std::chrono::system_clock::time_point maxTime = std::chrono::system_clock::now();
         std::unordered_set<QString> modules;
 
         ScanResult& operator+=(const ScanResult& other);
     };
 
-    ScanResult loadFolders(const std::vector<QString>& folders, const std::vector<std::shared_ptr<Format>>& formats);
+    std::optional<ScanResult> loadFolders(const std::vector<QString>& folders, const std::vector<std::shared_ptr<Format>>& formats);
+    std::optional<ScanResult> loadFile(const QString& filename, const std::vector<std::shared_ptr<Format>>& formats);
 
     const std::unordered_set<std::shared_ptr<Format>>& getFormats() const;
     const std::unordered_set<QString>& getModules() const;
@@ -38,18 +38,10 @@ public:
     std::optional<LogEntry> next();
 
 private:
-    std::pair<ScanResult, std::shared_ptr<Format>> scanLogFile(const QString& filename, const std::vector<std::shared_ptr<Format>>& formats);
-
-    std::chrono::system_clock::time_point parseTime(const QString& timeStr, const std::shared_ptr<Format>& format) const;
-
-    bool checkFormat(const QString& line, const std::shared_ptr<Format>& format);
-
-private:
     struct LogMetadata
     {
-        std::filesystem::path path;
         std::shared_ptr<Format> format;
-        Log log;
+        std::unique_ptr<Log> log;
     };
 
     struct HeapItem
@@ -65,7 +57,16 @@ private:
     };
 
 private:
-    Log createLog(const QString& path, std::shared_ptr<Format> format);
+    void clear();
+
+    std::optional<LogManager::ScanResult> addFile(const QString& filename, const QString& module, const QString& extension, std::function<std::unique_ptr<QIODevice>()> createFileFunc, const std::vector<std::shared_ptr<Format>>& formats);
+    std::optional<std::pair<std::shared_ptr<Format>, std::chrono::system_clock::time_point>> scanLogFile(std::function<std::unique_ptr<QIODevice>()> createFileFunc, const std::vector<std::shared_ptr<Format>>& formats);
+
+    std::chrono::system_clock::time_point parseTime(const QString& timeStr, const std::shared_ptr<Format>& format) const;
+
+    bool checkFormat(const QString& line, const std::shared_ptr<Format>& format);
+
+    Log createLog(std::unique_ptr<QIODevice>&& file, std::shared_ptr<Format> format);
 
     std::optional<LogEntry> getEntry(HeapItem& heapItem);
     std::optional<QString> getLine(HeapItem& heapItem);

@@ -1,5 +1,7 @@
 #include "LogManager.h"
 
+#include <quazip/quazipfile.h>
+
 #include <QFile>
 #include <QDebug>
 
@@ -16,12 +18,9 @@ LogManager::ScanResult& LogManager::ScanResult::operator+=(const ScanResult& oth
     return *this;
 }
 
-LogManager::ScanResult LogManager::loadFolders(const std::vector<QString>& folders, const std::vector<std::shared_ptr<Format>>& formats)
+std::optional<LogManager::ScanResult> LogManager::loadFolders(const std::vector<QString>& folders, const std::vector<std::shared_ptr<Format>>& formats)
 {
-    docs.clear();
-
-    while (!mergeHeap.empty())
-        mergeHeap.pop();
+    clear();
 
     ScanResult scanResult;
     scanResult.minTime = std::chrono::system_clock::now();
@@ -35,32 +34,48 @@ LogManager::ScanResult LogManager::loadFolders(const std::vector<QString>& folde
                 continue;
 
             auto filename = QString::fromStdString(entry.path().string());
-            auto module = QString::fromStdString(entry.path().stem().string());
+            auto extension = QString::fromStdString(entry.path().extension().string());
 
-            std::vector<std::shared_ptr<Format>> actualFormats;
-            for (const auto& format : formats)
+            if (extension == ".zip" || extension == ".gz" || extension == ".tar" || extension == ".7z")
             {
-                if (format->modules.contains(module) && format->extension.toStdString() == entry.path().extension())
-                    actualFormats.push_back(format);
+                QuaZip zip(filename);
+                if (!zip.open(QuaZip::mdUnzip))
+                {
+                    qDebug() << "Failed to open archive:" << filename;
+                    continue;
+                }
+
+                QuaZipFileInfo info;
+                for (bool more = zip.goToFirstFile(); more; more = zip.goToNextFile())
+                {
+                    zip.getCurrentFileInfo(&info);
+                    auto innerFilename = info.name;
+                    auto module = info.name.mid(0, info.name.lastIndexOf('.'));
+                    auto innerExtension = info.name.mid(module.size());
+
+                    auto fileCreationFunc = [filename, innerFilename]() {
+                        return std::make_unique<QuaZipFile>(filename, innerFilename);
+                    };
+                    auto result = addFile(innerFilename, module, innerExtension, fileCreationFunc, formats);
+                    if (result)
+                        scanResult += result.value();
+                }
             }
+            else
+            {
+                auto module = QString::fromStdString(entry.path().stem().string());
+                auto fileCreationFunc = [filename]() {
+                    return std::make_unique<QFile>(filename);
+                };
+                auto result = addFile(filename, module, extension, fileCreationFunc, formats);
+                if (!result)
+                {
+                    qDebug() << "No suitable format found for file:" << filename;
+                    continue;
+                }
 
-            if (actualFormats.empty())
-                continue;
-
-            auto result = scanLogFile(filename, actualFormats);
-            if (result.second == nullptr)
-                continue;
-
-            qDebug() << "File discovered:" << QString::fromStdString(entry.path().string());
-
-            usedFormats.insert(result.second);
-            modules.insert(module);
-
-            scanResult += result.first;
-            scanResult.modules.insert(module);
-
-            LogMetadata metadata { entry.path(), result.second, createLog(filename, result.second) };
-            docs[module].emplace(result.first.minTime, std::move(metadata));
+                scanResult += result.value();
+            }
         }
     }
 
@@ -70,28 +85,23 @@ LogManager::ScanResult LogManager::loadFolders(const std::vector<QString>& folde
     return scanResult;
 }
 
-std::pair<LogManager::ScanResult, std::shared_ptr<Format>> LogManager::scanLogFile(const QString& filename, const std::vector<std::shared_ptr<Format>>& formats)
+std::optional<LogManager::ScanResult> LogManager::loadFile(const QString& filename, const std::vector<std::shared_ptr<Format>>& formats)
 {
-    LogManager::ScanResult result;
+    clear();
 
-    for (const auto& format : formats)
-    {
-        Log log(std::make_unique<QFile>(filename), format->encoding, std::shared_ptr<std::vector<Format::Comment>>(format, &format->comments));
-        auto line = log.nextLine();
-        auto parts = line->split(format->separator);
+    std::filesystem::path path = filename.toStdString();
+    auto fileCreationFunc = [filename]() {
+        return std::make_unique<QFile>(filename);
+    };
+    auto result = addFile(filename, QString::fromStdString(path.stem().string()), QString::fromStdString(path.extension().string()), fileCreationFunc, formats);
 
-        if (parts.size() <= format->timeFieldIndex)
-            continue;
+    if (!result)
+        return std::nullopt;
 
-        if (!checkFormat(line.value(), format))
-            continue;
-
-        auto time = parseTime(parts[format->timeFieldIndex], format);
-        result.minTime = time;
-        return { result, format };
-    }
-
-    return { result, nullptr };
+    ScanResult scanResult = result.value();
+    minTime = scanResult.minTime;
+    maxTime = scanResult.maxTime;
+    return scanResult;
 }
 
 const std::unordered_set<std::shared_ptr<Format>>& LogManager::getFormats() const
@@ -129,7 +139,7 @@ void LogManager::setTimePoint(const std::chrono::system_clock::time_point& time)
         heapItem.startTime = logIt->first;
         heapItem.metadata = &logIt->second;
 
-        heapItem.line = logIt->second.log.nextLine().value_or(QString());
+        heapItem.line = logIt->second.log->nextLine().value_or(QString());
 
         while (auto entry = getEntry(heapItem))
         {
@@ -163,6 +173,66 @@ std::optional<LogEntry> LogManager::next()
     return std::move(top.entry);
 }
 
+void LogManager::clear()
+{
+    docs.clear();
+    mergeHeap = std::priority_queue<HeapItem>();
+    usedFormats.clear();
+    modules.clear();
+}
+
+std::optional<LogManager::ScanResult> LogManager::addFile(const QString& filename, const QString& module, const QString& extension, std::function<std::unique_ptr<QIODevice>()> createFileFunc, const std::vector<std::shared_ptr<Format>>& formats)
+{
+    std::vector<std::shared_ptr<Format>> actualFormats;
+    for (const auto& format : formats)
+    {
+        if (format->modules.contains(module) && format->extension == extension)
+            actualFormats.push_back(format);
+    }
+
+    if (actualFormats.empty())
+        return std::nullopt;
+
+    auto result = scanLogFile(createFileFunc, actualFormats);
+    if (!result)
+        return std::nullopt;
+
+    qDebug() << "File discovered:" << filename;
+
+    docs[module].emplace(result->second, LogMetadata{ result->first, std::make_unique<Log>(createLog(createFileFunc(), result->first)) });
+    usedFormats.insert(result->first);
+    modules.insert(module);
+
+    ScanResult scanResult;
+    scanResult.minTime = result->second;
+    scanResult.modules.insert(module);
+    return scanResult;
+}
+
+std::optional<std::pair<std::shared_ptr<Format>, std::chrono::system_clock::time_point>> LogManager::scanLogFile(std::function<std::unique_ptr<QIODevice>()> createFileFunc, const std::vector<std::shared_ptr<Format>>& formats)
+{
+    for (const auto& format : formats)
+    {
+        Log log(createFileFunc(), format->encoding, std::shared_ptr<std::vector<Format::Comment>>(format, &format->comments));
+        auto line = log.nextLine();
+        if (!line)
+            continue;
+
+        auto parts = line->split(format->separator);
+
+        if (parts.size() <= format->timeFieldIndex)
+            continue;
+
+        if (!checkFormat(line.value(), format))
+            continue;
+
+        auto time = parseTime(parts[format->timeFieldIndex], format);
+        return std::make_pair(format, time);
+    }
+
+    return std::nullopt;
+}
+
 std::chrono::system_clock::time_point LogManager::parseTime(const QString& timeStr, const std::shared_ptr<Format>& format) const
 {
     std::istringstream ss(timeStr.toStdString());
@@ -184,9 +254,9 @@ bool LogManager::checkFormat(const QString& line, const std::shared_ptr<Format>&
     return true;
 }
 
-Log LogManager::createLog(const QString& path, std::shared_ptr<Format> format)
+Log LogManager::createLog(std::unique_ptr<QIODevice>&& file, std::shared_ptr<Format> format)
 {
-    return Log(std::make_unique<QFile>(path), format->encoding, std::shared_ptr<std::vector<Format::Comment>>(format, &format->comments));
+    return Log(std::move(file), format->encoding, std::shared_ptr<std::vector<Format::Comment>>(format, &format->comments));
 }
 
 std::optional<LogEntry> LogManager::getEntry(HeapItem& heapItem)
@@ -261,7 +331,7 @@ std::optional<LogEntry> LogManager::getEntry(HeapItem& heapItem)
             }
         }
     }
-    while ((line = heapItem.metadata->log.nextLine()));
+    while ((line = heapItem.metadata->log->nextLine()));
 
     switchToNextLog(heapItem);
 
@@ -272,7 +342,7 @@ std::optional<LogEntry> LogManager::getEntry(HeapItem& heapItem)
 
 std::optional<QString> LogManager::getLine(HeapItem& heapItem)
 {
-    auto line = heapItem.metadata->log.nextLine();
+    auto line = heapItem.metadata->log->nextLine();
     if (line)
         return line;
 
@@ -316,7 +386,7 @@ void LogManager::switchToNextLog(HeapItem& heapItem)
         heapItem.startTime = fileIt->first;
         heapItem.metadata = &fileIt->second;
 
-        auto line = heapItem.metadata->log.nextLine();
+        auto line = heapItem.metadata->log->nextLine();
         if (line)
         {
             heapItem.line = line.value();
