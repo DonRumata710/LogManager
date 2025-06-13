@@ -18,7 +18,7 @@ LogManager::ScanResult& LogManager::ScanResult::operator+=(const ScanResult& oth
     return *this;
 }
 
-std::optional<LogManager::ScanResult> LogManager::loadFolders(const std::vector<QString>& folders, const std::vector<std::shared_ptr<Format>>& formats)
+LogManager::ScanResult LogManager::loadFolders(const std::vector<QString>& folders, const std::vector<std::shared_ptr<Format>>& formats)
 {
     clear();
 
@@ -99,6 +99,8 @@ std::optional<LogManager::ScanResult> LogManager::loadFile(const QString& filena
         return std::nullopt;
 
     ScanResult scanResult = result.value();
+    scanResult.maxTime = std::chrono::system_clock::now();
+    
     minTime = scanResult.minTime;
     maxTime = scanResult.maxTime;
     return scanResult;

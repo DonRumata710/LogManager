@@ -24,7 +24,7 @@ public:
         ScanResult& operator+=(const ScanResult& other);
     };
 
-    std::optional<ScanResult> loadFolders(const std::vector<QString>& folders, const std::vector<std::shared_ptr<Format>>& formats);
+    ScanResult loadFolders(const std::vector<QString>& folders, const std::vector<std::shared_ptr<Format>>& formats);
     std::optional<ScanResult> loadFile(const QString& filename, const std::vector<std::shared_ptr<Format>>& formats);
 
     const std::unordered_set<std::shared_ptr<Format>>& getFormats() const;

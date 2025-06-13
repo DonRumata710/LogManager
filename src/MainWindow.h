@@ -1,6 +1,7 @@
 #pragma once
 
 #include "FormatManager.h"
+#include "LogManager.h"
 
 #include <QMainWindow>
 #include <QAbstractItemModel>
@@ -19,14 +20,16 @@ public:
     ~MainWindow();
 
 private slots:
-    void on_actionRemove_format_triggered();
-    void on_actionAdd_format_triggered();
-    void on_actionClose_triggered();
     void on_actionOpen_folder_triggered();
+    void on_actionOpen_file_triggered();
+    void on_actionClose_triggered();
+    void on_actionAdd_format_triggered();
+    void on_actionRemove_format_triggered();
     void on_actionSelect_all_triggered();
     void on_actionDeselect_all_triggered();
 
 private:
+    void showLogs(std::unique_ptr<LogManager>&& logManager, const LogManager::ScanResult& scanResult);
     void checkActions();
     void setLogActionsEnabled(bool enabled);
     void setCloseActionEnabled(bool enabled);
