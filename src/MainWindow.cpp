@@ -84,38 +84,45 @@ void MainWindow::on_actionOpen_folder_triggered()
 
     std::unique_ptr<LogManager> manager = std::make_unique<LogManager>();
     auto scanResult = manager->loadFolders({ folderPath }, getSelectedFormats());
+    showLogs(std::move(manager), scanResult);
 
-    InitialDataDialog dialog(scanResult);
-    if (dialog.exec() != QDialog::Accepted)
-        return;
+    QT_SLOT_END
+}
 
-    auto startDate = dialog.getStartDate();
-    auto endDate = dialog.getEndDate();
-    auto modules = dialog.getModules();
+void MainWindow::on_actionOpen_file_triggered()
+{
+    QT_SLOT_BEGIN
 
-    if (startDate > endDate)
+    QString extensions;
+    std::unordered_multimap<QString, std::shared_ptr<Format>> formatMap;
+    for (const auto& formatName : selectedFormats)
     {
-        qWarning() << "Start date cannot be later than end date.";
-        return;
+        auto format = formatManager.getFormats().at(formatName);
+        if (!format)
+        {
+            continue;
+        }
+
+        formatMap.emplace(format->extension, format);
+
+        if (!extensions.isEmpty())
+            extensions += ";;";
+        extensions += QString::fromStdString(formatName) + " (*" + format->extension + ")";
     }
 
-    if (modules.empty())
-    {
-        qWarning() << "No modules selected.";
+    QString file = QFileDialog::getOpenFileName(this, tr("Open File"), QDir::currentPath(), extensions);
+
+    auto range = formatMap.equal_range(file.mid(file.lastIndexOf('.')));
+    std::vector<std::shared_ptr<Format>> formats;
+    for (auto it = range.first; it != range.second; ++it)
+        formats.push_back(it->second);
+
+    std::unique_ptr<LogManager> manager = std::make_unique<LogManager>();
+    auto scanResult = manager->loadFile(file, formats);
+    if (!scanResult)
         return;
-    }
 
-    manager->setTimeRange(startDate, endDate);
-
-    auto proxyModel = new LogFilterModel(this);
-
-    auto logModel = new LogModel(std::move(manager), proxyModel);
-    logModel->setModules(modules);
-
-    proxyModel->setSourceModel(logModel);
-
-    switchModel(proxyModel);
-    setCloseActionEnabled(true);
+    showLogs(std::move(manager), scanResult.value());
 
     QT_SLOT_END
 }
@@ -129,7 +136,6 @@ void MainWindow::on_actionClose_triggered()
 
     QT_SLOT_END
 }
-
 
 void MainWindow::on_actionAdd_format_triggered()
 {
@@ -172,6 +178,41 @@ void MainWindow::on_actionSelect_all_triggered()
 void MainWindow::on_actionDeselect_all_triggered()
 {
     updateFormatActions(false);
+}
+
+void MainWindow::showLogs(std::unique_ptr<LogManager>&& logManager, const LogManager::ScanResult& scanResult)
+{
+    InitialDataDialog dialog(scanResult);
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+
+    auto startDate = dialog.getStartDate();
+    auto endDate = dialog.getEndDate();
+    auto modules = dialog.getModules();
+
+    if (startDate > endDate)
+    {
+        qWarning() << "Start date cannot be later than end date.";
+        return;
+    }
+
+    if (modules.empty())
+    {
+        qWarning() << "No modules selected.";
+        return;
+    }
+
+    logManager->setTimeRange(startDate, endDate);
+
+    auto proxyModel = new LogFilterModel(this);
+
+    auto logModel = new LogModel(std::move(logManager), proxyModel);
+    logModel->setModules(modules);
+
+    proxyModel->setSourceModel(logModel);
+
+    switchModel(proxyModel);
+    setCloseActionEnabled(true);
 }
 
 void MainWindow::checkActions()

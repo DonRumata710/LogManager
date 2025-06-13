@@ -18,10 +18,7 @@ LogManager::ScanResult& LogManager::ScanResult::operator+=(const ScanResult& oth
 
 LogManager::ScanResult LogManager::loadFolders(const std::vector<QString>& folders, const std::vector<std::shared_ptr<Format>>& formats)
 {
-    docs.clear();
-
-    while (!mergeHeap.empty())
-        mergeHeap.pop();
+    clear();
 
     ScanResult scanResult;
     scanResult.minTime = std::chrono::system_clock::now();
@@ -36,31 +33,15 @@ LogManager::ScanResult LogManager::loadFolders(const std::vector<QString>& folde
 
             auto filename = QString::fromStdString(entry.path().string());
             auto module = QString::fromStdString(entry.path().stem().string());
-
-            std::vector<std::shared_ptr<Format>> actualFormats;
-            for (const auto& format : formats)
+            auto extension = QString::fromStdString(entry.path().extension().string());
+            auto result = addFile(filename, module, extension, formats);
+            if (!result)
             {
-                if (format->modules.contains(module) && format->extension.toStdString() == entry.path().extension())
-                    actualFormats.push_back(format);
+                qDebug() << "No suitable format found for file:" << filename;
+                continue;
             }
 
-            if (actualFormats.empty())
-                continue;
-
-            auto result = scanLogFile(filename, actualFormats);
-            if (result.second == nullptr)
-                continue;
-
-            qDebug() << "File discovered:" << QString::fromStdString(entry.path().string());
-
-            usedFormats.insert(result.second);
-            modules.insert(module);
-
-            scanResult += result.first;
-            scanResult.modules.insert(module);
-
-            LogMetadata metadata { entry.path(), result.second, createLog(filename, result.second) };
-            docs[module].emplace(result.first.minTime, std::move(metadata));
+            scanResult += result.value();
         }
     }
 
@@ -70,28 +51,22 @@ LogManager::ScanResult LogManager::loadFolders(const std::vector<QString>& folde
     return scanResult;
 }
 
-std::pair<LogManager::ScanResult, std::shared_ptr<Format>> LogManager::scanLogFile(const QString& filename, const std::vector<std::shared_ptr<Format>>& formats)
+std::optional<LogManager::ScanResult> LogManager::loadFile(const QString& filename, const std::vector<std::shared_ptr<Format>> &formats)
 {
-    LogManager::ScanResult result;
+    clear();
 
-    for (const auto& format : formats)
-    {
-        Log log(std::make_unique<QFile>(filename), format->encoding, std::shared_ptr<std::vector<Format::Comment>>(format, &format->comments));
-        auto line = log.nextLine();
-        auto parts = line->split(format->separator);
+    std::filesystem::path path = filename.toStdString();
+    auto result = addFile(QString::fromStdString(path.string()), QString::fromStdString(path.stem().string()), QString::fromStdString(path.extension().string()), formats);
 
-        if (parts.size() <= format->timeFieldIndex)
-            continue;
+    if (!result)
+        return std::nullopt;
 
-        if (!checkFormat(line.value(), format))
-            continue;
-
-        auto time = parseTime(parts[format->timeFieldIndex], format);
-        result.minTime = time;
-        return { result, format };
-    }
-
-    return { result, nullptr };
+    ScanResult scanResult = result.value();
+    scanResult.maxTime = std::chrono::system_clock::now();
+    
+    minTime = scanResult.minTime;
+    maxTime = scanResult.maxTime;
+    return scanResult;
 }
 
 const std::unordered_set<std::shared_ptr<Format>>& LogManager::getFormats() const
@@ -161,6 +136,66 @@ std::optional<LogEntry> LogManager::next()
         mergeHeap.emplace(std::move(top.module), std::move(top.startTime), std::move(top.metadata), *nextEntry);
 
     return std::move(top.entry);
+}
+
+void LogManager::clear()
+{
+    docs.clear();
+    mergeHeap = std::priority_queue<HeapItem>();
+    usedFormats.clear();
+    modules.clear();
+}
+
+std::optional<LogManager::ScanResult> LogManager::addFile(const QString& filename, const QString& module, const QString& extension, const std::vector<std::shared_ptr<Format>>& formats)
+{
+    std::vector<std::shared_ptr<Format>> actualFormats;
+    for (const auto& format : formats)
+    {
+        if (format->modules.contains(module) && format->extension == extension)
+            actualFormats.push_back(format);
+    }
+
+    if (actualFormats.empty())
+        return std::nullopt;
+
+    auto result = scanLogFile(filename, actualFormats);
+    if (!result)
+        return std::nullopt;
+
+    qDebug() << "File discovered:" << filename;
+
+    docs[module].emplace(result->second, LogMetadata{ result->first, createLog(filename, result->first) });
+    usedFormats.insert(result->first);
+    modules.insert(module);
+
+    ScanResult scanResult;
+    scanResult.minTime = result->second;
+    scanResult.modules.insert(module);
+    return scanResult;
+}
+
+std::optional<std::pair<std::shared_ptr<Format>, std::chrono::system_clock::time_point>> LogManager::scanLogFile(const QString& filename, const std::vector<std::shared_ptr<Format>>& formats)
+{
+    for (const auto& format : formats)
+    {
+        Log log(createLog(filename, format));
+        auto line = log.nextLine();
+        if (!line)
+            continue;
+
+        auto parts = line->split(format->separator);
+
+        if (parts.size() <= format->timeFieldIndex)
+            continue;
+
+        if (!checkFormat(line.value(), format))
+            continue;
+
+        auto time = parseTime(parts[format->timeFieldIndex], format);
+        return std::make_pair(format, time);
+    }
+
+    return std::nullopt;
 }
 
 std::chrono::system_clock::time_point LogManager::parseTime(const QString& timeStr, const std::shared_ptr<Format>& format) const
