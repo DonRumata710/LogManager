@@ -96,7 +96,10 @@ std::optional<LogManager::ScanResult> LogManager::loadFile(const QString& filena
     auto result = addFile(filename, QString::fromStdString(path.stem().string()), QString::fromStdString(path.extension().string()), fileCreationFunc, formats);
 
     if (!result)
+    {
+        qDebug() << "No suitable format found for file:" << filename;
         return std::nullopt;
+    }
 
     ScanResult scanResult = result.value();
     scanResult.maxTime = std::chrono::system_clock::now();
