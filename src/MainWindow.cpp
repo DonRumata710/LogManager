@@ -48,9 +48,19 @@ MainWindow::MainWindow(QWidget *parent) :
         int max = sb->maximum();
         int range = max - min;
 
-        LogModel* model = qobject_cast<LogModel*>(ui->logView->model());
-        if (!model)
+        auto* proxyModel = qobject_cast<QAbstractProxyModel*>(ui->logView->model());
+        if (!proxyModel)
+        {
             qWarning() << "Unexpected model type in log view";
+            return;
+        }
+
+        LogModel* model = qobject_cast<LogModel*>(proxyModel->sourceModel());
+        if (!model)
+        {
+            qWarning() << "Unexpected model type in log view";
+            return;
+        }
 
         // TODO: upside fetching
 

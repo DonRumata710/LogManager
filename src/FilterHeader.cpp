@@ -45,13 +45,15 @@ void FilterHeader::paintSection(QPainter* painter, const QRect& rect, int logica
     initStyleOption(&opt);
     opt.rect = rect;
     opt.section = logicalIndex;
+    style()->drawControl(QStyle::CE_HeaderSection, &opt, painter, this);
 
-    QRect textRect = rect.adjusted(0, 0, 0, -rect.height()/2);
+    int margin = style()->pixelMetric(QStyle::PM_HeaderMargin, &opt, this);
+    QRect textRect = rect.adjusted(margin, margin, -margin, -rect.height() / 2);
 
     opt.text = model()->headerData(logicalIndex, orientation(), Qt::DisplayRole).toString();
     opt.rect = textRect;
     opt.position = QStyleOptionHeader::Middle;
-    style()->drawControl(QStyle::CE_HeaderSection, &opt, painter, this);
+    style()->drawControl(QStyle::CE_HeaderLabel, &opt, painter, this);
 }
 
 void FilterHeader::setupEditors()

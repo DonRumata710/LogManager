@@ -49,12 +49,12 @@ void LogModel::fetchDownMore()
         newLogs.push_back(nextEntry.value());
     }
 
-    beginInsertRows(QModelIndex(), 0, newLogs.size() - 1);
+    beginInsertRows(QModelIndex(), logs.size(), logs.size() + newLogs.size() - 1);
     logs.insert(logs.end(), newLogs.begin(), newLogs.end());
     endInsertRows();
 }
 
-const std::vector<Format::Fields> &LogModel::getFields() const
+const std::vector<Format::Fields>& LogModel::getFields() const
 {
     return fields;
 }
