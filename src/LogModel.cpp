@@ -54,7 +54,7 @@ void LogModel::fetchDownMore()
     endInsertRows();
 }
 
-const std::vector<Format::Fields> &LogModel::getFields() const
+const std::vector<Format::Fields>& LogModel::getFields() const
 {
     return fields;
 }
