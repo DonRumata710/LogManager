@@ -23,7 +23,10 @@ public:
     std::chrono::system_clock::time_point getEndDate() const;
     std::unordered_set<QString> getModules() const;
 
-public slots:
+private slots:
+    void on_bSelect_clicked();
+    void on_bDeselect_clicked();
+
     void onModulesSelectionChanged();
 
 private:
