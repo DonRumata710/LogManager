@@ -370,6 +370,13 @@ void LogManager::switchToNextLog(HeapItem& heapItem)
         if (fileIt == moduleIt->second.begin())
         {
             qDebug() << "No more logs for module:" << heapItem.module;
+            heapItem.line.clear();
+            return;
+        }
+        else if (fileIt == moduleIt->second.end())
+        {
+            qCritical() << "Unexpected result after next log search:" << heapItem.module;
+            heapItem.line.clear();
             return;
         }
 
