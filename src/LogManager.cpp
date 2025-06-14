@@ -158,7 +158,7 @@ std::optional<LogManager::ScanResult> LogManager::addFile(const QString& filenam
     for (const auto& format : formats)
     {
         QString formatModule = module;
-        if (format->logFileRegex.isValid())
+        if (format->logFileRegex.isValid() && !format->logFileRegex.pattern().isEmpty())
         {
             QRegularExpressionMatch match = format->logFileRegex.match(stem);
             if (!match.hasMatch())
@@ -181,7 +181,7 @@ std::optional<LogManager::ScanResult> LogManager::addFile(const QString& filenam
 
     qDebug() << "File discovered:" << filename;
 
-    if (result->first->logFileRegex.isValid())
+    if (result->first->logFileRegex.isValid() && !result->first->logFileRegex.pattern().isEmpty())
     {
         auto matchIt = regexMatches.find(result->first);
         if (matchIt != regexMatches.end())
