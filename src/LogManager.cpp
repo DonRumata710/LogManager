@@ -136,7 +136,7 @@ std::optional<LogEntry> LogManager::next()
 
     auto nextEntry = getEntry(top);
     if (nextEntry)
-        mergeHeap.emplace(std::move(top.module), std::move(top.startTime), std::move(top.metadata), *nextEntry);
+        mergeHeap.emplace(std::move(top.module), std::move(top.startTime), std::move(top.metadata), *nextEntry, std::move(top.line));
 
     return std::move(top.entry);
 }
