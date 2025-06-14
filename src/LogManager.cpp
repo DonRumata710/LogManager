@@ -32,9 +32,9 @@ LogManager::ScanResult LogManager::loadFolders(const std::vector<QString>& folde
                 continue;
 
             auto filename = QString::fromStdString(entry.path().string());
-            auto module = QString::fromStdString(entry.path().stem().string());
+            auto stem = QString::fromStdString(entry.path().stem().string());
             auto extension = QString::fromStdString(entry.path().extension().string());
-            auto result = addFile(filename, module, extension, formats);
+            auto result = addFile(filename, stem, extension, formats);
             if (!result)
             {
                 qDebug() << "No suitable format found for file:" << filename;
@@ -149,12 +149,26 @@ void LogManager::clear()
     modules.clear();
 }
 
-std::optional<LogManager::ScanResult> LogManager::addFile(const QString& filename, const QString& module, const QString& extension, const std::vector<std::shared_ptr<Format>>& formats)
+std::optional<LogManager::ScanResult> LogManager::addFile(const QString& filename, const QString& stem, const QString& extension, const std::vector<std::shared_ptr<Format>>& formats)
 {
+    QString module = stem;
+
     std::vector<std::shared_ptr<Format>> actualFormats;
+    std::unordered_map<std::shared_ptr<Format>, QString> regexMatches;
     for (const auto& format : formats)
     {
-        if (format->modules.contains(module) && format->extension == extension)
+        QString formatModule = module;
+        if (format->logFileRegex.isValid())
+        {
+            QRegularExpressionMatch match = format->logFileRegex.match(stem);
+            if (!match.hasMatch())
+                continue;
+
+            if (match.hasCaptured("module"))
+                regexMatches[format] = match.captured("module");
+        }
+
+        if ((format->modules.empty() || format->modules.contains(formatModule)) && format->extension == extension)
             actualFormats.push_back(format);
     }
 
@@ -166,6 +180,15 @@ std::optional<LogManager::ScanResult> LogManager::addFile(const QString& filenam
         return std::nullopt;
 
     qDebug() << "File discovered:" << filename;
+
+    if (result->first->logFileRegex.isValid())
+    {
+        auto matchIt = regexMatches.find(result->first);
+        if (matchIt != regexMatches.end())
+            module = matchIt->second;
+        else
+            module = result->first->name;
+    }
 
     docs[module].emplace(result->second, LogMetadata{ result->first, createLog(filename, result->first) });
     usedFormats.insert(result->first);

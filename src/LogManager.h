@@ -60,7 +60,7 @@ private:
 private:
     void clear();
 
-    std::optional<LogManager::ScanResult> addFile(const QString& filename, const QString& module, const QString& extension, const std::vector<std::shared_ptr<Format>>& formats);
+    std::optional<LogManager::ScanResult> addFile(const QString& filename, const QString& stem, const QString& extension, const std::vector<std::shared_ptr<Format>>& formats);
     std::optional<std::pair<std::shared_ptr<Format>, std::chrono::system_clock::time_point>> scanLogFile(const QString& filename, const std::vector<std::shared_ptr<Format>>& formats);
 
     std::chrono::system_clock::time_point parseTime(const QString& timeStr, const std::shared_ptr<Format>& format) const;

@@ -8,8 +8,11 @@
 
 
 struct Format
-{    
+{
+    QString name;
+
     std::unordered_set<QString> modules;
+    QRegularExpression logFileRegex;
 
     QString extension;
     std::optional<QStringConverter::Encoding> encoding;
