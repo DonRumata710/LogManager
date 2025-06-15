@@ -13,8 +13,6 @@ class FilterHeader : public QHeaderView
 public:
     explicit FilterHeader(Qt::Orientation orientation, QWidget *parent = nullptr);
 
-    void setFields();
-
     QString filterText(int section) const;
 
 signals:
@@ -29,6 +27,8 @@ protected:
 private:
     void setupEditors();
     void updatePositions();
+
+    void adjustColumnWidths(QAbstractItemModel* model);
 
 private:
     std::vector<QLineEdit*> editors;

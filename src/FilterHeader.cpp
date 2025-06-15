@@ -24,6 +24,7 @@ void FilterHeader::setModel(QAbstractItemModel* model)
 {
     QHeaderView::setModel(model);
     setupEditors();
+    adjustColumnWidths(model);
 }
 
 void FilterHeader::resizeEvent(QResizeEvent *event)
@@ -102,5 +103,15 @@ void FilterHeader::updatePositions()
         QRect rect = QRect(pos, height() / 2, size, filterHeight);
         editors[i]->setGeometry(rect);
         editors[i]->setVisible(true);
+    }
+}
+
+void FilterHeader::adjustColumnWidths(QAbstractItemModel* model)
+{
+    if (model && model->columnCount() > 0)
+    {
+        for (int i = 0; i < model->columnCount() - 1; ++i)
+            setSectionResizeMode(i, QHeaderView::ResizeMode::ResizeToContents);
+        setSectionResizeMode(model->columnCount() - 1, QHeaderView::ResizeMode::Stretch);
     }
 }
