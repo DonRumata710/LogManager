@@ -18,6 +18,9 @@ public:
 signals:
     void filterChanged(int section, const QString &text);
 
+private slots:
+    void showContextMenu(const QPoint &point);
+
 protected:
     void setModel(QAbstractItemModel *model) override;
     void resizeEvent(QResizeEvent *event) override;

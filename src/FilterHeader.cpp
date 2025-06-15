@@ -4,6 +4,7 @@
 
 #include <QAbstractItemModel>
 #include <QResizeEvent>
+#include <QMenu>
 
 
 FilterHeader::FilterHeader(Qt::Orientation orientation, QWidget *parent) : QHeaderView(orientation, parent)
@@ -11,6 +12,9 @@ FilterHeader::FilterHeader(Qt::Orientation orientation, QWidget *parent) : QHead
     setSectionsClickable(true);
     connect(this, &QHeaderView::sectionResized, this, &FilterHeader::updatePositions);
     connect(this, &QHeaderView::sectionMoved, this, &FilterHeader::updatePositions);
+
+    setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(this, &QWidget::customContextMenuRequested, this, &FilterHeader::showContextMenu);
 }
 
 QString FilterHeader::filterText(int section) const
@@ -18,6 +22,28 @@ QString FilterHeader::filterText(int section) const
     if (section < 0 || section >= static_cast<int>(editors.size()))
         return QString();
     return editors[section]->text();
+}
+
+void FilterHeader::showContextMenu(const QPoint& point)
+{
+    QMenu menu(this);
+
+    if (!model())
+        return;
+
+    for (int col = 0; col < model()->columnCount(); ++col)
+    {
+        QString header = model()->headerData(col, Qt::Horizontal).toString();
+        QAction *action = menu.addAction(header);
+        action->setCheckable(true);
+        action->setChecked(!isSectionHidden(col));
+
+        connect(action, &QAction::toggled, this, [this, col](bool checked) {
+            setSectionHidden(col, !checked);
+        });
+    }
+
+    menu.exec(mapToGlobal(point));
 }
 
 void FilterHeader::setModel(QAbstractItemModel* model)
