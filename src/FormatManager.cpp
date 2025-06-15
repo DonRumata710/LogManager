@@ -18,73 +18,75 @@ std::map<std::string, std::shared_ptr<Format>> FormatManager::getFormats() const
     return formats;
 }
 
-void FormatManager::addFormat(const QString& name, const std::shared_ptr<Format>& format)
+void FormatManager::addFormat(const std::shared_ptr<Format>& format)
 {
-    if (format && !name.isEmpty())
+    if (format)
+        throw std::logic_error("Format cannot be null");
+
+    if (format->name.isEmpty())
+        throw std::logic_error("Format name cannot be empty");
+
+    QJsonDocument doc;
+    QJsonObject formatObj;
+
+    QJsonArray moduleArray;
+    for (const auto& module : format->modules)
+        moduleArray.append(module);
+    formatObj.insert("modules", moduleArray);
+
+    if (format->logFileRegex.isValid() && !format->logFileRegex.pattern().isEmpty())
+        formatObj.insert("logFileRegex", format->logFileRegex.pattern());
+    formatObj.insert("extension", format->extension);
+    if (format->encoding)
+        formatObj.insert("encoding", QStringConverter::nameForEncoding(format->encoding.value()));
+
+    QJsonArray commentArray;
+    for (const auto& comment : format->comments)
     {
-        QJsonDocument doc;
-        QJsonObject formatObj;
-
-        QJsonArray moduleArray;
-        for (const auto& module : format->modules)
-            moduleArray.append(module);
-        formatObj.insert("modules", moduleArray);
-
-        formatObj.insert("extension", format->extension);
-
-        if (format->encoding)
-            formatObj.insert("encoding", QStringConverter::nameForEncoding(format->encoding.value()));
-
-        QJsonArray commentArray;
-        for (const auto& comment : format->comments)
-        {
-            QJsonObject commentObj;
-            commentObj.insert("start", comment.start);
-            if (comment.finish && !comment.finish->isEmpty())
-                commentObj.insert("finish", comment.finish.value());
-            commentArray.append(commentObj);
-        }
-        formatObj.insert("comments", commentArray);
-
-        formatObj.insert("separator", format->separator);
-
-        formatObj.insert("timeFieldIndex", format->timeFieldIndex);
-
-        formatObj.insert("timeRegex", format->timeRegex);
-
-        QJsonArray fieldArray;
-        for (const auto& field : format->fields)
-        {
-            QJsonObject fieldObj;
-            fieldObj.insert("name", field.name);
-            fieldObj.insert("regex", field.regex.pattern());
-            fieldObj.insert("type", QMetaType::typeName(field.type));
-            fieldArray.append(fieldObj);
-        }
-        formatObj.insert("fields", fieldArray);
-
-        doc.setObject(formatObj);
-
-        QString filePath = name + ".json";
-        QFile file(filePath);
-        if (!file.open(QIODevice::WriteOnly))
-        {
-            qWarning() << "Failed to open file for writing:" << filePath;
-            return;
-        }
-
-        if (file.write(doc.toJson()) == -1)
-        {
-            qWarning() << "Failed to write to file:" << filePath;
-            return;
-        }
-
-        file.close();
-
-        formats[name.toStdString()] = format;
-
-        qDebug() << "Format created: " << name;
+        QJsonObject commentObj;
+        commentObj.insert("start", comment.start);
+        if (comment.finish && !comment.finish->isEmpty())
+            commentObj.insert("finish", comment.finish.value());
+        commentArray.append(commentObj);
     }
+    formatObj.insert("comments", commentArray);
+
+    formatObj.insert("separator", format->separator);
+    formatObj.insert("timeFieldIndex", format->timeFieldIndex);
+    formatObj.insert("timeRegex", format->timeRegex);
+
+    QJsonArray fieldArray;
+    for (const auto& field : format->fields)
+    {
+        QJsonObject fieldObj;
+        fieldObj.insert("name", field.name);
+        fieldObj.insert("regex", field.regex.pattern());
+        fieldObj.insert("type", QMetaType::typeName(field.type));
+        fieldArray.append(fieldObj);
+    }
+    formatObj.insert("fields", fieldArray);
+
+    doc.setObject(formatObj);
+
+    QString filePath = format->name + ".json";
+    QFile file(filePath);
+    if (!file.open(QIODevice::WriteOnly))
+    {
+        qWarning() << "Failed to open file for writing:" << filePath;
+        return;
+    }
+
+    if (file.write(doc.toJson()) == -1)
+    {
+        qWarning() << "Failed to write to file:" << filePath;
+        return;
+    }
+
+    file.close();
+
+    formats[format->name.toStdString()] = format;
+
+    qDebug() << "Format created: " << format->name;
 }
 
 void FormatManager::removeFormat(const QString& name)
@@ -118,11 +120,14 @@ void FormatManager::loadFormats()
         {
             QJsonObject formatObj = doc.object();
             std::shared_ptr<Format> format = std::make_shared<Format>();
+            format->name = file.left(file.lastIndexOf('.'));
 
             auto moduleArray = formatObj.value("modules").toArray();
             for (const auto& module : std::as_const(moduleArray))
                 format->modules.insert(module.toString());
 
+            if (formatObj.contains("logFileRegex"))
+                format->logFileRegex = QRegularExpression(formatObj.value("logFileRegex").toString());
             if (formatObj.contains("extension"))
                 format->extension = formatObj.value("extension").toString();
             if (formatObj.contains("encoding"))
@@ -139,9 +144,7 @@ void FormatManager::loadFormats()
             }
 
             format->separator = formatObj.value("separator").toString();
-
             format->timeFieldIndex = formatObj.value("timeFieldIndex").toInt(-1);
-
             format->timeRegex = formatObj.value("timeRegex").toString();
 
             auto fieldArray = formatObj.value("fields").toArray();

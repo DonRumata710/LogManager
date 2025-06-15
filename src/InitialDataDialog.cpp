@@ -72,6 +72,32 @@ std::unordered_set<QString> InitialDataDialog::getModules() const
     return checkedItems;
 }
 
+void InitialDataDialog::on_bSelect_clicked()
+{
+    QT_SLOT_BEGIN
+
+    for (int i = 0; i < ui->modulesListWidget->count(); ++i)
+    {
+        QListWidgetItem* item = ui->modulesListWidget->item(i);
+        item->setCheckState(Qt::CheckState::Checked);
+    }
+
+    QT_SLOT_END
+}
+
+void InitialDataDialog::on_bDeselect_clicked()
+{
+    QT_SLOT_BEGIN
+
+    for (int i = 0; i < ui->modulesListWidget->count(); ++i)
+    {
+        QListWidgetItem* item = ui->modulesListWidget->item(i);
+        item->setCheckState(Qt::CheckState::Unchecked);
+    }
+
+    QT_SLOT_END
+}
+
 void InitialDataDialog::onModulesSelectionChanged()
 {
     QT_SLOT_BEGIN

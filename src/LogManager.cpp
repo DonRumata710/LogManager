@@ -129,7 +129,7 @@ void LogManager::setTimeRange(const std::chrono::system_clock::time_point& _minT
 
 void LogManager::setTimePoint(const std::chrono::system_clock::time_point& time)
 {
-    mergeHeap = std::priority_queue<HeapItem>();
+    mergeHeap = decltype(mergeHeap)();
 
     for (auto& module : docs)
     {
@@ -173,7 +173,7 @@ std::optional<LogEntry> LogManager::next()
 
     auto nextEntry = getEntry(top);
     if (nextEntry)
-        mergeHeap.emplace(std::move(top.module), std::move(top.startTime), std::move(top.metadata), *nextEntry);
+        mergeHeap.emplace(std::move(top.module), std::move(top.startTime), std::move(top.metadata), *nextEntry, std::move(top.line));
 
     return std::move(top.entry);
 }
@@ -181,17 +181,31 @@ std::optional<LogEntry> LogManager::next()
 void LogManager::clear()
 {
     docs.clear();
-    mergeHeap = std::priority_queue<HeapItem>();
+    mergeHeap = decltype(mergeHeap)();
     usedFormats.clear();
     modules.clear();
 }
 
-std::optional<LogManager::ScanResult> LogManager::addFile(const QString& filename, const QString& module, const QString& extension, std::function<std::unique_ptr<QIODevice>()> createFileFunc, const std::vector<std::shared_ptr<Format>>& formats)
+std::optional<LogManager::ScanResult> LogManager::addFile(const QString& filename, const QString& stem, const QString& extension, std::function<std::unique_ptr<QIODevice>()> createFileFunc, const std::vector<std::shared_ptr<Format>>& formats)
 {
+    QString module = stem;
+
     std::vector<std::shared_ptr<Format>> actualFormats;
+    std::unordered_map<std::shared_ptr<Format>, QString> regexMatches;
     for (const auto& format : formats)
     {
-        if (format->modules.contains(module) && format->extension == extension)
+        QString formatModule = module;
+        if (format->logFileRegex.isValid() && !format->logFileRegex.pattern().isEmpty())
+        {
+            QRegularExpressionMatch match = format->logFileRegex.match(stem);
+            if (!match.hasMatch())
+                continue;
+
+            if (match.hasCaptured("module"))
+                regexMatches[format] = match.captured("module");
+        }
+
+        if ((format->modules.empty() || format->modules.contains(formatModule)) && format->extension == extension)
             actualFormats.push_back(format);
     }
 
@@ -203,6 +217,15 @@ std::optional<LogManager::ScanResult> LogManager::addFile(const QString& filenam
         return std::nullopt;
 
     qDebug() << "File discovered:" << filename;
+
+    if (result->first->logFileRegex.isValid() && !result->first->logFileRegex.pattern().isEmpty())
+    {
+        auto matchIt = regexMatches.find(result->first);
+        if (matchIt != regexMatches.end())
+            module = matchIt->second;
+        else
+            module = result->first->name;
+    }
 
     docs[module].emplace(result->second, LogMetadata{ result->first, std::make_unique<Log>(createLog(createFileFunc(), result->first)) });
     usedFormats.insert(result->first);
@@ -384,6 +407,13 @@ void LogManager::switchToNextLog(HeapItem& heapItem)
         if (fileIt == moduleIt->second.begin())
         {
             qDebug() << "No more logs for module:" << heapItem.module;
+            heapItem.line.clear();
+            return;
+        }
+        else if (fileIt == moduleIt->second.end())
+        {
+            qCritical() << "Unexpected result after next log search:" << heapItem.module;
+            heapItem.line.clear();
             return;
         }
 
@@ -403,4 +433,9 @@ void LogManager::switchToNextLog(HeapItem& heapItem)
 bool LogManager::HeapItem::operator<(const HeapItem& other) const
 {
     return entry.time < other.entry.time;
+}
+
+bool LogManager::HeapItem::operator>(const HeapItem& other) const
+{
+    return entry.time > other.entry.time;
 }

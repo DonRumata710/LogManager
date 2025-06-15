@@ -54,12 +54,13 @@ private:
         QString line;
 
         bool operator<(const HeapItem& other) const;
+        bool operator>(const HeapItem& other) const;
     };
 
 private:
     void clear();
 
-    std::optional<LogManager::ScanResult> addFile(const QString& filename, const QString& module, const QString& extension, std::function<std::unique_ptr<QIODevice>()> createFileFunc, const std::vector<std::shared_ptr<Format>>& formats);
+    std::optional<LogManager::ScanResult> addFile(const QString& filename, const QString& stem, const QString& extension, std::function<std::unique_ptr<QIODevice>()> createFileFunc, const std::vector<std::shared_ptr<Format>>& formats);
     std::optional<std::pair<std::shared_ptr<Format>, std::chrono::system_clock::time_point>> scanLogFile(std::function<std::unique_ptr<QIODevice>()> createFileFunc, const std::vector<std::shared_ptr<Format>>& formats);
 
     std::chrono::system_clock::time_point parseTime(const QString& timeStr, const std::shared_ptr<Format>& format) const;
@@ -79,5 +80,5 @@ private:
     std::unordered_set<QString> modules;
     std::chrono::system_clock::time_point minTime;
     std::chrono::system_clock::time_point maxTime;
-    std::priority_queue<HeapItem> mergeHeap;
+    std::priority_queue<HeapItem, std::vector<HeapItem>, std::greater<HeapItem>> mergeHeap;
 };

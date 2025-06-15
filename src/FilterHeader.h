@@ -13,12 +13,13 @@ class FilterHeader : public QHeaderView
 public:
     explicit FilterHeader(Qt::Orientation orientation, QWidget *parent = nullptr);
 
-    void setFields();
-
     QString filterText(int section) const;
 
 signals:
     void filterChanged(int section, const QString &text);
+
+private slots:
+    void showContextMenu(const QPoint &point);
 
 protected:
     void setModel(QAbstractItemModel *model) override;
@@ -29,6 +30,8 @@ protected:
 private:
     void setupEditors();
     void updatePositions();
+
+    void adjustColumnWidths(QAbstractItemModel* model);
 
 private:
     std::vector<QLineEdit*> editors;

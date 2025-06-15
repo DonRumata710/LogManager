@@ -52,8 +52,12 @@ std::optional<QString> Log::nextLine()
 {
     QString line;
     std::optional<Format::Comment> comment;
-    while (!(line = stream->readLine()).isEmpty())
+    while (!stream->atEnd())
     {
+        line = stream->readLine();
+        if (line.isEmpty())
+            continue;
+
         if (comment)
         {
             if (isCommentEnd(comment.value(), line))

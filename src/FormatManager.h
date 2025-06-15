@@ -12,7 +12,7 @@ public:
 
     std::map<std::string, std::shared_ptr<Format>> getFormats() const;
 
-    void addFormat(const QString& name, const std::shared_ptr<Format>& format);
+    void addFormat(const std::shared_ptr<Format>& format);
     void removeFormat(const QString& name);
 
 private:
