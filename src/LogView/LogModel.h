@@ -1,6 +1,6 @@
 #pragma once
 
-#include "LogManager.h"
+#include "../LogManagement/LogManager.h"
 
 #include <QAbstractTableModel>
 #include <QRegularExpression>
@@ -21,7 +21,7 @@ public:
     bool canFetchDownMore() const;
     void fetchDownMore();
 
-    const std::vector<Format::Fields>& getFields() const;
+    const std::vector<Format::Field>& getFields() const;
 
     // Header:
     QVariant headerData(int section,
@@ -42,7 +42,7 @@ private:
 
 private:
     std::unique_ptr<LogManager> manager;
-    std::vector<Format::Fields> fields;
+    std::vector<Format::Field> fields;
     std::unordered_set<QString> modules;
     std::deque<LogEntry> logs;
 

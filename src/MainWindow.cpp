@@ -3,11 +3,12 @@
 
 #include "Application.h"
 #include "Utils.h"
-#include "LogManager.h"
+#include "LogManagement/LogManager.h"
 #include "InitialDataDialog.h"
-#include "LogModel.h"
-#include "FilterHeader.h"
-#include "LogFilterModel.h"
+#include "LogView/LogModel.h"
+#include "LogView/FilterHeader.h"
+#include "LogView/LogFilterModel.h"
+#include "FormatCreation/FormatCreationWizard.h"
 
 #include <QScrollBar>
 #include <QFileDialog>
@@ -23,17 +24,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     for (const auto& format : formatManager.getFormats())
     {
-        QAction* action = formatActions.emplace_back(new QAction(QString::fromStdString(format.first), this));
-        action->setCheckable(true);
-        action->setChecked(true);
-        connect(action, &QAction::toggled, this, [this, format](bool checked) {
-            if (checked)
-                selectedFormats.insert(format.first);
-            else
-                selectedFormats.erase(format.first);
-        });
-        ui->menuFormats->addAction(action);
-
+        addFormat(format.first);
         selectedFormats.insert(format.first);
     }
 
@@ -141,6 +132,13 @@ void MainWindow::on_actionAdd_format_triggered()
 {
     QT_SLOT_BEGIN
 
+    FormatCreationWizard wizard(this);
+    if (wizard.exec() != QDialog::Accepted)
+        return;
+
+    auto newFormat = std::make_shared<Format>(wizard.getFormat());
+    formatManager.addFormat(newFormat);
+    addFormat(newFormat->name.toStdString());
 
     QT_SLOT_END
 }
@@ -165,6 +163,17 @@ void MainWindow::on_actionRemove_format_triggered()
 
     QString selectedFormat = dialog.textValue();
     formatManager.removeFormat(selectedFormat);
+    for (const auto& action : formatActions)
+    {
+        if (action->text() == selectedFormat)
+        {
+            selectedFormats.erase(selectedFormat.toStdString());
+            ui->menuFormats->removeAction(action);
+            formatActions.erase(std::remove(formatActions.begin(), formatActions.end(), action), formatActions.end());
+            delete action;
+            break;
+        }
+    }
 
     QT_SLOT_END
 }
@@ -178,6 +187,20 @@ void MainWindow::on_actionSelect_all_triggered()
 void MainWindow::on_actionDeselect_all_triggered()
 {
     updateFormatActions(false);
+}
+
+void MainWindow::addFormat(const std::string& format)
+{
+    QAction* action = formatActions.emplace_back(new QAction(QString::fromStdString(format), this));
+    action->setCheckable(true);
+    action->setChecked(true);
+    connect(action, &QAction::toggled, this, [this, format](bool checked) {
+        if (checked)
+            selectedFormats.insert(format);
+        else
+            selectedFormats.erase(format);
+    });
+    ui->menuFormats->addAction(action);
 }
 
 void MainWindow::showLogs(std::unique_ptr<LogManager>&& logManager, const LogManager::ScanResult& scanResult)

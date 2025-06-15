@@ -28,11 +28,11 @@ struct Format
     int timeFieldIndex = -1;
     QString timeRegex;
 
-    struct Fields
+    struct Field
     {
         QString name;
         QRegularExpression regex;
         QMetaType::Type type;
     };
-    std::vector<Fields> fields;
+    std::vector<Field> fields;
 };

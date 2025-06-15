@@ -1,6 +1,6 @@
 #pragma once
 
-#include "FormatManager.h"
+#include "LogManagement/FormatManager.h"
 
 #include <QApplication>
 
