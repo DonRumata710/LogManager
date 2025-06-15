@@ -29,6 +29,8 @@ private slots:
     void on_actionDeselect_all_triggered();
 
 private:
+    void addFormat(const std::string& format);
+
     void showLogs(std::unique_ptr<LogManager>&& logManager, const LogManager::ScanResult& scanResult);
     void checkActions();
     void setLogActionsEnabled(bool enabled);

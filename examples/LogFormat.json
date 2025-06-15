@@ -1,0 +1,53 @@
+{
+    "modules": [
+        "ModuleName1",
+        "ModuleName2"
+    ],
+
+    "logFileRegex": "log\\d*",
+    "extension": ".csv",
+    "encoding": "UTF-8",
+
+    "comments": [
+        {
+            "start": "//"
+        }
+    ],
+
+    "separator": ";",
+    "timeFieldIndex": 0,
+    "timeRegex": "%F %H:%M:%S.%f",
+
+    "fields": [
+        {
+            "name": "time",
+            "regex": ".*",
+            "type": "QString"
+        },
+        {
+            "name": "process ID",
+            "regex": ".*",
+            "type": "QString"
+        },
+        {
+            "name": "thread ID",
+            "regex": ".*",
+            "type": "QString"
+        },
+        {
+            "name": "module",
+            "regex": ".*",
+            "type": "QString"
+        },
+        {
+            "name": "severity",
+            "regex": ".*",
+            "type": "QString"
+        },
+        {
+            "name": "message",
+            "regex": ".*",
+            "type": "QString"
+        }
+    ]
+}

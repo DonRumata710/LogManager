@@ -20,7 +20,7 @@ std::map<std::string, std::shared_ptr<Format>> FormatManager::getFormats() const
 
 void FormatManager::addFormat(const std::shared_ptr<Format>& format)
 {
-    if (format)
+    if (!format)
         throw std::logic_error("Format cannot be null");
 
     if (format->name.isEmpty())
@@ -32,7 +32,8 @@ void FormatManager::addFormat(const std::shared_ptr<Format>& format)
     QJsonArray moduleArray;
     for (const auto& module : format->modules)
         moduleArray.append(module);
-    formatObj.insert("modules", moduleArray);
+    if (!moduleArray.empty())
+        formatObj.insert("modules", moduleArray);
 
     if (format->logFileRegex.isValid() && !format->logFileRegex.pattern().isEmpty())
         formatObj.insert("logFileRegex", format->logFileRegex.pattern());
@@ -49,7 +50,8 @@ void FormatManager::addFormat(const std::shared_ptr<Format>& format)
             commentObj.insert("finish", comment.finish.value());
         commentArray.append(commentObj);
     }
-    formatObj.insert("comments", commentArray);
+    if (!commentArray.empty())
+        formatObj.insert("comments", commentArray);
 
     formatObj.insert("separator", format->separator);
     formatObj.insert("timeFieldIndex", format->timeFieldIndex);
@@ -122,9 +124,12 @@ void FormatManager::loadFormats()
             std::shared_ptr<Format> format = std::make_shared<Format>();
             format->name = file.left(file.lastIndexOf('.'));
 
-            auto moduleArray = formatObj.value("modules").toArray();
-            for (const auto& module : std::as_const(moduleArray))
-                format->modules.insert(module.toString());
+            if (formatObj.contains("modules"))
+            {
+                auto moduleArray = formatObj.value("modules").toArray();
+                for (const auto& module : std::as_const(moduleArray))
+                    format->modules.insert(module.toString());
+            }
 
             if (formatObj.contains("logFileRegex"))
                 format->logFileRegex = QRegularExpression(formatObj.value("logFileRegex").toString());
@@ -133,14 +138,17 @@ void FormatManager::loadFormats()
             if (formatObj.contains("encoding"))
                 format->encoding = QStringConverter::encodingForName(formatObj.value("encoding").toString().toStdString().c_str());
 
-            auto commentArray = formatObj.value("comments").toArray();
-            for (const auto& comment : std::as_const(commentArray))
+            if (formatObj.contains("comments"))
             {
-                Format::Comment& c = format->comments.emplace_back();
-                QJsonObject commentObj = comment.toObject();
-                c.start = commentObj.value("start").toString();
-                if (commentObj.contains("finish"))
-                    c.finish = commentObj.value("finish").toString();
+                auto commentArray = formatObj.value("comments").toArray();
+                for (const auto& comment : std::as_const(commentArray))
+                {
+                    Format::Comment& c = format->comments.emplace_back();
+                    QJsonObject commentObj = comment.toObject();
+                    c.start = commentObj.value("start").toString();
+                    if (commentObj.contains("finish"))
+                        c.finish = commentObj.value("finish").toString();
+                }
             }
 
             format->separator = formatObj.value("separator").toString();
@@ -150,7 +158,7 @@ void FormatManager::loadFormats()
             auto fieldArray = formatObj.value("fields").toArray();
             for (const auto& field : std::as_const(fieldArray))
             {
-                Format::Fields& f = format->fields.emplace_back();
+                Format::Field& f = format->fields.emplace_back();
                 QJsonObject fieldObj = field.toObject();
                 f.name = fieldObj.value("name").toString();
                 f.regex = QRegularExpression(fieldObj.value("regex").toString());

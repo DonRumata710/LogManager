@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>FormatCreationWizard</class>
+ <widget class="QWizard" name="FormatCreationWizard">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>300</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Format creation</string>
+  </property>
+  <property name="wizardStyle">
+   <enum>QWizard::WizardStyle::ModernStyle</enum>
+  </property>
+  <widget class="FilenameFormatWizardPage" name="filenameFormatPage"/>
+  <widget class="ModuleListWizardPage" name="moduleListPage"/>
+  <widget class="LogFieldsWizardPage" name="logFieldsPage"/>
+  <widget class="LogFormatWizardPage" name="logFormatPage"/>
+  <widget class="CommentWizardPage" name="commentsPage"/>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>FilenameFormatWizardPage</class>
+   <extends>QWizardPage</extends>
+   <header>FilenameFormatWizardPage.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ModuleListWizardPage</class>
+   <extends>QWizardPage</extends>
+   <header>ModuleListWizardPage.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>LogFieldsWizardPage</class>
+   <extends>QWizardPage</extends>
+   <header>LogFieldsWizardPage.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>LogFormatWizardPage</class>
+   <extends>QWizardPage</extends>
+   <header>LogFormatWizardPage.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>CommentWizardPage</class>
+   <extends>QWizardPage</extends>
+   <header>CommentWizardPage.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>
