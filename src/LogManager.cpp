@@ -92,7 +92,7 @@ void LogManager::setTimeRange(const std::chrono::system_clock::time_point& _minT
 
 void LogManager::setTimePoint(const std::chrono::system_clock::time_point& time)
 {
-    mergeHeap = std::priority_queue<HeapItem>();
+    mergeHeap = decltype(mergeHeap)();
 
     for (auto& module : docs)
     {
@@ -144,7 +144,7 @@ std::optional<LogEntry> LogManager::next()
 void LogManager::clear()
 {
     docs.clear();
-    mergeHeap = std::priority_queue<HeapItem>();
+    mergeHeap = decltype(mergeHeap)();
     usedFormats.clear();
     modules.clear();
 }
@@ -396,4 +396,9 @@ void LogManager::switchToNextLog(HeapItem& heapItem)
 bool LogManager::HeapItem::operator<(const HeapItem& other) const
 {
     return entry.time < other.entry.time;
+}
+
+bool LogManager::HeapItem::operator>(const HeapItem& other) const
+{
+    return entry.time > other.entry.time;
 }

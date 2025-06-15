@@ -55,6 +55,7 @@ private:
         QString line;
 
         bool operator<(const HeapItem& other) const;
+        bool operator>(const HeapItem& other) const;
     };
 
 private:
@@ -80,5 +81,5 @@ private:
     std::unordered_set<QString> modules;
     std::chrono::system_clock::time_point minTime;
     std::chrono::system_clock::time_point maxTime;
-    std::priority_queue<HeapItem> mergeHeap;
+    std::priority_queue<HeapItem, std::vector<HeapItem>, std::greater<HeapItem>> mergeHeap;
 };
