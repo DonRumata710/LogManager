@@ -3,11 +3,11 @@
 
 #include "Application.h"
 #include "Utils.h"
-#include "LogManager.h"
+#include "LogManagement/LogManager.h"
 #include "InitialDataDialog.h"
-#include "LogModel.h"
-#include "FilterHeader.h"
-#include "LogFilterModel.h"
+#include "LogView/LogModel.h"
+#include "LogView/FilterHeader.h"
+#include "LogView/LogFilterModel.h"
 
 #include <QScrollBar>
 #include <QFileDialog>

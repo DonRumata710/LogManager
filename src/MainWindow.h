@@ -1,7 +1,7 @@
 #pragma once
 
-#include "FormatManager.h"
-#include "LogManager.h"
+#include "LogManagement/FormatManager.h"
+#include "LogManagement/LogManager.h"
 
 #include <QMainWindow>
 #include <QAbstractItemModel>

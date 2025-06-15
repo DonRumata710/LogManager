@@ -16,11 +16,11 @@ if (${ts} NOT STREQUAL "" AND QT6::LINGUIST_TOOLS_FOUND)
     add_custom_target(translations ALL DEPENDS ${QM_FILES})
 endif()
 
-file(GLOB SOURCES src/*.cpp)
-file(GLOB HEADERS src/*.h)
-file(GLOB RESOURCE_FILE qtres/*.qrc)
-file(GLOB UI_FILES ui/*.ui src/*.ui)
-file(GLOB RESOURCES res/*)
+file(GLOB_RECURSE SOURCES src/*.cpp)
+file(GLOB_RECURSE HEADERS src/*.h)
+file(GLOB_RECURSE RESOURCE_FILE qtres/*.qrc)
+file(GLOB_RECURSE UI_FILES ui/*.ui src/*.ui)
+file(GLOB_RECURSE RESOURCES res/*)
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${RESOURCE_FILE} ${UI_FILES} ${TS_FILES} ${RESOURCES})
 

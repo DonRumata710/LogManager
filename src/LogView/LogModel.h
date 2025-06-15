@@ -1,6 +1,6 @@
 #pragma once
 
-#include "LogManager.h"
+#include "../LogManagement/LogManager.h"
 
 #include <QAbstractTableModel>
 #include <QRegularExpression>
