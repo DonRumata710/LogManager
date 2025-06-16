@@ -1,5 +1,15 @@
 cmake_minimum_required(VERSION 3.15)
-project(LogManager VERSION 1.0 LANGUAGES CXX)
+
+if (EXISTS "${CMAKE_SOURCE_DIR}/local.cmake")
+    include(local.cmake)
+    message(STATUS "Using local.cmake for configuration")
+endif()
+include(cmake/version.cmake)
+list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_SOURCE_DIR}/cmake/modules")
+
+get_git_tag_version(gitVersion dirtyFlag)
+
+project(LogManager VERSION ${gitVersion} LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

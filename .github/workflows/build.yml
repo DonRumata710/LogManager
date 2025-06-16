@@ -32,8 +32,22 @@ jobs:
       - name: Create artifacts
         run: cmake --build build --target release_packet
 
+  release:
+    needs: build
+    runs-on: windows-latest
       - name: Upload Release Artifact
         uses: actions/upload-artifact@v4
         with:
           name: LogManager-release
           path: build/output/*
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
