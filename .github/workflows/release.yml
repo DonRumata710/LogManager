@@ -11,10 +11,29 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v3
+
+      - uses: ilammy/msvc-dev-cmd@v1
         with:
-          name: LogManager-release
-          path: ./release
+          vsversion: 2022
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: 6.8.3
+          arch: win64_msvc2022_64
+          host: 'windows'
+          target: 'desktop'
+
+      - name: Configure
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Create artifacts
+        run: cmake --build build --target release_packet
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
@@ -23,4 +42,4 @@ jobs:
           body: ${{ inputs.notes }}
           draft: false
           prerelease: false
-          files: ./release/*
+          files: build/output/*
