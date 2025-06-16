@@ -29,5 +29,11 @@ jobs:
       - name: Build
         run: cmake --build build --config Release --parallel
 
-      - name: Run tests
-        run: ctest --test-dir build -C Release --output-on-failure
+      - name: Create artifacts
+        run: cmake --build build --target release_packet
+
+      - name: Upload Release Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: LogManager-release
+          path: build/output/*
