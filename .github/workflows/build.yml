@@ -4,6 +4,7 @@ on:
   push:
     branches: [ master ]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   build:
@@ -32,10 +33,6 @@ jobs:
       - name: Create artifacts
         run: cmake --build build --target release_packet
 
-  release:
-    needs: build
-    runs-on: windows-latest
-    steps:
       - name: Upload Release Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -43,7 +40,7 @@ jobs:
           path: build/output/*
 
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: github.event_name == 'workflow_dispatch' && startsWith(github.ref, 'refs/tags/')
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
