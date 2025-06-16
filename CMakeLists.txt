@@ -6,6 +6,7 @@ if (EXISTS "${CMAKE_SOURCE_DIR}/local.cmake")
 endif()
 include(cmake/local_hints.cmake)
 include(cmake/version.cmake)
+list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_SOURCE_DIR}/cmake/modules")
 
 get_git_tag_version(gitVersion dirtyFlag)
 
