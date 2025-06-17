@@ -64,6 +64,7 @@ void FormatManager::addFormat(const std::shared_ptr<Format>& format)
         fieldObj.insert("name", field.name);
         fieldObj.insert("regex", field.regex.pattern());
         fieldObj.insert("type", QMetaType::typeName(field.type));
+        fieldObj.insert("optional", field.isOptional);
         fieldArray.append(fieldObj);
     }
     formatObj.insert("fields", fieldArray);
@@ -163,6 +164,8 @@ void FormatManager::loadFormats()
                 f.name = fieldObj.value("name").toString();
                 f.regex = QRegularExpression(fieldObj.value("regex").toString());
                 f.type = static_cast<QMetaType::Type>(QMetaType::type(fieldObj.value("type").toString().toLatin1().constData()));
+                if (fieldObj.contains("optional"))
+                    f.isOptional = fieldObj.value("optional").toBool();
             }
 
             formats[std::filesystem::path(file.toStdString()).stem().string()] = std::move(format);

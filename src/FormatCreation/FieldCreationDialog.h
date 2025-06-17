@@ -14,10 +14,13 @@ class FieldCreationDialog : public QDialog
     Q_OBJECT
 
 public:
-    explicit FieldCreationDialog(QWidget *parent = nullptr);
+    explicit FieldCreationDialog(QWidget* parent = nullptr);
     ~FieldCreationDialog();
 
     Format::Field getField() const;
+
+private slots:
+    void updateOkButtonState();
 
 private:
     Ui::FieldCreationDialog *ui;
