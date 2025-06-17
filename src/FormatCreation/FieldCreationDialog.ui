@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>198</height>
+    <height>246</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -60,6 +60,20 @@
       </size>
      </property>
     </spacer>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="bOptional">
+     <property name="text">
+      <string>Optional field</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="lWarning">
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
    </item>
    <item>
     <widget class="QDialogButtonBox" name="buttonBox">

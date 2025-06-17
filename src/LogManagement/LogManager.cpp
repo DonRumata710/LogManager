@@ -276,7 +276,7 @@ bool LogManager::checkFormat(const QString& line, const std::shared_ptr<Format>&
         QRegularExpressionMatch match = field.regex.match(line);
         if (!match.hasMatch())
         {
-            return false;
+            return field.isOptional;
         }
     }
     return true;
@@ -315,12 +315,12 @@ std::optional<LogEntry> LogManager::getEntry(HeapItem& heapItem)
 
         entry.line = line.value();
         entry.time = time;
-        for (size_t i = 0; i < heapItem.metadata->format->fields.size(); ++i)
+        for (size_t i = 0, fieldCount = 0; i < heapItem.metadata->format->fields.size(); ++i)
         {
             const auto& field = heapItem.metadata->format->fields[i];
             auto& fieldValue = entry.values[field.name];
 
-            QRegularExpressionMatch match = field.regex.match(parts[i].trimmed());
+            QRegularExpressionMatch match = field.regex.match(parts[fieldCount].trimmed());
             if (match.hasMatch())
             {
                 switch (field.type)
@@ -352,10 +352,15 @@ std::optional<LogEntry> LogManager::getEntry(HeapItem& heapItem)
                     qCritical() << "Unsupported field type for field" << field.name << ": " << field.type;
                     continue;
                 }
+
+                ++fieldCount;
             }
             else
             {
-                qCritical() << "Failed to match field" << field.name << "in line:" << line.value();
+                if (!field.isOptional)
+                {
+                    qCritical() << "Failed to match field" << field.name << "in line:" << line.value();
+                }
             }
         }
     }

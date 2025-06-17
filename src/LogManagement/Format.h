@@ -33,6 +33,7 @@ struct Format
         QString name;
         QRegularExpression regex;
         QMetaType::Type type;
+        bool isOptional = false;
     };
     std::vector<Field> fields;
 };

@@ -4,7 +4,7 @@
 #include <QPushButton>
 
 
-FieldCreationDialog::FieldCreationDialog(QWidget *parent) :
+FieldCreationDialog::FieldCreationDialog(QWidget* parent) :
     QDialog(parent),
     ui(new Ui::FieldCreationDialog)
 {
@@ -19,9 +19,9 @@ FieldCreationDialog::FieldCreationDialog(QWidget *parent) :
     ui->cbType->setCurrentIndex(4);
 
     ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(false);
-    connect(ui->leFieldName, &QLineEdit::textChanged, this, [this](const QString& text) {
-        ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(!text.isEmpty());
-    });
+    connect(ui->leFieldName, &QLineEdit::textChanged, this, &FieldCreationDialog::updateOkButtonState);
+    connect(ui->leRegex, &QLineEdit::textChanged, this, &FieldCreationDialog::updateOkButtonState);
+    connect(ui->bOptional, &QPushButton::clicked, this, &FieldCreationDialog::updateOkButtonState);
 }
 
 FieldCreationDialog::~FieldCreationDialog()
@@ -35,5 +35,23 @@ Format::Field FieldCreationDialog::getField() const
     field.name = ui->leFieldName->text();
     field.type = static_cast<QMetaType::Type>(ui->cbType->currentData().toInt());
     field.regex = QRegularExpression{ ui->leRegex->text() };
+    field.isOptional = ui->bOptional->isChecked();
     return field;
 }
+
+void FieldCreationDialog::updateOkButtonState()
+{
+    bool isValid = !ui->leFieldName->text().isEmpty();
+    if (isValid && ui->bOptional->isChecked() && (ui->leRegex->text().isEmpty() || ui->leRegex->text() == ".*"))
+    {
+        ui->lWarning->setText("Regex is empty or matches everything, which may lead to unexpected results.");
+        isValid = false;
+    }
+    else
+    {
+        ui->lWarning->setText(QString{});
+    }
+
+    ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(isValid);
+}
+
