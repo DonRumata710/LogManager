@@ -105,7 +105,11 @@ void FilterHeader::setupEditors()
         edit->setPlaceholderText(tr("Filter"));
         connect(edit, &QLineEdit::textChanged, this, [this, i, proxyModel](const QString& t) {
             emit filterChanged(i, t);
-            proxyModel->setFilterWildcard(i, t);
+
+            auto filter = t;
+            if (!t.isEmpty() && *t.rbegin() != '*')
+                filter += '*';
+            proxyModel->setFilterWildcard(i, filter);
         });
 
         editors.push_back(edit);
