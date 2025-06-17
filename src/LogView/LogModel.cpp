@@ -110,7 +110,7 @@ QVariant LogModel::data(const QModelIndex& index, int role) const
         return QVariant();
     }
 
-    if (role == Qt::DisplayRole)
+    if (role == Qt::DisplayRole || role == Qt::EditRole)
     {
         const auto& log = logs[index.row()];
 
@@ -128,6 +128,20 @@ QVariant LogModel::data(const QModelIndex& index, int role) const
     }
 
     return QVariant();
+}
+
+Qt::ItemFlags LogModel::flags(const QModelIndex& index) const
+{
+    if (!index.isValid())
+        return Qt::NoItemFlags;
+
+    if (index.column() < 0 || index.column() >= columnCount() ||
+        index.row() < 0 || index.row() >= rowCount())
+    {
+        return Qt::NoItemFlags;
+    }
+
+    return QAbstractItemModel::flags(index) | Qt::ItemIsSelectable | Qt::ItemIsEditable;
 }
 
 void LogModel::update()
