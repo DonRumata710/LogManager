@@ -26,8 +26,65 @@ jobs:
           host: 'windows'
           target: 'desktop'
 
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        id: cache-deps
+        with:
+          key: ${{ runner.os }}-deps-${{ hashFiles('deps/**') }}
+          restore-keys: |
+            ${{ runner.os }}-deps-
+          path: deps
+
+      - name: Download ZLib
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        uses: robinraju/release-downloader@v1
+        with:
+          repository: 'madler/zlib'
+          tag: 'v1.3.1'
+          fileName: '*.zip'
+          out-file-path: 'external/libs'
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build ZLib
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $zlibVersion = '1.3.1'
+          cd external/libs
+          7z x zlib-$zlibVersion.zip
+          cd "zlib-$zlibVersion"
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=deps/win64/Release/zlib
+          cmake --build build --config Release --parallel
+          cmake --install build --config Release
+          cd ../../..
+
+      - name: Download QuaZip
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        uses: robinraju/release-downloader@v1
+        with:
+          repository: 'stachenov/quazip'
+          tag: 'v1.5'
+          fileName: '*.zip'
+          out-file-path: 'external/libs'
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build QuaZip
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $quazipVersion = '1.5'
+          cd external/libs
+          7z x quazip-$quazipVersion.zip
+          cd "quazip-$quazipVersion"
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=deps/win64/Release/quazip -DCMAKE_PATH_PREFIX=deps/win64/Release -DQUAZIP_QT_MAJOR_VERSION=6 -DQUAZIP_BZIP2=OFF
+          cmake --build build --config Release --parallel
+          cmake --install build --config Release
+          cd ../../..
+
       - name: Configure
-        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DLOCAL_HINTS="deps"
 
       - name: Build
         run: cmake --build build --config Release --parallel
