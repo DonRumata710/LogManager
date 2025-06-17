@@ -71,6 +71,8 @@ add_custom_command(TARGET ${PROJECT_NAME}
     COMMAND ${CMAKE_COMMAND} -E remove_directory "$<TARGET_FILE_DIR:${PROJECT_NAME}>/deploy_folder"
     COMMAND ${imported_location} --dir "${CMAKE_BINARY_DIR}/deploy_folder" "$<TARGET_FILE_DIR:${PROJECT_NAME}>/$<TARGET_FILE_NAME:${PROJECT_NAME}>"
     COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:${PROJECT_NAME}>" "${CMAKE_BINARY_DIR}/deploy_folder"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_RUNTIME_DLLS:${PROJECT_NAME}>" "${CMAKE_BINARY_DIR}/deploy_folder"
+    COMMAND_EXPAND_LISTS
     COMMENT "Deploy libraries"
 )
 

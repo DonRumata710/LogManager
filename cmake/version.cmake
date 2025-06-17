@@ -53,7 +53,7 @@ endfunction()
 
 function(get_git_tag_version versionVar dirtyFlag)
     execute_process(
-        COMMAND git describe --dirty --tags --match "v[0-9]*"
+        COMMAND git describe --first-parent --dirty --tags --match "v[0-9]*"
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         OUTPUT_VARIABLE version
         OUTPUT_STRIP_TRAILING_WHITESPACE
