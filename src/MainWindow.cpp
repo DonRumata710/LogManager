@@ -137,8 +137,8 @@ void MainWindow::on_actionAdd_format_triggered()
         return;
 
     auto newFormat = std::make_shared<Format>(wizard.getFormat());
-    formatManager.addFormat(newFormat);
     addFormat(newFormat->name.toStdString());
+    formatManager.addFormat(std::move(newFormat));
 
     QT_SLOT_END
 }
@@ -199,6 +199,7 @@ void MainWindow::addFormat(const std::string& format)
             selectedFormats.insert(format);
         else
             selectedFormats.erase(format);
+        checkActions();
     });
     ui->menuFormats->addAction(action);
 }
@@ -258,6 +259,7 @@ void MainWindow::updateFormatActions(bool enabled)
 {
     for (const auto& action : formatActions)
         action->setChecked(enabled);
+    checkActions();
 }
 
 void MainWindow::switchModel(QAbstractItemModel* model)
