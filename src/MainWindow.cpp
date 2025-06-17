@@ -33,31 +33,8 @@ MainWindow::MainWindow(QWidget *parent) :
     auto header = new FilterHeader(Qt::Horizontal, ui->logView);
     ui->logView->setHeader(header);
 
-    connect(ui->logView->verticalScrollBar(), &QScrollBar::valueChanged, [this](int value){
-        QScrollBar* sb = ui->logView->verticalScrollBar();
-        int min = sb->minimum();
-        int max = sb->maximum();
-        int range = max - min;
-
-        auto* proxyModel = qobject_cast<QAbstractProxyModel*>(ui->logView->model());
-        if (!proxyModel)
-        {
-            qWarning() << "Unexpected model type in log view";
-            return;
-        }
-
-        LogModel* model = qobject_cast<LogModel*>(proxyModel->sourceModel());
-        if (!model)
-        {
-            qWarning() << "Unexpected model type in log view";
-            return;
-        }
-
-        // TODO: upside fetching
-
-        if (value - min >= range * 0.95)
-            model->fetchDownMore();
-    });
+    connect(ui->logView->verticalScrollBar(), &QScrollBar::valueChanged, this, &MainWindow::checkFetchNeeded);
+    connect(ui->logView->verticalScrollBar(), &QScrollBar::rangeChanged, this, &MainWindow::checkFetchNeeded);
 }
 
 MainWindow::~MainWindow()
@@ -187,6 +164,41 @@ void MainWindow::on_actionSelect_all_triggered()
 void MainWindow::on_actionDeselect_all_triggered()
 {
     updateFormatActions(false);
+}
+
+void MainWindow::checkFetchNeeded()
+{
+    QT_SLOT_BEGIN
+
+    QScrollBar* sb = ui->logView->verticalScrollBar();
+    int min = sb->minimum();
+    int max = sb->maximum();
+    int range = max - min;
+
+    auto* proxyModel = qobject_cast<QAbstractProxyModel*>(ui->logView->model());
+    if (!proxyModel)
+    {
+        qWarning() << "Unexpected model type in log view";
+        return;
+    }
+
+    LogModel* model = qobject_cast<LogModel*>(proxyModel->sourceModel());
+    if (!model)
+    {
+        qWarning() << "Unexpected model type in log view";
+        return;
+    }
+
+    // TODO: upside fetching
+
+    if (sb->value() - min >= range * 0.95 ||
+        sb->maximum() == 0 ||
+        !sb->isVisible())
+    {
+        model->fetchDownMore();
+    }
+
+    QT_SLOT_END
 }
 
 void MainWindow::addFormat(const std::string& format)

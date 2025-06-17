@@ -28,6 +28,8 @@ private slots:
     void on_actionSelect_all_triggered();
     void on_actionDeselect_all_triggered();
 
+    void checkFetchNeeded();
+
 private:
     void addFormat(const std::string& format);
 
