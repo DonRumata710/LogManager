@@ -68,7 +68,12 @@ QVariant LogModel::headerData(int section, Qt::Orientation orientation, int role
         return QVariant();
 
     if (role == Qt::DisplayRole)
-        return fields[section].name;
+    {
+        if (section == 0)
+            return tr("module");
+        else
+            return fields[section - 1].name;
+    }
 
     return QVariant();
 }
@@ -86,7 +91,7 @@ int LogModel::columnCount(const QModelIndex& parent) const
     if (parent.isValid())
         return 0;
 
-    return fields.size();
+    return fields.size() + 1;
 }
 
 bool LogModel::hasChildren(const QModelIndex& parent) const
@@ -108,11 +113,18 @@ QVariant LogModel::data(const QModelIndex& index, int role) const
     if (role == Qt::DisplayRole)
     {
         const auto& log = logs[index.row()];
-        const auto& field = fields[index.column()];
 
-        auto valueIt = log.values.find(field.name);
-        if (valueIt != log.values.end())
-            return valueIt->second;
+        if (index.column() == 0)
+        {
+            return log.module;
+        }
+        else
+        {
+            const auto& field = fields[index.column() - 1];
+            auto valueIt = log.values.find(field.name);
+            if (valueIt != log.values.end())
+                return valueIt->second;
+        }
     }
 
     return QVariant();
