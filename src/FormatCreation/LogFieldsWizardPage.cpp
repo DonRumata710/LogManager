@@ -11,8 +11,8 @@ LogFieldsWizardPage::LogFieldsWizardPage(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    ui->tableWidget->setColumnCount(3);
-    ui->tableWidget->setHorizontalHeaderLabels({"Name", "Regex", "Type"});
+    ui->tableWidget->setColumnCount(4);
+    ui->tableWidget->setHorizontalHeaderLabels({ "Name", "Regex", "Type", "Optional" });
     ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 
     registerField("fields", this, "fields", SIGNAL(fieldsChanged()));
@@ -37,6 +37,7 @@ QVariantList LogFieldsWizardPage::getFields() const
         fieldData["name"] = ui->tableWidget->item(i, 0)->text();
         fieldData["regex"] = ui->tableWidget->item(i, 1)->text();
         fieldData["type"] = static_cast<int>(QMetaType::fromName(ui->tableWidget->item(i, 2)->text().toLatin1()).id());
+        fieldData["optional"] = ui->tableWidget->item(i, 3)->text() == "Yes";
         fields.append(fieldData);
     }
     return fields;
@@ -55,10 +56,12 @@ void LogFieldsWizardPage::on_bAdd_clicked()
         QTableWidgetItem* nameItem = new QTableWidgetItem(dialog.getField().name);
         QTableWidgetItem* regexItem = new QTableWidgetItem(dialog.getField().regex.pattern());
         QTableWidgetItem* typeItem = new QTableWidgetItem(QMetaType::typeName(dialog.getField().type));
+        QTableWidgetItem* optionalItem = new QTableWidgetItem(dialog.getField().isOptional ? "Yes" : "No");
 
         ui->tableWidget->setItem(row, 0, nameItem);
         ui->tableWidget->setItem(row, 1, regexItem);
         ui->tableWidget->setItem(row, 2, typeItem);
+        ui->tableWidget->setItem(row, 3, optionalItem);
 
         updateFields();
     }
