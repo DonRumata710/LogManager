@@ -202,6 +202,9 @@ void MainWindow::addFormat(const std::string& format)
         checkActions();
     });
     ui->menuFormats->addAction(action);
+
+    selectedFormats.insert(format);
+    checkActions();
 }
 
 void MainWindow::showLogs(std::unique_ptr<LogManager>&& logManager, const LogManager::ScanResult& scanResult)
