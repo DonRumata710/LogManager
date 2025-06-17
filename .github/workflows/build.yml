@@ -76,7 +76,7 @@ jobs:
           cd external/libs
           $zip = Get-ChildItem -Filter '*.zip' | Select-Object -First 1
           7z x $zip.FullName -o'quazip'
-          cd "quazip"
+          cd "quazip/quazip-1.5"
           cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=deps/win64/Release/quazip -DCMAKE_PATH_PREFIX=deps/win64/Release -DQUAZIP_QT_MAJOR_VERSION=6 -DQUAZIP_BZIP2=OFF
           cmake --build build --config Release --parallel
           cmake --install build --config Release
