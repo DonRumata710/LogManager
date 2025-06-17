@@ -49,10 +49,10 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $zlibVersion = '1.3.1'
+          $zlibVersion = '131'
           cd external/libs
-          7z x zlib-$zlibVersion.zip
-          cd "zlib-$zlibVersion"
+          7z x zlib$zlibVersion.zip
+          cd "zlib$zlibVersion"
           cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=deps/win64/Release/zlib
           cmake --build build --config Release --parallel
           cmake --install build --config Release
