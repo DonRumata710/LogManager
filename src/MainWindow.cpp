@@ -281,6 +281,7 @@ void MainWindow::switchModel(QAbstractItemModel* model)
 {
     auto oldModel = ui->logView->model();
     ui->logView->setModel(model);
+    ui->logView->header()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
     if (oldModel)
         delete oldModel;
 }

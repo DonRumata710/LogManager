@@ -9,7 +9,6 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <map>
-#include <filesystem>
 #include <queue>
 
 
@@ -30,6 +29,8 @@ public:
 
     const std::unordered_set<std::shared_ptr<Format>>& getFormats() const;
     const std::unordered_set<QString>& getModules() const;
+
+    const std::unordered_set<QVariant, VariantHash>& getEnumList(const QString& field) const;
 
     void setTimeRange(const std::chrono::system_clock::time_point& minTime, const std::chrono::system_clock::time_point& maxTime);
 
@@ -66,7 +67,7 @@ private:
 
     std::chrono::system_clock::time_point parseTime(const QString& timeStr, const std::shared_ptr<Format>& format) const;
 
-    bool checkFormat(const QString& line, const std::shared_ptr<Format>& format);
+    bool checkFormat(const QStringList& parts, const std::shared_ptr<Format>& format);
 
     Log createLog(const QString& filename, std::shared_ptr<Format> format);
 
@@ -75,6 +76,9 @@ private:
 
     void switchToNextLog(HeapItem& heapItem);
 
+    QStringList splitLine(const QString& line, const std::shared_ptr<Format>& format) const;
+    QVariant getValue(const QString& value, const Format::Field& field, const std::shared_ptr<Format>& format);
+
 private:
     std::unordered_map<QString, std::map<std::chrono::system_clock::time_point, LogMetadata, std::greater<std::chrono::system_clock::time_point>>> docs;
     std::unordered_set<std::shared_ptr<Format>> usedFormats;
@@ -82,4 +86,5 @@ private:
     std::chrono::system_clock::time_point minTime;
     std::chrono::system_clock::time_point maxTime;
     std::priority_queue<HeapItem, std::vector<HeapItem>, std::greater<HeapItem>> mergeHeap;
+    std::unordered_map<QString, std::unordered_set<QVariant, VariantHash>> enumLists;
 };

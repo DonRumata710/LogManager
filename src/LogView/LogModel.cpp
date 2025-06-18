@@ -9,7 +9,13 @@ LogModel::LogModel(std::unique_ptr<LogManager>&& logManager, QObject *parent) :
     for (const auto& format : manager->getFormats())
     {
         for (const auto& field : format->fields)
+        {
+            auto it = std::find_if(fields.begin(), fields.end(),
+                         [&field](const Format::Field& f) { return f.name == field.name; });
+            if (it != fields.end())
+                continue;
             fields.push_back(field);
+        }
     }
 }
 
@@ -59,6 +65,26 @@ const std::vector<Format::Field>& LogModel::getFields() const
     return fields;
 }
 
+const std::unordered_set<QVariant, VariantHash> LogModel::availableValues(int section) const
+{
+    if (section < 0 || section >= fields.size())
+        return {};
+
+    if (section == 0)
+    {
+        std::unordered_set<QVariant, VariantHash> modules;
+        for (const auto& module: manager->getModules())
+            modules.emplace(module);
+        return modules;
+    }
+
+    const auto& field = getField(section);
+    if (!field.isEnum)
+        return {};
+
+    return manager->getEnumList(field.name);
+}
+
 QVariant LogModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
     if (section < 0 || section >= columnCount())
@@ -72,7 +98,7 @@ QVariant LogModel::headerData(int section, Qt::Orientation orientation, int role
         if (section == 0)
             return tr("module");
         else
-            return fields[section - 1].name;
+            return getField(section).name;
     }
 
     return QVariant();
@@ -120,7 +146,7 @@ QVariant LogModel::data(const QModelIndex& index, int role) const
         }
         else
         {
-            const auto& field = fields[index.column() - 1];
+            const auto& field = getField(index.column());
             auto valueIt = log.values.find(field.name);
             if (valueIt != log.values.end())
                 return valueIt->second;
@@ -159,4 +185,9 @@ void LogModel::update()
             logs.push_back(std::move(entry.value()));
         }
     }
+}
+
+const Format::Field& LogModel::getField(int section) const
+{
+    return fields[section - 1];
 }

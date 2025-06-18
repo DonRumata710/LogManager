@@ -22,6 +22,7 @@ public:
     void fetchDownMore();
 
     const std::vector<Format::Field>& getFields() const;
+    const std::unordered_set<QVariant, VariantHash> availableValues(int section) const;
 
     QVariant headerData(int section,
                         Qt::Orientation orientation,
@@ -38,6 +39,8 @@ public:
 
 private:
     void update();
+
+    const Format::Field& getField(int section) const;
 
 private:
     std::unique_ptr<LogManager> manager;

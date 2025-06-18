@@ -1,6 +1,8 @@
 #include "FilterHeader.h"
 
 #include "LogFilterModel.h"
+#include "LogModel.h"
+#include "MultiSelectComboBox.h"
 
 #include <QAbstractItemModel>
 #include <QResizeEvent>
@@ -15,13 +17,6 @@ FilterHeader::FilterHeader(Qt::Orientation orientation, QWidget *parent) : QHead
 
     setContextMenuPolicy(Qt::CustomContextMenu);
     connect(this, &QWidget::customContextMenuRequested, this, &FilterHeader::showContextMenu);
-}
-
-QString FilterHeader::filterText(int section) const
-{
-    if (section < 0 || section >= static_cast<int>(editors.size()))
-        return QString();
-    return editors[section]->text();
 }
 
 void FilterHeader::showContextMenu(const QPoint& point)
@@ -99,20 +94,46 @@ void FilterHeader::setupEditors()
         return;
     }
 
+    LogModel* logModel = qobject_cast<LogModel*>(proxyModel->sourceModel());
+    if (!logModel)
+    {
+        qWarning() << "FilterHeader requires a LogModel as the source model.";
+        return;
+    }
+
     for (int i = 0; i < model()->columnCount(); ++i)
     {
-        auto edit = new QLineEdit(this);
-        edit->setPlaceholderText(tr("Filter"));
-        connect(edit, &QLineEdit::textChanged, this, [this, i, proxyModel](const QString& t) {
-            emit filterChanged(i, t);
+        auto values = logModel->availableValues(i);
+        if (values.empty())
+        {
+            auto edit = new QLineEdit(this);
+            edit->setPlaceholderText(tr("Filter"));
+            connect(edit, &QLineEdit::textChanged, this, [this, i, proxyModel](const QString& t) {
+                emit filterChanged(i, t);
 
-            auto filter = t;
-            if (!t.isEmpty() && *t.rbegin() != '*')
-                filter += '*';
-            proxyModel->setFilterWildcard(i, filter);
-        });
+                auto filter = t;
+                if (!t.isEmpty() && *t.rbegin() != '*')
+                    filter += '*';
+                proxyModel->setFilterWildcard(i, filter);
+            });
 
-        editors.push_back(edit);
+            editors.push_back(edit);
+        }
+        else
+        {
+            auto comboBox = new MultiSelectComboBox(this);
+            comboBox->setPlaceholderText(tr("Filter"));
+
+            for (const auto& val : values)
+                comboBox->addItem(val.toString(), val);
+
+            connect(comboBox, &MultiSelectComboBox::currentTextChanged, this, [this, i, proxyModel, comboBox](const QString& text) {
+                emit filterChanged(i, text);
+                proxyModel->setVariantList(i, comboBox->currentText());
+            });
+
+            editors.push_back(comboBox);
+        }
     }
     updatePositions();
 }
@@ -141,8 +162,6 @@ void FilterHeader::adjustColumnWidths(QAbstractItemModel* model)
 {
     if (model && model->columnCount() > 0)
     {
-        for (int i = 0; i < model->columnCount() - 1; ++i)
-            setSectionResizeMode(i, QHeaderView::ResizeMode::ResizeToContents);
         setSectionResizeMode(model->columnCount() - 1, QHeaderView::ResizeMode::Stretch);
     }
 }
