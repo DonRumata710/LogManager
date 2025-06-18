@@ -119,6 +119,16 @@ const std::unordered_set<QString>& LogManager::getModules() const
     return modules;
 }
 
+const std::unordered_set<QVariant, VariantHash>& LogManager::getEnumList(const QString& field) const
+{
+    auto it = enumLists.find(field);
+    if (it != enumLists.end())
+        return it->second;
+
+    static const std::unordered_set<QVariant, VariantHash> emptySet;
+    return emptySet;
+}
+
 void LogManager::setTimeRange(const std::chrono::system_clock::time_point& _minTime, const std::chrono::system_clock::time_point& _maxTime)
 {
     minTime = _minTime;
@@ -246,12 +256,11 @@ std::optional<std::pair<std::shared_ptr<Format>, std::chrono::system_clock::time
         if (!line)
             continue;
 
-        auto parts = line->split(format->separator);
-
+        auto parts = splitLine(line.value(), format);
         if (parts.size() <= format->timeFieldIndex)
             continue;
 
-        if (!checkFormat(line.value(), format))
+        if (!checkFormat(parts, format))
             continue;
 
         auto time = parseTime(parts[format->timeFieldIndex], format);
@@ -269,15 +278,27 @@ std::chrono::system_clock::time_point LogManager::parseTime(const QString& timeS
     return tp;
 }
 
-bool LogManager::checkFormat(const QString& line, const std::shared_ptr<Format>& format)
+bool LogManager::checkFormat(const QStringList& parts, const std::shared_ptr<Format>& format)
 {
+    int index = 0;
     for (const auto& field : format->fields)
     {
-        QRegularExpressionMatch match = field.regex.match(line);
-        if (!match.hasMatch())
+        if (parts.size() <= index)
         {
-            return field.isOptional;
+            if (!field.isOptional)
+                return false;
+
+            ++index;
+            continue;
         }
+
+        QRegularExpressionMatch match = field.regex.match(parts[index]);
+        bool hasMatch = match.hasMatch();
+        bool isOutOfList = field.isEnum && !field.values.empty() && !field.values.contains(getValue(match.captured(0), field, format));
+        if ((!hasMatch || isOutOfList) && !field.isOptional)
+            return false;
+
+        ++index;
     }
     return true;
 }
@@ -295,8 +316,8 @@ std::optional<LogEntry> LogManager::getEntry(HeapItem& heapItem)
     std::optional<QString> line = heapItem.line;
     do
     {
-        auto parts = line->split(heapItem.metadata->format->separator);
-        if (!checkFormat(line.value(), heapItem.metadata->format) || parts.size() <= heapItem.metadata->format->timeFieldIndex)
+        auto parts = splitLine(line.value(), heapItem.metadata->format);
+        if (!checkFormat(parts, heapItem.metadata->format) || parts.size() <= heapItem.metadata->format->timeFieldIndex)
         {
             if (!entry.line.isEmpty())
                 entry.line += '\n' + line.value();
@@ -318,41 +339,27 @@ std::optional<LogEntry> LogManager::getEntry(HeapItem& heapItem)
         for (size_t i = 0, fieldCount = 0; i < heapItem.metadata->format->fields.size(); ++i)
         {
             const auto& field = heapItem.metadata->format->fields[i];
-            auto& fieldValue = entry.values[field.name];
 
-            QRegularExpressionMatch match = field.regex.match(parts[fieldCount].trimmed());
+            QRegularExpressionMatch match = field.regex.match(parts[fieldCount]);
             if (match.hasMatch())
             {
-                switch (field.type)
+                auto fieldValue = getValue(match.captured(0), field, heapItem.metadata->format);
+                if (field.isEnum)
                 {
-                case QMetaType::Bool:
-                {
-                    static const std::unordered_set<QString> trueValues = {
-                        "true", "t", "1", "yes", "y", "on", "enabled"
-                    };
-                    fieldValue = trueValues.contains(match.captured(0).toLower());
-                    break;
-                }
-                case QMetaType::Int:
-                    fieldValue = match.captured(0).toInt();
-                    break;
-                case QMetaType::UInt:
-                    fieldValue = match.captured(0).toUInt();
-                    break;
-                case QMetaType::Double:
-                    fieldValue = match.captured(0).toDouble();
-                    break;
-                case QMetaType::QString:
-                    fieldValue = match.captured(0);
-                    break;
-                case QMetaType::QDateTime:
-                    fieldValue = QDateTime::fromString(match.captured(0), heapItem.metadata->format->timeRegex);
-                    break;
-                default:
-                    qCritical() << "Unsupported field type for field" << field.name << ": " << field.type;
-                    continue;
+                    if (!field.values.empty() && !field.values.contains(fieldValue))
+                    {
+                        if (!field.isOptional)
+                            qWarning() << "Enum value for field" << field.name << "is not defined in the format:" << fieldValue;
+                        continue;
+                    }
+
+                    if (field.values.empty())
+                        enumLists[field.name].emplace(fieldValue);
+                    for (const auto& val : field.values)
+                        enumLists[field.name].emplace(val);
                 }
 
+                entry.values[field.name] = fieldValue;
                 ++fieldCount;
             }
             else
@@ -432,6 +439,41 @@ void LogManager::switchToNextLog(HeapItem& heapItem)
             heapItem.line = line.value();
             return;
         }
+    }
+}
+
+QStringList LogManager::splitLine(const QString& line, const std::shared_ptr<Format>& format) const
+{
+    auto parts = line.split(format->separator);
+    for (auto& part : parts)
+        part = part.trimmed();
+    return parts;
+}
+
+QVariant LogManager::getValue(const QString& value, const Format::Field& field, const std::shared_ptr<Format>& format)
+{
+    switch (field.type)
+    {
+    case QMetaType::Bool:
+    {
+        static const std::unordered_set<QString> trueValues = {
+            "true", "t", "1", "yes", "y", "on", "enabled"
+        };
+        return trueValues.contains(value.toLower());
+    }
+    case QMetaType::Int:
+        return value;
+    case QMetaType::UInt:
+        return value.toUInt();
+    case QMetaType::Double:
+        return value.toDouble();
+    case QMetaType::QString:
+        return value;
+    case QMetaType::QDateTime:
+        return QDateTime::fromString(value, format->timeRegex);
+    default:
+        qCritical() << "Unsupported field type for field" << field.name << ": " << field.type;
+        return QVariant();
     }
 }
 

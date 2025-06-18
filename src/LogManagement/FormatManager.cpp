@@ -61,10 +61,21 @@ void FormatManager::addFormat(const std::shared_ptr<Format>& format)
     for (const auto& field : format->fields)
     {
         QJsonObject fieldObj;
+
         fieldObj.insert("name", field.name);
         fieldObj.insert("regex", field.regex.pattern());
-        fieldObj.insert("type", QMetaType::typeName(field.type));
+        fieldObj.insert("type", QMetaType(field.type).name());
         fieldObj.insert("optional", field.isOptional);
+        fieldObj.insert("enum", field.isEnum);
+
+        if (!field.values.empty())
+        {
+            QJsonArray valuesArray;
+            for (const auto& value : field.values)
+                valuesArray.append(value.toJsonValue());
+            fieldObj.insert("values", valuesArray);
+        }
+
         fieldArray.append(fieldObj);
     }
     formatObj.insert("fields", fieldArray);
@@ -161,11 +172,22 @@ void FormatManager::loadFormats()
             {
                 Format::Field& f = format->fields.emplace_back();
                 QJsonObject fieldObj = field.toObject();
+
                 f.name = fieldObj.value("name").toString();
                 f.regex = QRegularExpression(fieldObj.value("regex").toString());
-                f.type = static_cast<QMetaType::Type>(QMetaType::type(fieldObj.value("type").toString().toLatin1().constData()));
+                f.type = static_cast<QMetaType::Type>(QMetaType::fromName(fieldObj.value("type").toString().toLatin1().constData()).id());
+
                 if (fieldObj.contains("optional"))
                     f.isOptional = fieldObj.value("optional").toBool();
+
+                if (fieldObj.contains("enum"))
+                    f.isEnum = fieldObj.value("enum").toBool();
+                if (fieldObj.contains("values"))
+                {
+                    auto valuesArray = fieldObj.value("values").toArray();
+                    for (const auto& value : std::as_const(valuesArray))
+                        f.values.emplace(value.toVariant());
+                }
             }
 
             formats[std::filesystem::path(file.toStdString()).stem().string()] = std::move(format);
