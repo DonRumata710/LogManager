@@ -262,6 +262,9 @@ bool LogManager::checkFormat(const QStringList& parts, const std::shared_ptr<For
         if ((!hasMatch || isOutOfList) && !field.isOptional)
             return false;
 
+        if (field.isOptional && !hasMatch && !parts[index].isEmpty())
+            continue;
+
         ++index;
     }
     return true;
@@ -336,6 +339,10 @@ std::optional<LogEntry> LogManager::getEntry(HeapItem& heapItem)
                 if (!field.isOptional)
                 {
                     qCritical() << "Failed to match field" << field.name << "in line:" << line.value();
+                }
+                else if (parts[fieldCount].isEmpty())
+                {
+                    ++fieldCount;
                 }
             }
         }
