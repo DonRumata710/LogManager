@@ -21,6 +21,7 @@ MainWindow::MainWindow(QWidget *parent) :
     formatManager(qobject_cast<Application*>(QApplication::instance())->getFormatManager())
 {
     ui->setupUi(this);
+    setWindowTitle(QApplication::instance()->applicationName());
 
     for (const auto& format : formatManager.getFormats())
     {
@@ -32,6 +33,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     auto header = new FilterHeader(Qt::Horizontal, ui->logView);
     ui->logView->setHeader(header);
+    ui->logView->setUniformRowHeights(false);
 
     connect(ui->logView->verticalScrollBar(), &QScrollBar::valueChanged, this, &MainWindow::checkFetchNeeded);
     connect(ui->logView->verticalScrollBar(), &QScrollBar::rangeChanged, this, &MainWindow::checkFetchNeeded);
