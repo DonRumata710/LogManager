@@ -29,7 +29,7 @@ void FilterHeader::showContextMenu(const QPoint& point)
     for (int col = 0; col < model()->columnCount(); ++col)
     {
         QString header = model()->headerData(col, Qt::Horizontal).toString();
-        QAction *action = menu.addAction(header);
+        QAction* action = menu.addAction(header);
         action->setCheckable(true);
         action->setChecked(!isSectionHidden(col));
 

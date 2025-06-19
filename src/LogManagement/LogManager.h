@@ -72,12 +72,15 @@ private:
     Log createLog(const QString& filename, std::shared_ptr<Format> format);
 
     std::optional<LogEntry> getEntry(HeapItem& heapItem);
+    std::optional<LogEntry> getPreparedEntry(HeapItem& heapItem);
     std::optional<QString> getLine(HeapItem& heapItem);
 
     void switchToNextLog(HeapItem& heapItem);
 
     QStringList splitLine(const QString& line, const std::shared_ptr<Format>& format) const;
     QVariant getValue(const QString& value, const Format::Field& field, const std::shared_ptr<Format>& format);
+
+    void prepareEntry(LogEntry& entry);
 
 private:
     std::unordered_map<QString, std::map<std::chrono::system_clock::time_point, LogMetadata, std::greater<std::chrono::system_clock::time_point>>> docs;

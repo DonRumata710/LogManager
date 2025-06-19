@@ -37,6 +37,9 @@ void LogFilterModel::setVariantList(int column, const QStringList& values)
 
 bool LogFilterModel::filterAcceptsRow(int source_row, const QModelIndex& source_parent) const
 {
+    if (source_parent.isValid())
+        return true;
+
     for (const auto& filter : columnFilters)
     {
         int column = filter.first;

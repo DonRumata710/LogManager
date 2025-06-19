@@ -175,14 +175,11 @@ void MainWindow::checkFetchNeeded()
     int max = sb->maximum();
     int range = max - min;
 
+    auto* model = qobject_cast<LogModel*>(ui->logView->model());
     auto* proxyModel = qobject_cast<QAbstractProxyModel*>(ui->logView->model());
-    if (!proxyModel)
-    {
-        qWarning() << "Unexpected model type in log view";
-        return;
-    }
+    if (proxyModel)
+        model = qobject_cast<LogModel*>(proxyModel->sourceModel());
 
-    LogModel* model = qobject_cast<LogModel*>(proxyModel->sourceModel());
     if (!model)
     {
         qWarning() << "Unexpected model type in log view";

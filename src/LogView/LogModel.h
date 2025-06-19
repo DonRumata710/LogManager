@@ -9,7 +9,7 @@
 #include <deque>
 
 
-class LogModel : public QAbstractTableModel
+class LogModel : public QAbstractItemModel
 {
     Q_OBJECT
 
@@ -28,6 +28,9 @@ public:
                         Qt::Orientation orientation,
                         int role = Qt::DisplayRole) const override;
 
+    QModelIndex index(int row, int column, const QModelIndex& parent = QModelIndex()) const override;
+    QModelIndex parent(const QModelIndex& index) const override;
+
     int rowCount(const QModelIndex& parent = QModelIndex()) const override;
     int columnCount(const QModelIndex& parent = QModelIndex()) const override;
 
@@ -42,11 +45,20 @@ private:
 
     const Format::Field& getField(int section) const;
 
+    size_t getParentIndex(const QModelIndex& index) const;
+
+private:
+    struct LogItem
+    {
+        LogEntry entry;
+        size_t index;
+    };
+
 private:
     std::unique_ptr<LogManager> manager;
     std::vector<Format::Field> fields;
     std::unordered_set<QString> modules;
-    std::deque<LogEntry> logs;
+    std::deque<LogItem> logs;
 
     static const int BatchSize = 1000;
 };

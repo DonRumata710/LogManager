@@ -123,6 +123,7 @@ void LogManager::setTimePoint(const std::chrono::system_clock::time_point& time)
         {
             if (entry->time >= time)
             {
+                prepareEntry(entry.value());
                 heapItem.entry = std::move(*entry);
                 mergeHeap.emplace(std::move(heapItem));
                 break;
@@ -144,7 +145,7 @@ std::optional<LogEntry> LogManager::next()
     HeapItem top = mergeHeap.top();
     mergeHeap.pop();
 
-    auto nextEntry = getEntry(top);
+    auto nextEntry = getPreparedEntry(top);
     if (nextEntry)
         mergeHeap.emplace(std::move(top.module), std::move(top.startTime), std::move(top.metadata), *nextEntry, std::move(top.line));
 
@@ -283,7 +284,12 @@ std::optional<LogEntry> LogManager::getEntry(HeapItem& heapItem)
         if (!checkFormat(parts, heapItem.metadata->format) || parts.size() <= heapItem.metadata->format->timeFieldIndex)
         {
             if (!entry.line.isEmpty())
+            {
                 entry.line += '\n' + line.value();
+                if (!entry.additionalLines.isEmpty())
+                    entry.additionalLines += '\n';
+                entry.additionalLines += line.value();
+            }
             continue;
         }
 
@@ -341,6 +347,14 @@ std::optional<LogEntry> LogManager::getEntry(HeapItem& heapItem)
     if (!entry.line.isEmpty())
         return entry;
     return std::nullopt;
+}
+
+std::optional<LogEntry> LogManager::getPreparedEntry(HeapItem& heapItem)
+{
+    auto res = getEntry(heapItem);
+    if (res)
+        prepareEntry(res.value());
+    return res;
 }
 
 std::optional<QString> LogManager::getLine(HeapItem& heapItem)
@@ -437,6 +451,28 @@ QVariant LogManager::getValue(const QString& value, const Format::Field& field, 
     default:
         qCritical() << "Unsupported field type for field" << field.name << ": " << field.type;
         return QVariant();
+    }
+}
+
+void LogManager::prepareEntry(LogEntry& entry)
+{
+    auto lines = entry.additionalLines.split('\n');
+
+    size_t minSpaces = 0;
+    for (auto& line : lines)
+    {
+        size_t spaces = 0;
+        while (line.size() < spaces && (line[spaces] == ' '|| line[spaces] == '\t'))
+            ++spaces;
+        if (spaces < minSpaces)
+            minSpaces = spaces;
+    }
+
+    if (minSpaces > 0)
+    {
+        for (auto& line : lines)
+            line.remove(0, minSpaces);
+        entry.additionalLines = lines.join('\n');
     }
 }
 
