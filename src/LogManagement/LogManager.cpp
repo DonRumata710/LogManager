@@ -502,11 +502,11 @@ void LogManager::prepareEntry(LogEntry& entry)
 {
     auto lines = entry.additionalLines.split('\n');
 
-    size_t minSpaces = 0;
+    size_t minSpaces = std::numeric_limits<size_t>::max();
     for (auto& line : lines)
     {
         size_t spaces = 0;
-        while (line.size() < spaces && (line[spaces] == ' '|| line[spaces] == '\t'))
+        while (spaces < line.size() && (line[spaces] == ' '|| line[spaces] == '\t'))
             ++spaces;
         if (spaces < minSpaces)
             minSpaces = spaces;
