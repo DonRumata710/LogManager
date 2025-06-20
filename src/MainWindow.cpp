@@ -159,13 +159,21 @@ void MainWindow::on_actionRemove_format_triggered()
 
 void MainWindow::on_actionSelect_all_triggered()
 {
+    QT_SLOT_BEGIN
+
     updateFormatActions(true);
+
+    QT_SLOT_END
 }
 
 
 void MainWindow::on_actionDeselect_all_triggered()
 {
+    QT_SLOT_BEGIN
+
     updateFormatActions(false);
+
+    QT_SLOT_END
 }
 
 void MainWindow::checkFetchNeeded()
@@ -175,6 +183,7 @@ void MainWindow::checkFetchNeeded()
     QScrollBar* sb = ui->logView->verticalScrollBar();
     int min = sb->minimum();
     int max = sb->maximum();
+    int value = sb->value();
     int range = max - min;
 
     auto* model = qobject_cast<LogModel*>(ui->logView->model());
@@ -190,12 +199,8 @@ void MainWindow::checkFetchNeeded()
 
     // TODO: upside fetching
 
-    if (sb->value() - min >= range * 0.95 ||
-        sb->maximum() == 0 ||
-        !sb->isVisible())
-    {
+    if (value - min >= range * 0.9 || max == 0 || !sb->isVisible())
         model->fetchDownMore();
-    }
 
     QT_SLOT_END
 }
