@@ -46,7 +46,7 @@ void FilterHeader::setModel(QAbstractItemModel* model)
     QHeaderView::setModel(model);
     setupEditors();
     adjustColumnWidths(model);
-    setSectionHidden(0, true);
+    setSectionHidden(1, true);
 }
 
 void FilterHeader::resizeEvent(QResizeEvent *event)

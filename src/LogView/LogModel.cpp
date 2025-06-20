@@ -6,10 +6,23 @@ LogModel::LogModel(std::unique_ptr<LogManager>&& logManager, QObject *parent) :
     manager(std::move(logManager)),
     modules(manager->getModules())
 {
+    bool flag = false;
     for (const auto& format : manager->getFormats())
     {
+        QString timeFormatName = format->fields.at(format->timeFieldIndex).name;
+
         for (const auto& field : format->fields)
         {
+            if (field.name == timeFormatName)
+            {
+                if (!flag)
+                {
+                    fields.insert(fields.begin(), field);
+                    flag = true;
+                }
+                continue;
+            }
+
             auto it = std::find_if(fields.begin(), fields.end(),
                          [&field](const Format::Field& f) { return f.name == field.name; });
             if (it != fields.end())
@@ -96,7 +109,7 @@ QVariant LogModel::headerData(int section, Qt::Orientation orientation, int role
 
     if (role == Qt::DisplayRole)
     {
-        if (section == 0)
+        if (section == 1)
             return tr("module");
         else
             return getField(section).name;
@@ -199,7 +212,7 @@ QVariant LogModel::data(const QModelIndex& index, int role) const
 
         const auto& log = logs[index.row()];
 
-        if (index.column() == 0)
+        if (index.column() == 1)
         {
             return log.entry.module;
         }
@@ -242,6 +255,8 @@ void LogModel::update()
 
 const Format::Field& LogModel::getField(int section) const
 {
+    if (section == 0)
+        return fields[0];
     return fields[section - 1];
 }
 
