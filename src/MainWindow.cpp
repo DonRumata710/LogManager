@@ -3,7 +3,6 @@
 
 #include "Application.h"
 #include "Utils.h"
-#include "LogManagement/LogManager.h"
 #include "InitialDataDialog.h"
 #include "LogView/LogModel.h"
 #include "LogView/FilterHeader.h"
@@ -52,9 +51,8 @@ void MainWindow::on_actionOpen_folder_triggered()
     if (folderPath.isEmpty())
         return;
 
-    std::unique_ptr<LogManager> manager = std::make_unique<LogManager>();
-    auto scanResult = manager->loadFolders({ folderPath }, getSelectedFormats());
-    showLogs(std::move(manager), scanResult);
+    std::unique_ptr<LogManager> manager = std::make_unique<LogManager>(std::vector<QString>{ folderPath }, getSelectedFormats());
+    showLogs(std::move(manager));
 
     QT_SLOT_END
 }
@@ -87,12 +85,8 @@ void MainWindow::on_actionOpen_file_triggered()
     for (auto it = range.first; it != range.second; ++it)
         formats.push_back(it->second);
 
-    std::unique_ptr<LogManager> manager = std::make_unique<LogManager>();
-    auto scanResult = manager->loadFile(file, formats);
-    if (!scanResult)
-        return;
-
-    showLogs(std::move(manager), scanResult.value());
+    std::unique_ptr<LogManager> manager = std::make_unique<LogManager>(file, formats);
+    showLogs(std::move(manager));
 
     QT_SLOT_END
 }
@@ -223,9 +217,9 @@ void MainWindow::addFormat(const std::string& format)
     checkActions();
 }
 
-void MainWindow::showLogs(std::unique_ptr<LogManager>&& logManager, const LogManager::ScanResult& scanResult)
+void MainWindow::showLogs(std::unique_ptr<LogManager>&& logManager)
 {
-    InitialDataDialog dialog(scanResult);
+    InitialDataDialog dialog(*logManager, this);
     if (dialog.exec() != QDialog::Accepted)
         return;
 
@@ -245,11 +239,9 @@ void MainWindow::showLogs(std::unique_ptr<LogManager>&& logManager, const LogMan
         return;
     }
 
-    logManager->setTimeRange(startDate, endDate);
-
     auto proxyModel = new LogFilterModel(this);
 
-    auto logModel = new LogModel(std::move(logManager), proxyModel);
+    auto logModel = new LogModel(std::move(logManager), startDate, proxyModel);
     logModel->setModules(modules);
 
     proxyModel->setSourceModel(logModel);

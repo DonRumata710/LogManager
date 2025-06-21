@@ -33,7 +33,7 @@ private slots:
 private:
     void addFormat(const std::string& format);
 
-    void showLogs(std::unique_ptr<LogManager>&& logManager, const LogManager::ScanResult& scanResult);
+    void showLogs(std::unique_ptr<LogManager>&& logManager);
     void checkActions();
     void setLogActionsEnabled(bool enabled);
     void setCloseActionEnabled(bool enabled);

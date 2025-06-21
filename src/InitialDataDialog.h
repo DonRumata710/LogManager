@@ -16,7 +16,7 @@ class InitialDataDialog : public QDialog
     Q_OBJECT
 
 public:
-    explicit InitialDataDialog(const LogManager::ScanResult&, QWidget *parent = nullptr);
+    explicit InitialDataDialog(const LogManager&, QWidget *parent = nullptr);
     ~InitialDataDialog();
 
     std::chrono::system_clock::time_point getStartDate() const;

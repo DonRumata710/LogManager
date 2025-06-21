@@ -1,9 +1,10 @@
 #include "LogModel.h"
 
 
-LogModel::LogModel(std::unique_ptr<LogManager>&& logManager, QObject *parent) :
+LogModel::LogModel(std::unique_ptr<LogManager>&& logManager, std::chrono::system_clock::time_point startTime, QObject *parent) :
     QAbstractItemModel(parent),
     manager(std::move(logManager)),
+    iterator(manager->getIterator(startTime)),
     modules(manager->getModules())
 {
     bool flag = false;
@@ -48,7 +49,7 @@ void LogModel::setModules(const std::unordered_set<QString>& _modules)
 
 bool LogModel::canFetchDownMore() const
 {
-    return manager->hasLogs();
+    return iterator.hasLogs();
 }
 
 void LogModel::fetchDownMore()
@@ -61,7 +62,7 @@ void LogModel::fetchDownMore()
     std::vector<LogEntry> newLogs;
     while (newLogs.size() < BatchSize)
     {
-        auto nextEntry = manager->next();
+        auto nextEntry = iterator.next();
         if (!nextEntry)
             break;
 
@@ -242,7 +243,7 @@ void LogModel::update()
 
     while (logs.size() < BatchSize * 2)
     {
-        auto entry = manager->next();
+        auto entry = iterator.next();
         if (!entry)
             break;
 

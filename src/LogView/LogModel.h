@@ -14,7 +14,7 @@ class LogModel : public QAbstractItemModel
     Q_OBJECT
 
 public:
-    explicit LogModel(std::unique_ptr<LogManager>&& logManager, QObject *parent = nullptr);
+    explicit LogModel(std::unique_ptr<LogManager>&& logManager, std::chrono::system_clock::time_point startTime, QObject *parent = nullptr);
 
     void setModules(const std::unordered_set<QString>& modules);
 
@@ -56,6 +56,8 @@ private:
 
 private:
     std::unique_ptr<LogManager> manager;
+    LogEntryIterator iterator;
+
     std::vector<Format::Field> fields;
     std::unordered_set<QString> modules;
     std::deque<LogItem> logs;

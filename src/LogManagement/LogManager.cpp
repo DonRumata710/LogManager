@@ -1,29 +1,18 @@
 #include "LogManager.h"
 
+#include "LogUtils.h"
+
 #include <QFile>
 #include <QDebug>
 
 #include <filesystem>
 
 
-LogManager::ScanResult& LogManager::ScanResult::operator+=(const ScanResult& other)
+LogManager::LogManager(const std::vector<QString>& folders, const std::vector<std::shared_ptr<Format>>& formats)
 {
-    if (other.minTime < minTime)
-        minTime = other.minTime;
-    if (other.maxTime > maxTime)
-        maxTime = other.maxTime;
-    modules.insert(other.modules.begin(), other.modules.end());
-    return *this;
-}
+    logStorage = std::make_shared<LogStorage>();
 
-LogManager::ScanResult LogManager::loadFolders(const std::vector<QString>& folders, const std::vector<std::shared_ptr<Format>>& formats)
-{
-    clear();
-
-    ScanResult scanResult;
-    scanResult.minTime = std::chrono::system_clock::now();
-    scanResult.maxTime = std::chrono::system_clock::now();
-
+    bool foundFiles = false;
     for (const auto& folder : folders)
     {
         for (const auto& entry : std::filesystem::recursive_directory_iterator(folder.toStdString()))
@@ -41,126 +30,60 @@ LogManager::ScanResult LogManager::loadFolders(const std::vector<QString>& folde
                 continue;
             }
 
-            scanResult += result.value();
+            foundFiles = true;
         }
     }
 
-    minTime = scanResult.minTime;
-    maxTime = scanResult.maxTime;
-
-    return scanResult;
+    if (!foundFiles)
+    {
+        throw std::runtime_error("No suitable files found in the specified folders.");
+    }
 }
 
-std::optional<LogManager::ScanResult> LogManager::loadFile(const QString& filename, const std::vector<std::shared_ptr<Format>> &formats)
+LogManager::LogManager(const QString& filename, const std::vector<std::shared_ptr<Format>> &formats)
 {
-    clear();
+    logStorage = std::make_shared<LogStorage>();
 
     std::filesystem::path path = filename.toStdString();
     auto result = addFile(QString::fromStdString(path.string()), QString::fromStdString(path.stem().string()), QString::fromStdString(path.extension().string()), formats);
-
     if (!result)
     {
         qDebug() << "No suitable format found for file:" << filename;
-        return std::nullopt;
+        throw std::runtime_error("No suitable format found for file: " + path.string() + '.');
     }
-
-    ScanResult scanResult = result.value();
-    scanResult.maxTime = std::chrono::system_clock::now();
-    
-    minTime = scanResult.minTime;
-    maxTime = scanResult.maxTime;
-    return scanResult;
 }
 
 const std::unordered_set<std::shared_ptr<Format>>& LogManager::getFormats() const
 {
-    return usedFormats;
+    return logStorage->getFormats();
 }
 
 const std::unordered_set<QString>& LogManager::getModules() const
 {
-    return modules;
+    return logStorage->getModules();
 }
 
 const std::unordered_set<QVariant, VariantHash>& LogManager::getEnumList(const QString& field) const
 {
-    auto it = enumLists.find(field);
-    if (it != enumLists.end())
-        return it->second;
-
-    static const std::unordered_set<QVariant, VariantHash> emptySet;
-    return emptySet;
+    return logStorage->getEnumList(field);
 }
 
-void LogManager::setTimeRange(const std::chrono::system_clock::time_point& _minTime, const std::chrono::system_clock::time_point& _maxTime)
+std::chrono::system_clock::time_point LogManager::getMinTime() const
 {
-    minTime = _minTime;
-    maxTime = _maxTime;
-
-    setTimePoint(minTime);
+    return logStorage->getMinTime();
 }
 
-void LogManager::setTimePoint(const std::chrono::system_clock::time_point& time)
+std::chrono::system_clock::time_point LogManager::getMaxTime() const
 {
-    mergeHeap = decltype(mergeHeap)();
-
-    for (auto& module : docs)
-    {
-        auto logIt = module.second.upper_bound(time);
-        if (logIt == module.second.begin())
-            continue;
-
-        --logIt;
-
-        HeapItem heapItem;
-        heapItem.module = module.first;
-        heapItem.startTime = logIt->first;
-        heapItem.metadata = &logIt->second;
-
-        heapItem.line = logIt->second.log.nextLine().value_or(QString());
-
-        while (auto entry = getEntry(heapItem))
-        {
-            if (entry->time >= time)
-            {
-                prepareEntry(entry.value());
-                heapItem.entry = std::move(*entry);
-                mergeHeap.emplace(std::move(heapItem));
-                break;
-            }
-        }
-    }
+    return logStorage->getMaxTime();
 }
 
-bool LogManager::hasLogs() const
+LogEntryIterator LogManager::getIterator(const std::chrono::system_clock::time_point& startTime)
 {
-    return !mergeHeap.empty();
+    return LogEntryIterator(logStorage, startTime);
 }
 
-std::optional<LogEntry> LogManager::next()
-{
-    if (!hasLogs())
-        return std::nullopt;
-
-    HeapItem top = mergeHeap.top();
-    mergeHeap.pop();
-
-    auto nextEntry = getPreparedEntry(top);
-    if (nextEntry)
-        mergeHeap.emplace(std::move(top.module), std::move(top.startTime), std::move(top.metadata), *nextEntry, std::move(top.line));
-
-    return std::move(top.entry);
-}
-
-void LogManager::clear()
-{
-    docs.clear();
-    mergeHeap = decltype(mergeHeap)();
-    usedFormats.clear();
-    modules.clear();
-}
-
-std::optional<LogManager::ScanResult> LogManager::addFile(const QString& filename, const QString& stem, const QString& extension, const std::vector<std::shared_ptr<Format>>& formats)
+bool LogManager::addFile(const QString& filename, const QString& stem, const QString& extension, const std::vector<std::shared_ptr<Format>>& formats)
 {
     QString module = stem;
 
@@ -184,11 +107,11 @@ std::optional<LogManager::ScanResult> LogManager::addFile(const QString& filenam
     }
 
     if (actualFormats.empty())
-        return std::nullopt;
+        return false;
 
     auto result = scanLogFile(filename, actualFormats);
     if (!result)
-        return std::nullopt;
+        return false;
 
     qDebug() << "File discovered:" << filename;
 
@@ -201,14 +124,15 @@ std::optional<LogManager::ScanResult> LogManager::addFile(const QString& filenam
             module = result->first->name;
     }
 
-    docs[module].emplace(result->second, LogMetadata{ result->first, createLog(filename, result->first) });
-    usedFormats.insert(result->first);
-    modules.insert(module);
+    LogStorage::LogMetadata metadata;
+    metadata.format = result->first;
+    metadata.fileBuilder = [this](const QString& filename, const std::shared_ptr<Format>& format) {
+        return std::make_shared<Log>(createLog(filename, format));
+    };
+    metadata.filename = filename;
+    logStorage->addLog(module, result->second, result->first, std::move(metadata));
 
-    ScanResult scanResult;
-    scanResult.minTime = result->second;
-    scanResult.modules.insert(module);
-    return scanResult;
+    return true;
 }
 
 std::optional<std::pair<std::shared_ptr<Format>, std::chrono::system_clock::time_point>> LogManager::scanLogFile(const QString& filename, const std::vector<std::shared_ptr<Format>>& formats)
@@ -234,261 +158,7 @@ std::optional<std::pair<std::shared_ptr<Format>, std::chrono::system_clock::time
     return std::nullopt;
 }
 
-std::chrono::system_clock::time_point LogManager::parseTime(const QString& timeStr, const std::shared_ptr<Format>& format) const
-{
-    std::istringstream ss(timeStr.toStdString());
-    std::chrono::system_clock::time_point tp;
-    ss >> std::chrono::parse(format->timeRegex.toStdString(), tp);
-    return tp;
-}
-
-bool LogManager::checkFormat(const QStringList& parts, const std::shared_ptr<Format>& format)
-{
-    int index = 0;
-    for (const auto& field : format->fields)
-    {
-        if (parts.size() <= index)
-        {
-            if (!field.isOptional)
-                return false;
-
-            ++index;
-            continue;
-        }
-
-        QRegularExpressionMatch match = field.regex.match(parts[index]);
-        bool hasMatch = match.hasMatch();
-        bool isOutOfList = field.isEnum && !field.values.empty() && !field.values.contains(getValue(match.captured(0), field, format));
-        if ((!hasMatch || isOutOfList) && !field.isOptional)
-            return false;
-
-        if (field.isOptional && !hasMatch && !parts[index].isEmpty())
-            continue;
-
-        ++index;
-    }
-    return true;
-}
-
 Log LogManager::createLog(const QString& path, std::shared_ptr<Format> format)
 {
     return Log(std::make_unique<QFile>(path), format->encoding, std::shared_ptr<std::vector<Format::Comment>>(format, &format->comments));
-}
-
-std::optional<LogEntry> LogManager::getEntry(HeapItem& heapItem)
-{
-    LogEntry entry;
-    entry.module = heapItem.module;
-
-    std::optional<QString> line = heapItem.line;
-    do
-    {
-        auto parts = splitLine(line.value(), heapItem.metadata->format);
-        if (!checkFormat(parts, heapItem.metadata->format) || parts.size() <= heapItem.metadata->format->timeFieldIndex)
-        {
-            if (!entry.line.isEmpty())
-            {
-                entry.line += '\n' + line.value();
-                if (!entry.additionalLines.isEmpty())
-                    entry.additionalLines += '\n';
-                entry.additionalLines += line.value();
-            }
-            continue;
-        }
-
-        auto time = parseTime(parts[heapItem.metadata->format->timeFieldIndex], heapItem.metadata->format);
-        if (time < minTime || time > maxTime)
-            continue;
-
-        if (!entry.line.isEmpty())
-        {
-            heapItem.line = line.value();
-            return entry;
-        }
-
-        entry.line = line.value();
-        entry.time = time;
-        for (size_t i = 0, fieldCount = 0; i < heapItem.metadata->format->fields.size(); ++i)
-        {
-            const auto& field = heapItem.metadata->format->fields[i];
-
-            QRegularExpressionMatch match = field.regex.match(parts[fieldCount]);
-            if (match.hasMatch())
-            {
-                auto fieldValue = getValue(match.captured(0), field, heapItem.metadata->format);
-                if (field.isEnum)
-                {
-                    if (!field.values.empty() && !field.values.contains(fieldValue))
-                    {
-                        if (!field.isOptional)
-                            qWarning() << "Enum value for field" << field.name << "is not defined in the format:" << fieldValue;
-                        continue;
-                    }
-
-                    if (field.values.empty())
-                        enumLists[field.name].emplace(fieldValue);
-                    for (const auto& val : field.values)
-                        enumLists[field.name].emplace(val);
-                }
-
-                entry.values[field.name] = fieldValue;
-                ++fieldCount;
-            }
-            else
-            {
-                if (!field.isOptional)
-                {
-                    qCritical() << "Failed to match field" << field.name << "in line:" << line.value();
-                }
-                else if (parts[fieldCount].isEmpty())
-                {
-                    ++fieldCount;
-                }
-            }
-        }
-    }
-    while ((line = heapItem.metadata->log.nextLine()));
-
-    switchToNextLog(heapItem);
-
-    if (!entry.line.isEmpty())
-        return entry;
-    return std::nullopt;
-}
-
-std::optional<LogEntry> LogManager::getPreparedEntry(HeapItem& heapItem)
-{
-    auto res = getEntry(heapItem);
-    if (res)
-        prepareEntry(res.value());
-    return res;
-}
-
-std::optional<QString> LogManager::getLine(HeapItem& heapItem)
-{
-    auto line = heapItem.metadata->log.nextLine();
-    if (line)
-        return line;
-
-    auto docIt = docs.find(heapItem.module);
-    if (docIt == docs.end())
-    {
-        qDebug() << "Unknown module: " << heapItem.module;
-        return std::nullopt;
-    }
-
-    auto fileIt = docIt->second.upper_bound(heapItem.startTime);
-    if (fileIt == docIt->second.begin())
-        return std::nullopt;
-
-    --fileIt;
-    heapItem.startTime = fileIt->first;
-    heapItem.metadata = &fileIt->second;
-
-    return getLine(heapItem);
-}
-
-void LogManager::switchToNextLog(HeapItem& heapItem)
-{
-    while (true)
-    {
-        auto moduleIt = docs.find(heapItem.module);
-        if (moduleIt == docs.end())
-        {
-            qDebug() << "Unknown module: " << heapItem.module;
-            return;
-        }
-
-        auto fileIt = moduleIt->second.find(heapItem.startTime);
-        if (fileIt == moduleIt->second.begin())
-        {
-            qDebug() << "No more logs for module:" << heapItem.module;
-            heapItem.line.clear();
-            return;
-        }
-        else if (fileIt == moduleIt->second.end())
-        {
-            qCritical() << "Unexpected result after next log search:" << heapItem.module;
-            heapItem.line.clear();
-            return;
-        }
-
-        --fileIt;
-        heapItem.startTime = fileIt->first;
-        heapItem.metadata = &fileIt->second;
-
-        auto line = heapItem.metadata->log.nextLine();
-        if (line)
-        {
-            heapItem.line = line.value();
-            return;
-        }
-    }
-}
-
-QStringList LogManager::splitLine(const QString& line, const std::shared_ptr<Format>& format) const
-{
-    auto parts = line.split(format->separator);
-    for (auto& part : parts)
-        part = part.trimmed();
-    return parts;
-}
-
-QVariant LogManager::getValue(const QString& value, const Format::Field& field, const std::shared_ptr<Format>& format)
-{
-    switch (field.type)
-    {
-    case QMetaType::Bool:
-    {
-        static const std::unordered_set<QString> trueValues = {
-            "true", "t", "1", "yes", "y", "on", "enabled"
-        };
-        return trueValues.contains(value.toLower());
-    }
-    case QMetaType::Int:
-        return value;
-    case QMetaType::UInt:
-        return value.toUInt();
-    case QMetaType::Double:
-        return value.toDouble();
-    case QMetaType::QString:
-        return value;
-    case QMetaType::QDateTime:
-        return QDateTime::fromString(value, format->timeRegex);
-    default:
-        qCritical() << "Unsupported field type for field" << field.name << ": " << field.type;
-        return QVariant();
-    }
-}
-
-void LogManager::prepareEntry(LogEntry& entry)
-{
-    auto lines = entry.additionalLines.split('\n');
-
-    size_t minSpaces = std::numeric_limits<size_t>::max();
-    for (auto& line : lines)
-    {
-        size_t spaces = 0;
-        while (spaces < line.size() && (line[spaces] == ' '|| line[spaces] == '\t'))
-            ++spaces;
-        if (spaces < minSpaces)
-            minSpaces = spaces;
-    }
-
-    if (minSpaces > 0)
-    {
-        for (auto& line : lines)
-            line.remove(0, minSpaces);
-        entry.additionalLines = lines.join('\n');
-    }
-}
-
-bool LogManager::HeapItem::operator<(const HeapItem& other) const
-{
-    return entry.time < other.entry.time;
-}
-
-bool LogManager::HeapItem::operator>(const HeapItem& other) const
-{
-    return entry.time > other.entry.time;
 }
