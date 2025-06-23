@@ -55,7 +55,7 @@ void LogModel::setModules(const std::unordered_set<QString>& _modules)
 
 bool LogModel::canFetchDownMore() const
 {
-    return iterator->hasLogs();
+    return iterator && iterator->hasLogs();
 }
 
 void LogModel::fetchDownMore()
