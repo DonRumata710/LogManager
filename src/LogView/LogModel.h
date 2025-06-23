@@ -13,6 +13,11 @@ class LogModel : public QAbstractItemModel
 {
     Q_OBJECT
 
+    enum class PredefinedColumn
+    {
+        Module = 1
+    };
+
 public:
     explicit LogModel(std::unique_ptr<LogManager>&& logManager, std::chrono::system_clock::time_point startTime, QObject *parent = nullptr);
 

@@ -85,7 +85,7 @@ const std::unordered_set<QVariant, VariantHash> LogModel::availableValues(int se
     if (section < 0 || section >= fields.size())
         return {};
 
-    if (section == 0)
+    if (section == static_cast<int>(PredefinedColumn::Module))
     {
         std::unordered_set<QVariant, VariantHash> modules;
         for (const auto& module: manager->getModules())
@@ -110,7 +110,7 @@ QVariant LogModel::headerData(int section, Qt::Orientation orientation, int role
 
     if (role == Qt::DisplayRole)
     {
-        if (section == 1)
+        if (section == static_cast<int>(PredefinedColumn::Module))
             return tr("module");
         else
             return getField(section).name;
@@ -213,7 +213,7 @@ QVariant LogModel::data(const QModelIndex& index, int role) const
 
         const auto& log = logs[index.row()];
 
-        if (index.column() == 1)
+        if (index.column() == static_cast<int>(PredefinedColumn::Module))
         {
             return log.entry.module;
         }
