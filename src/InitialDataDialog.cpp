@@ -6,17 +6,17 @@
 #include <QPushButton>
 
 
-InitialDataDialog::InitialDataDialog(const LogManager::ScanResult& scanResult, QWidget* parent) :
+InitialDataDialog::InitialDataDialog(const LogManager& manager, QWidget* parent) :
     QDialog(parent),
     ui(new Ui::InitialDataDialog)
 {
     ui->setupUi(this);
 
-    auto minMs = std::chrono::duration_cast<std::chrono::milliseconds>(scanResult.minTime.time_since_epoch()).count();
-    QDateTime minDateTime = QDateTime::fromMSecsSinceEpoch(minMs, Qt::UTC);
+    auto minMs = std::chrono::duration_cast<std::chrono::milliseconds>(manager.getMinTime().time_since_epoch()).count();
+    QDateTime minDateTime = QDateTime::fromMSecsSinceEpoch(minMs, Qt::LocalTime);
 
-    auto maxMs = std::chrono::duration_cast<std::chrono::milliseconds>(scanResult.maxTime.time_since_epoch()).count();
-    QDateTime maxDateTime = QDateTime::fromMSecsSinceEpoch(maxMs, Qt::UTC);
+    auto maxMs = std::chrono::duration_cast<std::chrono::milliseconds>(manager.getMaxTime().time_since_epoch()).count();
+    QDateTime maxDateTime = QDateTime::fromMSecsSinceEpoch(maxMs, Qt::LocalTime);
 
     ui->startTimeEdit->setMinimumDateTime(minDateTime);
     ui->startTimeEdit->setMaximumDateTime(maxDateTime);
@@ -32,13 +32,14 @@ InitialDataDialog::InitialDataDialog(const LogManager::ScanResult& scanResult, Q
         ui->endTimeEdit->setMinimumDateTime(dateTime);
     });
 
-    for (const auto& module : scanResult.modules)
+    for (const auto& module : manager.getModules())
     {
         QListWidgetItem* item = new QListWidgetItem(module, ui->modulesListWidget);
         item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
         item->setCheckState(Qt::Unchecked);
-        connect(ui->modulesListWidget, SIGNAL(itemChanged(QListWidgetItem*)), this, SLOT(onModulesSelectionChanged()));
     }
+
+    connect(ui->modulesListWidget, SIGNAL(itemChanged(QListWidgetItem*)), this, SLOT(onModulesSelectionChanged()));
 
     updateOkButtonState(false);
 }
@@ -48,16 +49,14 @@ InitialDataDialog::~InitialDataDialog()
     delete ui;
 }
 
-std::chrono::system_clock::time_point InitialDataDialog::getStartDate() const
+QDateTime InitialDataDialog::getStartDate() const
 {
-    qint64 ms_since_epoch = ui->startTimeEdit->dateTime().toMSecsSinceEpoch();
-    return std::chrono::system_clock::time_point(std::chrono::milliseconds(ms_since_epoch));
+    return ui->startTimeEdit->dateTime();
 }
 
-std::chrono::system_clock::time_point InitialDataDialog::getEndDate() const
+QDateTime InitialDataDialog::getEndDate() const
 {
-    qint64 ms_since_epoch = ui->endTimeEdit->dateTime().toMSecsSinceEpoch();
-    return std::chrono::system_clock::time_point(std::chrono::milliseconds(ms_since_epoch));
+    return ui->endTimeEdit->dateTime();
 }
 
 std::unordered_set<QString> InitialDataDialog::getModules() const

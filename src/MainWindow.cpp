@@ -3,7 +3,6 @@
 
 #include "Application.h"
 #include "Utils.h"
-#include "LogManagement/LogManager.h"
 #include "InitialDataDialog.h"
 #include "LogView/LogModel.h"
 #include "LogView/FilterHeader.h"
@@ -26,7 +25,7 @@ MainWindow::MainWindow(QWidget *parent) :
     for (const auto& format : formatManager.getFormats())
     {
         addFormat(format.first);
-        selectedFormats.insert(format.first);
+        selectedFormats += format.second->name;
     }
 
     setLogActionsEnabled(!selectedFormats.empty());
@@ -37,6 +36,11 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(ui->logView->verticalScrollBar(), &QScrollBar::valueChanged, this, &MainWindow::checkFetchNeeded);
     connect(ui->logView->verticalScrollBar(), &QScrollBar::rangeChanged, this, &MainWindow::checkFetchNeeded);
+
+    auto logService = qobject_cast<Application*>(QApplication::instance())->getLogService();
+    connect(this, &MainWindow::openFile, logService, &LogService::openFile);
+    connect(this, &MainWindow::openFolder, logService, &LogService::openFolder);
+    connect(logService, &LogService::logManagerCreated, this, &MainWindow::logManagerCreated);
 }
 
 MainWindow::~MainWindow()
@@ -52,9 +56,7 @@ void MainWindow::on_actionOpen_folder_triggered()
     if (folderPath.isEmpty())
         return;
 
-    std::unique_ptr<LogManager> manager = std::make_unique<LogManager>();
-    auto scanResult = manager->loadFolders({ folderPath }, getSelectedFormats());
-    showLogs(std::move(manager), scanResult);
+    openFolder(folderPath, selectedFormats);
 
     QT_SLOT_END
 }
@@ -64,35 +66,34 @@ void MainWindow::on_actionOpen_file_triggered()
     QT_SLOT_BEGIN
 
     QString extensions;
-    std::unordered_multimap<QString, std::shared_ptr<Format>> formatMap;
+    QMap<QString, QString> formatMap;
     for (const auto& formatName : selectedFormats)
     {
-        auto format = formatManager.getFormats().at(formatName);
+        auto format = formatManager.getFormats().at(formatName.toStdString());
         if (!format)
         {
             continue;
         }
 
-        formatMap.emplace(format->extension, format);
+        formatMap.insert(format->extension, format->name);
 
         if (!extensions.isEmpty())
             extensions += ";;";
-        extensions += QString::fromStdString(formatName) + " (*" + format->extension + ")";
+        extensions += formatName + " (*" + format->extension + ")";
     }
 
-    QString file = QFileDialog::getOpenFileName(this, tr("Open File"), QDir::currentPath(), extensions);
-
-    auto range = formatMap.equal_range(file.mid(file.lastIndexOf('.')));
-    std::vector<std::shared_ptr<Format>> formats;
-    for (auto it = range.first; it != range.second; ++it)
-        formats.push_back(it->second);
-
-    std::unique_ptr<LogManager> manager = std::make_unique<LogManager>();
-    auto scanResult = manager->loadFile(file, formats);
-    if (!scanResult)
+    QString file = QFileDialog::getOpenFileName(this, tr("Open File"), QDir::currentPath(), extensions);    
+    if (file.isEmpty())
         return;
 
-    showLogs(std::move(manager), scanResult.value());
+    QStringList formats;
+    auto range = formatMap.equal_range(file.mid(file.lastIndexOf('.')));
+    for (auto it = range.first; it != range.second; ++it)
+    {
+        formats += *it;
+    }
+
+    openFile(file, formats);
 
     QT_SLOT_END
 }
@@ -146,7 +147,7 @@ void MainWindow::on_actionRemove_format_triggered()
     {
         if (action->text() == selectedFormat)
         {
-            selectedFormats.erase(selectedFormat.toStdString());
+            selectedFormats.remove(selectedFormats.indexOf(selectedFormat));
             ui->menuFormats->removeAction(action);
             formatActions.erase(std::remove(formatActions.begin(), formatActions.end(), action), formatActions.end());
             delete action;
@@ -205,27 +206,44 @@ void MainWindow::checkFetchNeeded()
     QT_SLOT_END
 }
 
-void MainWindow::addFormat(const std::string& format)
+void MainWindow::on_actionExport_as_is_triggered()
 {
-    QAction* action = formatActions.emplace_back(new QAction(QString::fromStdString(format), this));
-    action->setCheckable(true);
-    action->setChecked(true);
-    connect(action, &QAction::toggled, this, [this, format](bool checked) {
-        if (checked)
-            selectedFormats.insert(format);
-        else
-            selectedFormats.erase(format);
-        checkActions();
-    });
-    ui->menuFormats->addAction(action);
+    QT_SLOT_BEGIN
 
-    selectedFormats.insert(format);
-    checkActions();
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Export Logs"), QDir::currentPath(), tr("Log Files (*.log);; CSV Files (*.csv)"));
+    if (fileName.isEmpty())
+        return;
+
+
+
+    QT_SLOT_END
 }
 
-void MainWindow::showLogs(std::unique_ptr<LogManager>&& logManager, const LogManager::ScanResult& scanResult)
+void MainWindow::on_actionFull_export_triggered()
 {
-    InitialDataDialog dialog(scanResult);
+    QT_SLOT_BEGIN
+
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Export Logs"), QDir::currentPath(), tr("Log Files (*.log);; CSV Files (*.csv)"));
+    if (fileName.isEmpty())
+        return;
+
+    QT_SLOT_END
+}
+
+void MainWindow::logManagerCreated()
+{
+    QT_SLOT_BEGIN
+
+    auto logService = qobject_cast<Application*>(QApplication::instance())->getLogService();
+
+    auto logManager = logService->getLogManager();
+    if (!logService->getLogManager())
+    {
+        qWarning() << "LogManager is not created.";
+        return;
+    }
+
+    InitialDataDialog dialog(*logManager);
     if (dialog.exec() != QDialog::Accepted)
         return;
 
@@ -245,17 +263,36 @@ void MainWindow::showLogs(std::unique_ptr<LogManager>&& logManager, const LogMan
         return;
     }
 
-    logManager->setTimeRange(startDate, endDate);
-
     auto proxyModel = new LogFilterModel(this);
 
-    auto logModel = new LogModel(std::move(logManager), proxyModel);
+    auto logModel = new LogModel(logService, startDate, proxyModel);
     logModel->setModules(modules);
 
     proxyModel->setSourceModel(logModel);
 
     switchModel(proxyModel);
     setCloseActionEnabled(true);
+
+    QT_SLOT_END
+}
+
+void MainWindow::addFormat(const std::string& format)
+{
+    QAction* action = formatActions.emplace_back(new QAction(QString::fromStdString(format), this));
+    action->setCheckable(true);
+    action->setChecked(true);
+    QString formatName = QString::fromStdString(format);
+    connect(action, &QAction::toggled, this, [this, formatName](bool checked) {
+        if (checked)
+            selectedFormats += formatName;
+        else
+            selectedFormats.remove(selectedFormats.indexOf(formatName));
+        checkActions();
+    });
+    ui->menuFormats->addAction(action);
+
+    selectedFormats += formatName;
+    checkActions();
 }
 
 void MainWindow::checkActions()
@@ -288,16 +325,4 @@ void MainWindow::switchModel(QAbstractItemModel* model)
     ui->logView->header()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
     if (oldModel)
         delete oldModel;
-}
-
-std::vector<std::shared_ptr<Format>> MainWindow::getSelectedFormats() const
-{
-    std::vector<std::shared_ptr<Format>> formats;
-    for (const auto& formatName : selectedFormats)
-    {
-        auto format = formatManager.getFormats().at(formatName);
-        if (format)
-            formats.push_back(format);
-    }
-    return formats;
 }

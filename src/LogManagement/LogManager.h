@@ -1,93 +1,37 @@
 #pragma once
 
 #include "Format.h"
-#include "LogEntry.h"
 #include "Log.h"
+#include "LogStorage.h"
+#include "LogEntryIterator.h"
 
 #include <QDateTime>
 
 #include <unordered_set>
-#include <unordered_map>
-#include <map>
-#include <queue>
 
 
 class LogManager
 {
 public:
-    struct ScanResult
-    {
-        std::chrono::system_clock::time_point minTime;
-        std::chrono::system_clock::time_point maxTime = std::chrono::system_clock::now();
-        std::unordered_set<QString> modules;
-
-        ScanResult& operator+=(const ScanResult& other);
-    };
-
-    ScanResult loadFolders(const std::vector<QString>& folders, const std::vector<std::shared_ptr<Format>>& formats);
-    std::optional<ScanResult> loadFile(const QString& filename, const std::vector<std::shared_ptr<Format>>& formats);
+    LogManager(const std::vector<QString>& folders, const std::vector<std::shared_ptr<Format>>& formats);
+    LogManager(const QString& filename, const std::vector<std::shared_ptr<Format>>& formats);
 
     const std::unordered_set<std::shared_ptr<Format>>& getFormats() const;
     const std::unordered_set<QString>& getModules() const;
 
     const std::unordered_set<QVariant, VariantHash>& getEnumList(const QString& field) const;
 
-    void setTimeRange(const std::chrono::system_clock::time_point& minTime, const std::chrono::system_clock::time_point& maxTime);
+    std::chrono::system_clock::time_point getMinTime() const;
+    std::chrono::system_clock::time_point getMaxTime() const;
 
-    void setTimePoint(const std::chrono::system_clock::time_point& time);
-
-    bool hasLogs() const;
-    std::optional<LogEntry> next();
+    LogEntryIterator getIterator(const std::chrono::system_clock::time_point& startTime = std::chrono::system_clock::time_point());
 
 private:
-    struct LogMetadata
-    {
-        std::shared_ptr<Format> format;
-        std::unique_ptr<Log> log;
-    };
+    bool addFile(const QString& filename, const QString& stem, const QString& extension, std::function<std::unique_ptr<QIODevice>(const QString&)> createFileFunc, const std::vector<std::shared_ptr<Format>>& formats);
+    std::optional<std::pair<std::shared_ptr<Format>, std::chrono::system_clock::time_point>> scanLogFile(const QString& filename, std::function<std::unique_ptr<QIODevice>(const QString&)> createFileFunc, const std::vector<std::shared_ptr<Format>>& formats);
 
-    struct HeapItem
-    {
-        QString module;
-        std::chrono::system_clock::time_point startTime;
-        LogMetadata* metadata;
-
-        LogEntry entry;
-        QString line;
-
-        bool operator<(const HeapItem& other) const;
-        bool operator>(const HeapItem& other) const;
-    };
+    Log createLog(const QString& filename, std::function<std::unique_ptr<QIODevice>(const QString&)> createFileFunc, std::shared_ptr<Format> format);
 
 private:
-    void clear();
-
-    std::optional<LogManager::ScanResult> addFile(const QString& filename, const QString& stem, const QString& extension, std::function<std::unique_ptr<QIODevice>()> createFileFunc, const std::vector<std::shared_ptr<Format>>& formats);
-    std::optional<std::pair<std::shared_ptr<Format>, std::chrono::system_clock::time_point>> scanLogFile(std::function<std::unique_ptr<QIODevice>()> createFileFunc, const std::vector<std::shared_ptr<Format>>& formats);
-
-    std::chrono::system_clock::time_point parseTime(const QString& timeStr, const std::shared_ptr<Format>& format) const;
-
-    bool checkFormat(const QStringList& parts, const std::shared_ptr<Format>& format);
-
-    Log createLog(std::unique_ptr<QIODevice>&& file, std::shared_ptr<Format> format);
-
-    std::optional<LogEntry> getEntry(HeapItem& heapItem);
-    std::optional<LogEntry> getPreparedEntry(HeapItem& heapItem);
-    std::optional<QString> getLine(HeapItem& heapItem);
-
-    void switchToNextLog(HeapItem& heapItem);
-
-    QStringList splitLine(const QString& line, const std::shared_ptr<Format>& format) const;
-    QVariant getValue(const QString& value, const Format::Field& field, const std::shared_ptr<Format>& format);
-
-    void prepareEntry(LogEntry& entry);
-
-private:
-    std::unordered_map<QString, std::map<std::chrono::system_clock::time_point, LogMetadata, std::greater<std::chrono::system_clock::time_point>>> docs;
-    std::unordered_set<std::shared_ptr<Format>> usedFormats;
-    std::unordered_set<QString> modules;
-    std::chrono::system_clock::time_point minTime;
-    std::chrono::system_clock::time_point maxTime;
-    std::priority_queue<HeapItem, std::vector<HeapItem>, std::greater<HeapItem>> mergeHeap;
-    std::unordered_map<QString, std::unordered_set<QVariant, VariantHash>> enumLists;
+    std::shared_ptr<LogStorage> logStorage;
 };

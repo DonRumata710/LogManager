@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../LogManagement/LogManager.h"
+#include "LogService.h"
 
 #include <QAbstractTableModel>
 #include <QRegularExpression>
@@ -13,8 +13,13 @@ class LogModel : public QAbstractItemModel
 {
     Q_OBJECT
 
+    enum class PredefinedColumn
+    {
+        Module = 1
+    };
+
 public:
-    explicit LogModel(std::unique_ptr<LogManager>&& logManager, QObject *parent = nullptr);
+    explicit LogModel(LogService* logManager, const QDateTime& startTime, QObject *parent = nullptr);
 
     void setModules(const std::unordered_set<QString>& modules);
 
@@ -40,6 +45,10 @@ public:
 
     Qt::ItemFlags flags(const QModelIndex& index) const override;
 
+public slots:
+    void handleIterator(int);
+    void handleData(int);
+
 private:
     void update();
 
@@ -54,8 +63,21 @@ private:
         size_t index;
     };
 
+    enum class DataRequestType
+    {
+        Append,
+        Prepend,
+        Replace
+    };
+
 private:
-    std::unique_ptr<LogManager> manager;
+    LogService* service;
+
+    int iteratorIndex;
+    std::shared_ptr<LogEntryIterator> iterator;
+
+    std::unordered_map<int, DataRequestType> dataRequests;
+
     std::vector<Format::Field> fields;
     std::unordered_set<QString> modules;
     std::deque<LogItem> logs;
