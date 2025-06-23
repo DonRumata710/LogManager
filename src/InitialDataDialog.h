@@ -19,8 +19,8 @@ public:
     explicit InitialDataDialog(const LogManager&, QWidget *parent = nullptr);
     ~InitialDataDialog();
 
-    std::chrono::system_clock::time_point getStartDate() const;
-    std::chrono::system_clock::time_point getEndDate() const;
+    QDateTime getStartDate() const;
+    QDateTime getEndDate() const;
     std::unordered_set<QString> getModules() const;
 
 private slots:

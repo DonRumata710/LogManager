@@ -37,8 +37,9 @@ InitialDataDialog::InitialDataDialog(const LogManager& manager, QWidget* parent)
         QListWidgetItem* item = new QListWidgetItem(module, ui->modulesListWidget);
         item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
         item->setCheckState(Qt::Unchecked);
-        connect(ui->modulesListWidget, SIGNAL(itemChanged(QListWidgetItem*)), this, SLOT(onModulesSelectionChanged()));
     }
+
+    connect(ui->modulesListWidget, SIGNAL(itemChanged(QListWidgetItem*)), this, SLOT(onModulesSelectionChanged()));
 
     updateOkButtonState(false);
 }
@@ -48,16 +49,14 @@ InitialDataDialog::~InitialDataDialog()
     delete ui;
 }
 
-std::chrono::system_clock::time_point InitialDataDialog::getStartDate() const
+QDateTime InitialDataDialog::getStartDate() const
 {
-    qint64 ms_since_epoch = ui->startTimeEdit->dateTime().toMSecsSinceEpoch();
-    return std::chrono::system_clock::time_point(std::chrono::milliseconds(ms_since_epoch));
+    return ui->startTimeEdit->dateTime();
 }
 
-std::chrono::system_clock::time_point InitialDataDialog::getEndDate() const
+QDateTime InitialDataDialog::getEndDate() const
 {
-    qint64 ms_since_epoch = ui->endTimeEdit->dateTime().toMSecsSinceEpoch();
-    return std::chrono::system_clock::time_point(std::chrono::milliseconds(ms_since_epoch));
+    return ui->endTimeEdit->dateTime();
 }
 
 std::unordered_set<QString> InitialDataDialog::getModules() const

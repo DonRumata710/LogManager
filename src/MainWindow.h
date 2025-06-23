@@ -2,6 +2,7 @@
 
 #include "LogManagement/FormatManager.h"
 #include "LogManagement/LogManager.h"
+#include "LogService.h"
 
 #include <QMainWindow>
 #include <QAbstractItemModel>
@@ -30,10 +31,19 @@ private slots:
 
     void checkFetchNeeded();
 
+    void on_actionExport_as_is_triggered();
+
+    void on_actionFull_export_triggered();
+
+    void logManagerCreated();
+
+signals:
+    void openFile(const QString& file, const QStringList& formats);
+    void openFolder(const QString& logDirectory, const QStringList& formats);
+
 private:
     void addFormat(const std::string& format);
 
-    void showLogs(std::unique_ptr<LogManager>&& logManager);
     void checkActions();
     void setLogActionsEnabled(bool enabled);
     void setCloseActionEnabled(bool enabled);
@@ -41,13 +51,11 @@ private:
 
     void switchModel(QAbstractItemModel* model);
 
-    std::vector<std::shared_ptr<Format>> getSelectedFormats() const;
-
 private:
     Ui::MainWindow *ui;
     FormatManager& formatManager;
 
     std::vector<QAction*> formatActions;
 
-    std::unordered_set<std::string> selectedFormats;
+    QStringList selectedFormats;
 };

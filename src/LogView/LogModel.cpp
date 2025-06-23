@@ -1,14 +1,20 @@
 #include "LogModel.h"
 
+#include "Utils.h"
 
-LogModel::LogModel(std::unique_ptr<LogManager>&& logManager, std::chrono::system_clock::time_point startTime, QObject *parent) :
+
+LogModel::LogModel(LogService* logService, const QDateTime& startTime, QObject *parent) :
     QAbstractItemModel(parent),
-    manager(std::move(logManager)),
-    iterator(manager->getIterator(startTime)),
-    modules(manager->getModules())
+    service(logService),
+    modules(logService->getLogManager()->getModules())
 {
+    connect(service, &LogService::iteratorCreated, this, &LogModel::handleIterator);
+    connect(service, &LogService::dataLoaded, this, &LogModel::handleData);
+
+    iteratorIndex = service->requestIterator(startTime.toStdSysSeconds());
+
     bool flag = false;
-    for (const auto& format : manager->getFormats())
+    for (const auto& format : logService->getLogManager()->getFormats())
     {
         QString timeFormatName = format->fields.at(format->timeFieldIndex).name;
 
@@ -37,7 +43,7 @@ void LogModel::setModules(const std::unordered_set<QString>& _modules)
 {
     for (const auto& module : _modules)
     {
-        if (!manager->getModules().contains(module))
+        if (!service->getLogManager()->getModules().contains(module))
             throw std::runtime_error("Unexpected module: " + module.toStdString());
     }
 
@@ -49,7 +55,7 @@ void LogModel::setModules(const std::unordered_set<QString>& _modules)
 
 bool LogModel::canFetchDownMore() const
 {
-    return iterator.hasLogs();
+    return iterator->hasLogs();
 }
 
 void LogModel::fetchDownMore()
@@ -57,22 +63,7 @@ void LogModel::fetchDownMore()
     if (!canFetchDownMore())
         return;
 
-    auto time = logs.back().entry.time;
-
-    std::vector<LogEntry> newLogs;
-    while (newLogs.size() < BatchSize)
-    {
-        auto nextEntry = iterator.next();
-        if (!nextEntry)
-            break;
-
-        newLogs.push_back(nextEntry.value());
-    }
-
-    beginInsertRows(QModelIndex(), logs.size(), logs.size() + newLogs.size() - 1);
-    for (const auto& entry : newLogs)
-        logs.emplace_back(std::move(entry), logs.size());
-    endInsertRows();
+    dataRequests[service->requestLogEntries(iterator, BatchSize)] = DataRequestType::Append;
 }
 
 const std::vector<Format::Field>& LogModel::getFields() const
@@ -88,7 +79,7 @@ const std::unordered_set<QVariant, VariantHash> LogModel::availableValues(int se
     if (section == static_cast<int>(PredefinedColumn::Module))
     {
         std::unordered_set<QVariant, VariantHash> modules;
-        for (const auto& module: manager->getModules())
+        for (const auto& module : service->getLogManager()->getModules())
             modules.emplace(module);
         return modules;
     }
@@ -97,7 +88,7 @@ const std::unordered_set<QVariant, VariantHash> LogModel::availableValues(int se
     if (!field.isEnum)
         return {};
 
-    return manager->getEnumList(field.name);
+    return service->getLogManager()->getEnumList(field.name);
 }
 
 QVariant LogModel::headerData(int section, Qt::Orientation orientation, int role) const
@@ -237,21 +228,79 @@ Qt::ItemFlags LogModel::flags(const QModelIndex& index) const
     return QAbstractItemModel::flags(index) | Qt::ItemIsSelectable | Qt::ItemIsEditable;
 }
 
+void LogModel::handleIterator(int index)
+{
+    QT_SLOT_BEGIN
+    if (iteratorIndex == index)
+    {
+        iterator = service->getIterator(index);
+        update();
+    }
+    QT_SLOT_END
+}
+
+void LogModel::handleData(int index)
+{
+    QT_SLOT_BEGIN
+
+    auto it = dataRequests.find(index);
+    if (it == dataRequests.end())
+        return;
+
+    auto requestType = it->second;
+    dataRequests.erase(it);
+
+    auto data = service->getResult(index);
+
+    switch(requestType)
+    {
+    case DataRequestType::Append:
+        beginInsertRows(QModelIndex(), logs.size(), logs.size() + BatchSize - 1);
+        for (const auto& entry : data)
+        {
+            LogItem item;
+            item.entry = entry;
+            item.index = logs.size();
+            logs.push_back(item);
+        }
+        endInsertRows();
+        break;
+
+    case DataRequestType::Prepend:
+        beginInsertRows(QModelIndex(), 0, BatchSize - 1);
+        for (size_t i = data.size() - 1; i < data.size(); --i)
+        {
+            LogItem item;
+            item.entry = data[i];
+            item.index = i;
+            logs.push_front(item);
+        }
+        for (size_t i = data.size(); i < logs.size(); ++i)
+            logs[i].index = i;
+        endInsertRows();
+        break;
+
+    case DataRequestType::Replace:
+        beginResetModel();
+        logs.clear();
+        for (const auto& entry : data)
+        {
+            LogItem item;
+            item.entry = entry;
+            item.index = logs.size();
+            logs.push_back(item);
+        }
+        endResetModel();
+        break;
+    }
+
+    QT_SLOT_END
+}
+
 void LogModel::update()
 {
-    logs.clear();
-
-    while (logs.size() < BatchSize * 2)
-    {
-        auto entry = iterator.next();
-        if (!entry)
-            break;
-
-        if (modules.empty() || modules.contains(entry->module))
-        {
-            logs.emplace_back(std::move(entry.value()), logs.size());
-        }
-    }
+    dataRequests.clear();
+    dataRequests[service->requestLogEntries(iterator, BatchSize * 4)] = DataRequestType::Replace;
 }
 
 const Format::Field& LogModel::getField(int section) const
