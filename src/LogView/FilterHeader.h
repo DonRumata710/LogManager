@@ -18,6 +18,7 @@ signals:
 
 private slots:
     void showContextMenu(const QPoint &point);
+    void updateEditors();
 
 protected:
     void setModel(QAbstractItemModel *model) override;
@@ -26,8 +27,8 @@ protected:
     void paintSection(QPainter *painter, const QRect &rect, int logicalIndex) const override;
 
 private:
-    void setupEditors();
     void updatePositions();
+    void setupEditors();
 
     void adjustColumnWidths(QAbstractItemModel* model);
 

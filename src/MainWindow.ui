@@ -55,6 +55,7 @@
     </property>
     <addaction name="actionExport_as_is"/>
     <addaction name="actionFull_export"/>
+    <addaction name="actionFiltered_export"/>
    </widget>
    <addaction name="menuLogs"/>
    <addaction name="menuFormats"/>
@@ -101,12 +102,17 @@
   </action>
   <action name="actionExport_as_is">
    <property name="text">
-    <string>Export as is</string>
+    <string>Export current view</string>
    </property>
   </action>
   <action name="actionFull_export">
    <property name="text">
     <string>Full export</string>
+   </property>
+  </action>
+  <action name="actionFiltered_export">
+   <property name="text">
+    <string>Filtered export</string>
    </property>
   </action>
  </widget>

@@ -42,4 +42,5 @@ private:
     QLineEdit* mLineEdit;
     QLineEdit* mSearchBar;
     QVariantList mCurrentData;
+    QStringList mItems;
 };

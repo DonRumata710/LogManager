@@ -3,6 +3,7 @@
 #include "LogFilterModel.h"
 #include "LogModel.h"
 #include "MultiSelectComboBox.h"
+#include "Utils.h"
 
 #include <QAbstractItemModel>
 #include <QResizeEvent>
@@ -21,6 +22,8 @@ FilterHeader::FilterHeader(Qt::Orientation orientation, QWidget *parent) : QHead
 
 void FilterHeader::showContextMenu(const QPoint& point)
 {
+    QT_SLOT_BEGIN
+
     QMenu menu(this);
 
     if (!model())
@@ -39,6 +42,40 @@ void FilterHeader::showContextMenu(const QPoint& point)
     }
 
     menu.exec(mapToGlobal(point));
+
+    QT_SLOT_END
+}
+
+void FilterHeader::updateEditors()
+{
+    QT_SLOT_BEGIN
+
+    auto proxyLogModel = qobject_cast<QSortFilterProxyModel*>(model());
+    if (!proxyLogModel)
+    {
+        qWarning() << "FilterHeader requires a QSortFilterProxyModel as the model.";
+        return;
+    }
+
+    auto logModel = qobject_cast<LogModel*>(proxyLogModel->sourceModel());
+    if (!logModel)
+    {
+        qWarning() << "FilterHeader requires a LogModel as the source model.";
+        return;
+    }
+
+    for (int i = 0; i < model()->columnCount(); ++i)
+    {
+        auto cb = qobject_cast<MultiSelectComboBox*>(editors[i]);
+        if (!cb)
+            continue;
+
+        auto values = logModel->availableValues(i);
+        for (const auto& val : values)
+            cb->addItem(val.toString(), val);
+    }
+
+    QT_SLOT_END
 }
 
 void FilterHeader::setModel(QAbstractItemModel* model)
@@ -46,7 +83,9 @@ void FilterHeader::setModel(QAbstractItemModel* model)
     QHeaderView::setModel(model);
     setupEditors();
     adjustColumnWidths(model);
-    setSectionHidden(1, true);
+    setSectionHidden(static_cast<int>(LogModel::PredefinedColumn::Module), true);
+    connect(model, &QAbstractItemModel::modelReset, this, &FilterHeader::updateEditors);
+    connect(model, &QAbstractItemModel::rowsInserted, this, &FilterHeader::updateEditors);
 }
 
 void FilterHeader::resizeEvent(QResizeEvent *event)
@@ -77,6 +116,27 @@ void FilterHeader::paintSection(QPainter* painter, const QRect& rect, int logica
     opt.rect = textRect;
     opt.position = QStyleOptionHeader::Middle;
     style()->drawControl(QStyle::CE_HeaderLabel, &opt, painter, this);
+}
+
+void FilterHeader::updatePositions()
+{
+    int y = QHeaderView::sizeHint().height();
+    for (int i = 0; i < static_cast<int>(editors.size()); ++i)
+    {
+        int logical = logicalIndex(i);
+        if (isSectionHidden(logical))
+        {
+            editors[i]->setVisible(false);
+            continue;
+        }
+
+        int pos = sectionPosition(logical);
+        int size = sectionSize(logical);
+
+        QRect rect = QRect(pos, height() / 2, size, filterHeight);
+        editors[i]->setGeometry(rect);
+        editors[i]->setVisible(true);
+    }
 }
 
 void FilterHeader::setupEditors()
@@ -138,30 +198,8 @@ void FilterHeader::setupEditors()
     updatePositions();
 }
 
-void FilterHeader::updatePositions()
-{
-    int y = QHeaderView::sizeHint().height();
-    for (int i = 0; i < static_cast<int>(editors.size()); ++i)
-    {
-        int logical = logicalIndex(i);
-        if (isSectionHidden(logical)) {
-            editors[i]->setVisible(false);
-            continue;
-        }
-
-        int pos = sectionPosition(logical);
-        int size = sectionSize(logical);
-
-        QRect rect = QRect(pos, height() / 2, size, filterHeight);
-        editors[i]->setGeometry(rect);
-        editors[i]->setVisible(true);
-    }
-}
-
 void FilterHeader::adjustColumnWidths(QAbstractItemModel* model)
 {
     if (model && model->columnCount() > 0)
-    {
         setSectionResizeMode(model->columnCount() - 1, QHeaderView::ResizeMode::Stretch);
-    }
 }

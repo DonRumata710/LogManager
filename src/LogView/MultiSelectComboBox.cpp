@@ -85,13 +85,18 @@ void MultiSelectComboBox::stateChanged(int aState)
 
 void MultiSelectComboBox::addItem(const QString& aText, const QVariant& aUserData)
 {
-    Q_UNUSED(aUserData);
+    if (mItems.contains(aText))
+        return;
+    mItems.push_back(aText);
+
     QListWidgetItem* listWidgetItem = new QListWidgetItem(mListWidget);
     QCheckBox* checkBox = new QCheckBox(this);
     checkBox->setText(aText);
+    setItemData(mListWidget->count(), aUserData);
     mListWidget->addItem(listWidgetItem);
     mListWidget->setItemWidget(listWidgetItem, checkBox);
     connect(checkBox, &QCheckBox::stateChanged, this, &MultiSelectComboBox::stateChanged);
+
 }
 
 QStringList MultiSelectComboBox::currentText()

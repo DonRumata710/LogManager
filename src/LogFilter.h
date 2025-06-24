@@ -1,31 +1,28 @@
 #pragma once
 
-#include "LogFilter.h"
+#include "LogManagement/LogEntry.h"
 
-#include <QSortFilterProxyModel>
 #include <QRegularExpression>
 
-#include <unordered_map>
 #include <unordered_set>
 
 
-class LogFilterModel : public QSortFilterProxyModel
+class LogFilter
 {
-    Q_OBJECT
-
 public:
-    explicit LogFilterModel(QObject *parent = nullptr);
+    LogFilter() = default;
+    LogFilter(const std::unordered_map<int, QRegularExpression>& columnFilters, const std::unordered_map<int, std::unordered_set<QString>>& variants, const QStringList& fields);
 
     void setFilterWildcard(int column, const QString& pattern);
     void setFilterRegularExpression(int column, const QString& pattern);
     void setVariantList(int column, const QStringList& values);
 
-    LogFilter exportFilter() const;
-
-protected:
-    bool filterAcceptsRow(int source_row, const QModelIndex& source_parent) const override;
+    bool check(const LogEntry& entry) const;
 
 private:
     std::unordered_map<int, QRegularExpression> columnFilters;
     std::unordered_map<int, std::unordered_set<QString>> variants;
+    QStringList fields;
 };
+
+Q_DECLARE_METATYPE(LogFilter);

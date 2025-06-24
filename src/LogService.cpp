@@ -12,12 +12,13 @@ LogService::LogService(QObject *parent) :
     dataRequestResults(ThreadSafePtr<std::map<int, std::vector<LogEntry>>>::DefaultConstructor{})
 {}
 
-const std::shared_ptr<LogManager>& LogService::getLogManager() const
+const ThreadSafePtr<LogManager>& LogService::getLogManager() const
 {
     return logManager;
 }
 
-int LogService::requestIterator(const std::chrono::system_clock::time_point& startTime)
+int LogService::requestIterator(const std::chrono::system_clock::time_point& startTime,
+                                const std::chrono::system_clock::time_point& endTime)
 {
     if (!logManager || logManager->getMaxTime() < startTime)
     {
@@ -26,7 +27,7 @@ int LogService::requestIterator(const std::chrono::system_clock::time_point& sta
     }
 
     int index = nextRequestIndex++;
-    iteratorRequests->emplace_back(index, startTime);
+    iteratorRequests->emplace_back(index, startTime, endTime);
     QMetaObject::invokeMethod(this, "handleIteratorRequest", Qt::QueuedConnection);
 
     return index;
@@ -98,6 +99,127 @@ void LogService::openFolder(const QString& logDirectory, const QStringList& form
     QT_SLOT_END
 }
 
+void LogService::exportData(const QString& filename, const QDateTime& startTime, const QDateTime& endTime)
+{
+    QT_SLOT_BEGIN
+
+    exportDataToFile(filename, startTime, endTime, [](QFile& file, const LogEntry& entry) {
+        file.write(entry.line.toUtf8());
+        file.write("\n");
+    });
+
+    QT_SLOT_END
+}
+
+void LogService::exportData(const QString& filename, const QDateTime& startTime, const QDateTime& endTime, const QStringList& fields)
+{
+    QT_SLOT_BEGIN
+
+    exportDataToFile(filename, startTime, endTime, [&fields](QFile& file, const LogEntry& entry) {
+        for (const auto& field : fields)
+        {
+            auto value = entry.values.find(field);
+            if (value != entry.values.end())
+                file.write(value->second.toString().toUtf8());
+            file.write(";");
+        }
+
+        if (!entry.additionalLines.isEmpty())
+        {
+            file.write("\n");
+            file.write(entry.additionalLines.toUtf8());
+        }
+
+        file.write("\n");
+    });
+
+    QT_SLOT_END
+}
+
+void LogService::exportData(const QString& filename, const QDateTime& startTime, const QDateTime& endTime, const QStringList& fields, const LogFilter& filter)
+{
+    QT_SLOT_BEGIN
+
+    exportDataToFile(filename, startTime, endTime, [&fields, &filter](QFile& file, const LogEntry& entry) {
+        if (!filter.check(entry))
+            return;
+
+        for (const auto& field : fields)
+        {
+            auto value = entry.values.find(field);
+            if (value != entry.values.end())
+                file.write(value->second.toString().toUtf8());
+            file.write(";");
+        }
+
+        if (!entry.additionalLines.isEmpty())
+        {
+            file.write("\n");
+            file.write(entry.additionalLines.toUtf8());
+        }
+
+        file.write("\n");
+    });
+
+    QT_SLOT_END
+}
+
+void LogService::exportData(const QString& filename, QTreeView* view)
+{
+    QT_SLOT_BEGIN
+
+    if (!view)
+    {
+        qCritical() << "Invalid view provided for export.";
+        return;
+    }
+
+    auto model = qobject_cast<QAbstractItemModel*>(view->model());
+    if (!model)
+    {
+        qCritical() << "Invalid model in the provided view.";
+        return;
+    }
+
+    QFile file(filename);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
+    {
+        qCritical() << "Failed to open file for writing:" << file.errorString();
+        return;
+    }
+
+    for (int col = 0; col < model->columnCount(); ++col)
+    {
+        if (view->isColumnHidden(col))
+            continue;
+
+        QVariant data = model->headerData(col, Qt::Horizontal, Qt::DisplayRole);
+        if (data.isValid())
+            file.write(data.toString().toUtf8() + ";");
+        file.write("\n");
+    }
+
+    for (int row = 0; row < model->rowCount(); ++row)
+    {
+        QStringList lineData;
+        for (int col = 0; col < model->columnCount(); ++col)
+        {
+            if (view->isColumnHidden(col))
+                continue;
+
+            QModelIndex index = model->index(row, col);
+            if (index.isValid())
+            {
+                QVariant data = model->data(index, Qt::DisplayRole);
+                lineData.append(data.toString());
+            }
+        }
+        file.write(lineData.join(";").toUtf8() + "\n");
+    }
+
+    QT_SLOT_END
+}
+
 void LogService::handleIteratorRequest()
 {
     QT_SLOT_BEGIN
@@ -114,7 +236,7 @@ void LogService::handleIteratorRequest()
     auto& request = *it;
     lockedIteratorRequests.unlock();
 
-    iterators->emplace(request.index, std::make_shared<LogEntryIterator>(logManager->getIterator(request.startTime)));
+    iterators->emplace(request.index, std::make_shared<LogEntryIterator>(logManager->getIterator(request.startTime, request.endTime)));
 
     iteratorCreated(request.index);
 
@@ -173,7 +295,42 @@ std::vector<std::shared_ptr<Format>> LogService::getFormats(const QStringList& f
     return res;
 }
 
-LogService::IteratorRequest::IteratorRequest(int index, const std::chrono::system_clock::time_point& time) : index(index), startTime(time)
+void LogService::exportDataToFile(const QString& filename, const QDateTime& startTime, const QDateTime& endTime, const std::function<void (QFile&, const LogEntry&)>& writeFunction)
+{
+    if (!logManager)
+    {
+        qCritical() << "LogManager is not initialized.";
+        return;
+    }
+
+    if (startTime > endTime)
+    {
+        qCritical() << "Invalid time range for export.";
+        return;
+    }
+
+    QFile file(filename);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
+    {
+        qCritical() << "Failed to open file for writing:" << file.errorString();
+        return;
+    }
+
+    auto iterator = logManager->getIterator(startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
+    while (iterator.hasLogs())
+    {
+        auto entry = iterator.next();
+        if (!entry)
+            break;
+
+        writeFunction(file, entry.value());
+    }
+}
+
+LogService::IteratorRequest::IteratorRequest(int index, const std::chrono::system_clock::time_point& start, const std::chrono::system_clock::time_point& end) :
+    index(index),
+    startTime(start),
+    endTime(end)
 {}
 
 LogService::DataRequest::DataRequest(int index, std::shared_ptr<LogEntryIterator> it, int count) : index(index), iterator(std::move(it)), entryCount(count)
