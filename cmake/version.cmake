@@ -4,7 +4,7 @@ function(git_tag_version name)
         set(version ${PRODUCT_VERSION})
     else()
         execute_process(
-            COMMAND git describe --dirty --tags --match "v[0-9]*"
+            COMMAND git describe --first-parent --dirty --tags --match "v[0-9]*"
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
             OUTPUT_VARIABLE git_desc
             OUTPUT_STRIP_TRAILING_WHITESPACE

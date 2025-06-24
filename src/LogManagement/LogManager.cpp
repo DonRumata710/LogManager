@@ -2,6 +2,8 @@
 
 #include "LogUtils.h"
 
+#include <quazip/quazipfile.h>
+
 #include <QFile>
 #include <QDebug>
 
@@ -21,16 +23,48 @@ LogManager::LogManager(const std::vector<QString>& folders, const std::vector<st
                 continue;
 
             auto filename = QString::fromStdString(entry.path().string());
-            auto stem = QString::fromStdString(entry.path().stem().string());
             auto extension = QString::fromStdString(entry.path().extension().string());
-            auto result = addFile(filename, stem, extension, formats);
-            if (!result)
-            {
-                qDebug() << "No suitable format found for file:" << filename;
-                continue;
-            }
 
-            foundFiles = true;
+            if (extension == ".zip" || extension == ".gz" || extension == ".tar" || extension == ".7z")
+            {
+                QuaZip zip(filename);
+                if (!zip.open(QuaZip::mdUnzip))
+                {
+                    qDebug() << "Failed to open archive:" << filename;
+                    continue;
+                }
+
+                QuaZipFileInfo info;
+                for (bool more = zip.goToFirstFile(); more; more = zip.goToNextFile())
+                {
+                    zip.getCurrentFileInfo(&info);
+                    auto innerFilename = info.name;
+                    auto module = info.name.mid(0, info.name.lastIndexOf('.'));
+                    auto innerExtension = info.name.mid(module.size());
+
+                    auto fileCreationFunc = [filename](const QString& innerFilename) {
+                        return std::make_unique<QuaZipFile>(filename, innerFilename);
+                    };
+                    auto result = addFile(innerFilename, module, innerExtension, fileCreationFunc, formats);
+                    if (result)
+                        foundFiles = true;
+                }
+            }
+            else
+            {
+                auto module = QString::fromStdString(entry.path().stem().string());
+                auto fileCreationFunc = [](const QString& filename) {
+                    return std::make_unique<QFile>(filename);
+                };
+                auto result = addFile(filename, module, extension, fileCreationFunc, formats);
+                if (!result)
+                {
+                    qDebug() << "No suitable format found for file:" << filename;
+                    continue;
+                }
+
+                foundFiles = true;
+            }
         }
     }
 
@@ -40,12 +74,16 @@ LogManager::LogManager(const std::vector<QString>& folders, const std::vector<st
     }
 }
 
-LogManager::LogManager(const QString& filename, const std::vector<std::shared_ptr<Format>> &formats)
+LogManager::LogManager(const QString& filename, const std::vector<std::shared_ptr<Format>>& formats)
 {
     logStorage = std::make_shared<LogStorage>();
 
     std::filesystem::path path = filename.toStdString();
-    auto result = addFile(QString::fromStdString(path.string()), QString::fromStdString(path.stem().string()), QString::fromStdString(path.extension().string()), formats);
+    auto fileCreationFunc = [](const QString& filename) {
+        return std::make_unique<QFile>(filename);
+    };
+    auto result = addFile(filename, QString::fromStdString(path.stem().string()), QString::fromStdString(path.extension().string()), fileCreationFunc, formats);
+
     if (!result)
     {
         qDebug() << "No suitable format found for file:" << filename;
@@ -83,7 +121,7 @@ LogEntryIterator LogManager::getIterator(const std::chrono::system_clock::time_p
     return LogEntryIterator(logStorage, startTime, endTime);
 }
 
-bool LogManager::addFile(const QString& filename, const QString& stem, const QString& extension, const std::vector<std::shared_ptr<Format>>& formats)
+bool LogManager::addFile(const QString& filename, const QString& stem, const QString& extension, std::function<std::unique_ptr<QIODevice>(const QString&)> createFileFunc, const std::vector<std::shared_ptr<Format>>& formats)
 {
     QString module = stem;
 
@@ -109,7 +147,7 @@ bool LogManager::addFile(const QString& filename, const QString& stem, const QSt
     if (actualFormats.empty())
         return false;
 
-    auto result = scanLogFile(filename, actualFormats);
+    auto result = scanLogFile(filename, createFileFunc, actualFormats);
     if (!result)
         return false;
 
@@ -126,8 +164,8 @@ bool LogManager::addFile(const QString& filename, const QString& stem, const QSt
 
     LogStorage::LogMetadata metadata;
     metadata.format = result->first;
-    metadata.fileBuilder = [this](const QString& filename, const std::shared_ptr<Format>& format) {
-        return std::make_shared<Log>(createLog(filename, format));
+    metadata.fileBuilder = [this, createFileFunc](const QString& filename, const std::shared_ptr<Format>& format) {
+        return std::make_shared<Log>(createLog(filename, createFileFunc, format));
     };
     metadata.filename = filename;
     logStorage->addLog(module, result->second, result->first, std::move(metadata));
@@ -135,11 +173,11 @@ bool LogManager::addFile(const QString& filename, const QString& stem, const QSt
     return true;
 }
 
-std::optional<std::pair<std::shared_ptr<Format>, std::chrono::system_clock::time_point>> LogManager::scanLogFile(const QString& filename, const std::vector<std::shared_ptr<Format>>& formats)
+std::optional<std::pair<std::shared_ptr<Format>, std::chrono::system_clock::time_point>> LogManager::scanLogFile(const QString& filename, std::function<std::unique_ptr<QIODevice>(const QString&)> createFileFunc, const std::vector<std::shared_ptr<Format>>& formats)
 {
     for (const auto& format : formats)
     {
-        Log log(createLog(filename, format));
+        Log log(createLog(filename, createFileFunc, format));
         auto line = log.nextLine();
         if (!line)
             continue;
@@ -158,7 +196,7 @@ std::optional<std::pair<std::shared_ptr<Format>, std::chrono::system_clock::time
     return std::nullopt;
 }
 
-Log LogManager::createLog(const QString& path, std::shared_ptr<Format> format)
+Log LogManager::createLog(const QString& filename, std::function<std::unique_ptr<QIODevice>(const QString&)> createFileFunc, std::shared_ptr<Format> format)
 {
-    return Log(std::make_unique<QFile>(path), format->encoding, std::shared_ptr<std::vector<Format::Comment>>(format, &format->comments));
+    return Log(createFileFunc(filename), format->encoding, std::shared_ptr<std::vector<Format::Comment>>(format, &format->comments));
 }

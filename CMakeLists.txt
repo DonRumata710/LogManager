@@ -4,6 +4,7 @@ if (EXISTS "${CMAKE_SOURCE_DIR}/local.cmake")
     include(local.cmake)
     message(STATUS "Using local.cmake for configuration")
 endif()
+include(cmake/local_hints.cmake)
 include(cmake/version.cmake)
 list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_SOURCE_DIR}/cmake/modules")
 
@@ -18,7 +19,10 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
+check_local_hints()
+
 find_package(Qt6 COMPONENTS Core Gui Widgets REQUIRED)
+find_package(QuaZip-Qt6 COMPONENTS QuaZip)
 
 file(GLOB ts ${CMAKE_CURRENT_SOURCE_DIR}/translations/*)
 if (${ts} NOT STREQUAL "" AND QT6::LINGUIST_TOOLS_FOUND)
@@ -44,7 +48,13 @@ target_include_directories(${PROJECT_NAME}
         ${CMAKE_BINARY_DIR}/${PROJECT_NAME}_autogen
 )
 
-target_link_libraries(${PROJECT_NAME} PUBLIC Qt6::Core Qt6::Gui Qt6::Widgets)
+target_link_libraries(${PROJECT_NAME}
+    PUBLIC
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Widgets
+        QuaZip::QuaZip
+)
 
 get_target_property(_qt5_qmake_location Qt::qmake IMPORTED_LOCATION)
 
@@ -61,6 +71,8 @@ add_custom_command(TARGET ${PROJECT_NAME}
     COMMAND ${CMAKE_COMMAND} -E remove_directory "$<TARGET_FILE_DIR:${PROJECT_NAME}>/deploy_folder"
     COMMAND ${imported_location} --dir "${CMAKE_BINARY_DIR}/deploy_folder" "$<TARGET_FILE_DIR:${PROJECT_NAME}>/$<TARGET_FILE_NAME:${PROJECT_NAME}>"
     COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:${PROJECT_NAME}>" "${CMAKE_BINARY_DIR}/deploy_folder"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_RUNTIME_DLLS:${PROJECT_NAME}>" "${CMAKE_BINARY_DIR}/deploy_folder"
+    COMMAND_EXPAND_LISTS
     COMMENT "Deploy libraries"
 )
 
