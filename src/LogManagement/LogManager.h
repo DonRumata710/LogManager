@@ -24,7 +24,7 @@ public:
     std::chrono::system_clock::time_point getMinTime() const;
     std::chrono::system_clock::time_point getMaxTime() const;
 
-    LogEntryIterator getIterator(const std::chrono::system_clock::time_point& startTime = std::chrono::system_clock::time_point());
+    LogEntryIterator getIterator(const std::chrono::system_clock::time_point& startTime = std::chrono::system_clock::time_point(), const std::chrono::system_clock::time_point& endTime = std::chrono::system_clock::time_point::max());
 
 private:
     bool addFile(const QString& filename, const QString& stem, const QString& extension, const std::vector<std::shared_ptr<Format>>& formats);

@@ -13,13 +13,14 @@ class LogModel : public QAbstractItemModel
 {
     Q_OBJECT
 
+public:
     enum class PredefinedColumn
     {
         Module = 1
     };
 
 public:
-    explicit LogModel(LogService* logManager, const QDateTime& startTime, QObject *parent = nullptr);
+    explicit LogModel(LogService* logManager, const QDateTime& startTime, const QDateTime& endTime, QObject *parent = nullptr);
 
     void setModules(const std::unordered_set<QString>& modules);
 
@@ -28,6 +29,11 @@ public:
 
     const std::vector<Format::Field>& getFields() const;
     const std::unordered_set<QVariant, VariantHash> availableValues(int section) const;
+
+    QDateTime getStartTime() const;
+    QDateTime getEndTime() const;
+
+    QStringList getFieldsName();
 
     QVariant headerData(int section,
                         Qt::Orientation orientation,

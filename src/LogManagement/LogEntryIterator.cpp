@@ -5,8 +5,10 @@
 #include <QDateTime>
 
 
-LogEntryIterator::LogEntryIterator(const std::shared_ptr<LogStorage>& logStorage, const std::chrono::system_clock::time_point& startTime) :
-    logStorage(logStorage)
+LogEntryIterator::LogEntryIterator(const std::shared_ptr<LogStorage>& logStorage, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime) :
+    logStorage(logStorage),
+    startTime(startTime),
+    endTime(endTime)
 {
     for (const auto& module : logStorage->getModules())
     {
@@ -33,6 +35,16 @@ LogEntryIterator::LogEntryIterator(const std::shared_ptr<LogStorage>& logStorage
             }
         }
     }
+}
+
+std::chrono::system_clock::time_point LogEntryIterator::getStartTime() const
+{
+    return startTime;
+}
+
+std::chrono::system_clock::time_point LogEntryIterator::getEndTime() const
+{
+    return endTime;
 }
 
 bool LogEntryIterator::hasLogs() const

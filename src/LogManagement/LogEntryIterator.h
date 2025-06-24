@@ -9,7 +9,10 @@
 class LogEntryIterator
 {
 public:
-    LogEntryIterator(const std::shared_ptr<LogStorage>& logStorage, const std::chrono::system_clock::time_point& startTime);
+    LogEntryIterator(const std::shared_ptr<LogStorage>& logStorage, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime);
+
+    std::chrono::system_clock::time_point getStartTime() const;
+    std::chrono::system_clock::time_point getEndTime() const;
 
     bool hasLogs() const;
     std::optional<LogEntry> next();
@@ -39,4 +42,7 @@ private:
 private:
     std::priority_queue<HeapItem, std::vector<HeapItem>, std::greater<HeapItem>> mergeHeap;
     std::shared_ptr<LogStorage> logStorage;
+
+    std::chrono::system_clock::time_point startTime;
+    std::chrono::system_clock::time_point endTime;
 };

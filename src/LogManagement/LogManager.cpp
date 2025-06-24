@@ -78,9 +78,9 @@ std::chrono::system_clock::time_point LogManager::getMaxTime() const
     return logStorage->getMaxTime();
 }
 
-LogEntryIterator LogManager::getIterator(const std::chrono::system_clock::time_point& startTime)
+LogEntryIterator LogManager::getIterator(const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime)
 {
-    return LogEntryIterator(logStorage, startTime);
+    return LogEntryIterator(logStorage, startTime, endTime);
 }
 
 bool LogManager::addFile(const QString& filename, const QString& stem, const QString& extension, const std::vector<std::shared_ptr<Format>>& formats)

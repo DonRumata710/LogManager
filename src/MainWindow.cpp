@@ -41,6 +41,10 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(this, &MainWindow::openFile, logService, &LogService::openFile);
     connect(this, &MainWindow::openFolder, logService, &LogService::openFolder);
     connect(logService, &LogService::logManagerCreated, this, &MainWindow::logManagerCreated);
+
+    connect(this, SIGNAL(exportData(QString,QDateTime,QDateTime)), logService, SLOT(exportData(QString,QDateTime,QDateTime)));
+    connect(this, SIGNAL(exportData(QString,QDateTime,QDateTime,QStringList)), logService, SLOT(exportData(QString,QDateTime,QDateTime,QStringList)));
+    connect(this, SIGNAL(exportData(QString,QTreeView*)), logService, SLOT(exportData(QString,QTreeView*)));
 }
 
 MainWindow::~MainWindow()
@@ -67,13 +71,11 @@ void MainWindow::on_actionOpen_file_triggered()
 
     QString extensions;
     QMap<QString, QString> formatMap;
-    for (const auto& formatName : selectedFormats)
+    for (const auto& formatName : std::as_const(selectedFormats))
     {
         auto format = formatManager.getFormats().at(formatName.toStdString());
         if (!format)
-        {
             continue;
-        }
 
         formatMap.insert(format->extension, format->name);
 
@@ -210,11 +212,11 @@ void MainWindow::on_actionExport_as_is_triggered()
 {
     QT_SLOT_BEGIN
 
-    QString fileName = QFileDialog::getSaveFileName(this, tr("Export Logs"), QDir::currentPath(), tr("Log Files (*.log);; CSV Files (*.csv)"));
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Export Logs"), QDir::currentPath(), tr("CSV Files (*.csv)"));
     if (fileName.isEmpty())
         return;
 
-
+    exportData(fileName, ui->logView);
 
     QT_SLOT_END
 }
@@ -223,9 +225,46 @@ void MainWindow::on_actionFull_export_triggered()
 {
     QT_SLOT_BEGIN
 
-    QString fileName = QFileDialog::getSaveFileName(this, tr("Export Logs"), QDir::currentPath(), tr("Log Files (*.log);; CSV Files (*.csv)"));
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Export Logs"), QDir::currentPath(), tr("Origin format logs (*.log);; CSV Files (*.csv)"));
     if (fileName.isEmpty())
         return;
+
+    auto logFilterModel = qobject_cast<LogFilterModel*>(ui->logView->model());
+    if (!logFilterModel)
+    {
+        qWarning() << "Log model is not set.";
+        return;
+    }
+
+    auto logModel = qobject_cast<LogModel*>(logFilterModel->sourceModel());
+
+    bool originFormat = fileName.endsWith(".log", Qt::CaseInsensitive);
+    if (originFormat)
+        exportData(fileName, logModel->getStartTime(), logModel->getEndTime());
+    else
+        exportData(fileName, logModel->getStartTime(), logModel->getEndTime(), logModel->getFieldsName());
+
+    QT_SLOT_END
+}
+
+void MainWindow::on_actionFiltered_export_triggered()
+{
+    QT_SLOT_BEGIN
+
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Export Logs"), QDir::currentPath(), tr("Origin format logs (*.log);; CSV Files (*.csv)"));
+    if (fileName.isEmpty())
+        return;
+
+    auto logFilterModel = qobject_cast<LogFilterModel*>(ui->logView->model());
+    if (!logFilterModel)
+    {
+        qWarning() << "Log model is not set.";
+        return;
+    }
+
+    auto logModel = qobject_cast<LogModel*>(logFilterModel->sourceModel());
+
+    exportData(fileName, logModel->getStartTime(), logModel->getEndTime(), logModel->getFieldsName(), logFilterModel->exportFilter());
 
     QT_SLOT_END
 }
@@ -243,7 +282,7 @@ void MainWindow::logManagerCreated()
         return;
     }
 
-    InitialDataDialog dialog(*logManager);
+    InitialDataDialog dialog(*logManager.get());
     if (dialog.exec() != QDialog::Accepted)
         return;
 
@@ -265,7 +304,7 @@ void MainWindow::logManagerCreated()
 
     auto proxyModel = new LogFilterModel(this);
 
-    auto logModel = new LogModel(logService, startDate, proxyModel);
+    auto logModel = new LogModel(logService, startDate, endDate, proxyModel);
     logModel->setModules(modules);
 
     proxyModel->setSourceModel(logModel);
@@ -320,6 +359,15 @@ void MainWindow::updateFormatActions(bool enabled)
 
 void MainWindow::switchModel(QAbstractItemModel* model)
 {
+    if (model)
+    {
+        auto resizeFunc = [view = ui->logView]() {
+            view->header()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
+        };
+
+        connect(model, &QAbstractItemModel::modelReset, resizeFunc);
+    }
+
     auto oldModel = ui->logView->model();
     ui->logView->setModel(model);
     ui->logView->header()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);

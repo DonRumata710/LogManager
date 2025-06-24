@@ -35,6 +35,14 @@ void LogFilterModel::setVariantList(int column, const QStringList& values)
     invalidateFilter();
 }
 
+LogFilter LogFilterModel::exportFilter() const
+{
+    QStringList fields;
+    for (int i = 0; i < sourceModel()->columnCount(); ++i)
+        fields.append(sourceModel()->headerData(i, Qt::Horizontal, Qt::DisplayRole).toString());
+    return LogFilter{ columnFilters, variants, fields };
+}
+
 bool LogFilterModel::filterAcceptsRow(int source_row, const QModelIndex& source_parent) const
 {
     if (source_parent.isValid())

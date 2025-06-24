@@ -3,7 +3,7 @@
 #include "Utils.h"
 
 
-LogModel::LogModel(LogService* logService, const QDateTime& startTime, QObject *parent) :
+LogModel::LogModel(LogService* logService, const QDateTime& startTime, const QDateTime& endTime, QObject *parent) :
     QAbstractItemModel(parent),
     service(logService),
     modules(logService->getLogManager()->getModules())
@@ -11,7 +11,7 @@ LogModel::LogModel(LogService* logService, const QDateTime& startTime, QObject *
     connect(service, &LogService::iteratorCreated, this, &LogModel::handleIterator);
     connect(service, &LogService::dataLoaded, this, &LogModel::handleData);
 
-    iteratorIndex = service->requestIterator(startTime.toStdSysSeconds());
+    iteratorIndex = service->requestIterator(startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
 
     bool flag = false;
     for (const auto& format : logService->getLogManager()->getFormats())
@@ -30,8 +30,7 @@ LogModel::LogModel(LogService* logService, const QDateTime& startTime, QObject *
                 continue;
             }
 
-            auto it = std::find_if(fields.begin(), fields.end(),
-                         [&field](const Format::Field& f) { return f.name == field.name; });
+            auto it = std::find_if(fields.begin(), fields.end(), [&field](const Format::Field& f) { return f.name == field.name; });
             if (it != fields.end())
                 continue;
             fields.push_back(field);
@@ -60,6 +59,9 @@ bool LogModel::canFetchDownMore() const
 
 void LogModel::fetchDownMore()
 {
+    if (!dataRequests.empty())
+        return;
+
     if (!canFetchDownMore())
         return;
 
@@ -89,6 +91,31 @@ const std::unordered_set<QVariant, VariantHash> LogModel::availableValues(int se
         return {};
 
     return service->getLogManager()->getEnumList(field.name);
+}
+
+QDateTime convertToQDateTime(const std::chrono::system_clock::time_point& timePoint)
+{
+    auto duration = timePoint.time_since_epoch();
+    auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+    return QDateTime::fromMSecsSinceEpoch(millis, Qt::UTC);
+}
+
+QDateTime LogModel::getStartTime() const
+{
+    return convertToQDateTime(iterator->getStartTime());
+}
+
+QDateTime LogModel::getEndTime() const
+{
+    return convertToQDateTime(iterator->getEndTime());
+}
+
+QStringList LogModel::getFieldsName()
+{
+    QStringList fieldNames;
+    for (const auto& field : fields)
+        fieldNames.append(field.name);
+    return fieldNames;
 }
 
 QVariant LogModel::headerData(int section, Qt::Orientation orientation, int role) const

@@ -34,12 +34,19 @@ private slots:
     void on_actionExport_as_is_triggered();
 
     void on_actionFull_export_triggered();
+    void on_actionFiltered_export_triggered();
 
     void logManagerCreated();
 
 signals:
     void openFile(const QString& file, const QStringList& formats);
     void openFolder(const QString& logDirectory, const QStringList& formats);
+
+    void exportData(const QString& filename, const QDateTime& startTime, const QDateTime& endTime);
+    void exportData(const QString& filename, const QDateTime& startTime, const QDateTime& endTime, const QStringList& fields);
+    void exportData(const QString& filename, const QDateTime& startTime, const QDateTime& endTime, const QStringList& fields, const LogFilter& filter);
+
+    void exportData(const QString& filename, QTreeView* view);
 
 private:
     void addFormat(const std::string& format);
