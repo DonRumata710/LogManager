@@ -45,6 +45,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(this, SIGNAL(exportData(QString,QDateTime,QDateTime)), logService, SLOT(exportData(QString,QDateTime,QDateTime)));
     connect(this, SIGNAL(exportData(QString,QDateTime,QDateTime,QStringList)), logService, SLOT(exportData(QString,QDateTime,QDateTime,QStringList)));
     connect(this, SIGNAL(exportData(QString,QTreeView*)), logService, SLOT(exportData(QString,QTreeView*)));
+    connect(this, SIGNAL(exportData(QString,QDateTime,QDateTime,QStringList,LogFilter)), logService, SLOT(exportData(QString,QDateTime,QDateTime,QStringList,LogFilter)));
 }
 
 MainWindow::~MainWindow()
