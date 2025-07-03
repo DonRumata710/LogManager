@@ -107,7 +107,10 @@ jobs:
           cd external/libs
           7z x boost-1.88.0-cmake.zip
           $dir = Get-ChildItem -Directory | Where-Object { $_.Name -like 'boost*' } | Select-Object -First 1
-          Move-Item $dir.FullName $installPath
+          Move-Item $dir.FullName boost
+          cd boost
+          ./bootstrap.bat --prefix=$installPath
+          ./b2 install --prefix=$installPath --build-type=complete --layout=versioned address-model=64 variant=release link=static,shared runtime-link=static,shared threading=multi --with-headers
           cd ../../..
 
       - name: Configure
