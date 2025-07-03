@@ -2,7 +2,7 @@ name: Build
 
 on:
   push:
-    branches: [ feature/zip_scanning ]
+    branches: [ master ]
   pull_request:
 
 permissions:
