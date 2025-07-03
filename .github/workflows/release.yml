@@ -85,6 +85,28 @@ jobs:
           cmake --install build --config Release
           cd ../../..
 
+      - name: Download Boost
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        uses: robinraju/release-downloader@v1
+        with:
+          repository: 'boostorg/boost'
+          tag: 'boost-1.88.0'
+          fileName: 'boost-1.88.0-cmake.zip'
+          out-file-path: 'external/libs'
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare Boost
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installPath = Join-Path $Env:GITHUB_WORKSPACE 'deps/win64/Release/boost'
+          cd external/libs
+          7z x boost-1.88.0-cmake.zip
+          $dir = Get-ChildItem -Directory | Where-Object { $_.Name -like 'boost*' } | Select-Object -First 1
+          Move-Item $dir.FullName $installPath
+          cd ../../..
+
       - name: Configure
         run: |
           $depsPath = Join-Path $Env:GITHUB_WORKSPACE "deps"

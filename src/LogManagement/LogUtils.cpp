@@ -61,7 +61,7 @@ QVariant getValue(const QString& value, const Format::Field& field, const std::s
     case QMetaType::QDateTime:
         return QDateTime::fromString(value, format->timeRegex);
     default:
-        qCritical() << "Unsupported field type for field" << field.name << ": " << field.type;
+        qCritical() << QString("Unsupported field type for field %1:").arg(field.name) << field.type;
         return QVariant();
     }
 }

@@ -195,16 +195,17 @@ void MainWindow::checkFetchNeeded()
     if (proxyModel)
         model = qobject_cast<LogModel*>(proxyModel->sourceModel());
 
-    if (!model)
+    if (!model || model->rowCount() == 0)
     {
         qWarning() << "Unexpected model type in log view";
         return;
     }
 
-    // TODO: upside fetching
-
-    if (value - min >= range * 0.9 || max == 0 || !sb->isVisible())
+    if (value - min >= range * 0.9 || max == 0)
         model->fetchDownMore();
+
+    if (value - min <= range * 0.1 || max == 0)
+        model->fetchUpMore();
 
     QT_SLOT_END
 }

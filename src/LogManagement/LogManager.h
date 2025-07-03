@@ -24,7 +24,17 @@ public:
     std::chrono::system_clock::time_point getMinTime() const;
     std::chrono::system_clock::time_point getMaxTime() const;
 
-    LogEntryIterator getIterator(const std::chrono::system_clock::time_point& startTime = std::chrono::system_clock::time_point(), const std::chrono::system_clock::time_point& endTime = std::chrono::system_clock::time_point::max());
+    template<bool straight = true>
+    LogEntryIterator<straight> getIterator(const std::chrono::system_clock::time_point& startTime = std::chrono::system_clock::time_point(), const std::chrono::system_clock::time_point& endTime = std::chrono::system_clock::time_point::max())
+    {
+        return LogEntryIterator<straight>(logStorage, startTime, endTime);
+    }
+
+    template<bool straight = true>
+    LogEntryIterator<straight> createIterator(const std::vector<HeapItemCache>& cache, const std::chrono::system_clock::time_point& startTime = std::chrono::system_clock::time_point(), const std::chrono::system_clock::time_point& endTime = std::chrono::system_clock::time_point::max())
+    {
+        return LogEntryIterator<straight>(cache, logStorage, startTime, endTime);
+    }
 
 private:
     bool addFile(const QString& filename, const QString& stem, const QString& extension, std::function<std::unique_ptr<QIODevice>(const QString&)> createFileFunc, const std::vector<std::shared_ptr<Format>>& formats);

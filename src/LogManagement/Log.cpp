@@ -1,60 +1,126 @@
 #include "Log.h"
 
 
-Log::Log(std::unique_ptr<QIODevice>&& _file, const std::optional<QStringConverter::Encoding>& encoding, const std::shared_ptr<std::vector<Format::Comment>>& _comments) :
+Log::Log(std::unique_ptr<QIODevice>&& _file, const std::optional<QStringConverter::Encoding>& _encoding, const std::shared_ptr<std::vector<Format::Comment>>& _comments) :
     file(std::move(_file)),
-    stream(std::make_unique<QTextStream>(file.get())),
     comments(_comments)
 {
     if (!file->isOpen())
     {
         if (!file->open(QIODevice::ReadOnly | QIODevice::Text))
-            throw std::runtime_error("Cannot open log file: " + file->errorString().toStdString());
+            throw std::runtime_error("cannot open log file: " + file->errorString().toStdString());
     }
 
-    if (encoding)
-    {
-        stream->setEncoding(encoding.value());
-    }
-    else
-    {
-        QByteArray head = file->read(4);
-        file->seek(0);
+    QStringConverter::Encoding encoding = checkFileForBom();
+    if (_encoding)
+        encoding = _encoding.value();
+    decoder = QStringDecoder(encoding);
+}
 
-        if (head.startsWith("\xEF\xBB\xBF"))
+Log::Log(std::unique_ptr<QIODevice>&& _file, qint64 pos, const std::optional<QStringConverter::Encoding>& encoding, const std::shared_ptr<std::vector<Format::Comment>>& _comment) :
+    Log(std::move(_file), encoding, _comment)
+{
+    seek(pos);
+}
+
+std::optional<QString> Log::prevLine()
+{
+    QString line;
+    std::optional<Format::Comment> comment;
+    while (file->pos() != 0)
+    {
+        QByteArray lineData;
+
+        char ch;
+        int prevPos = file->pos();
+        while (prevPos > 0)
         {
-            stream->setEncoding(QStringDecoder::Utf8);
+            prevPos--;
+            file->seek(prevPos);
+            if (!file->getChar(&ch))
+                return std::nullopt;
+
+            if (ch != '\n' && ch != '\r')
+            {
+                lineData.prepend(ch);
+                break;
+            }
         }
-        else if (head.startsWith("\xFF\xFE"))
+
+        while (prevPos > 0)
         {
-            stream->setEncoding(QStringDecoder::Utf16LE);
+            file->seek(prevPos - 1);
+            if (!file->getChar(&ch))
+                return std::nullopt;
+            if (ch == '\n' || ch == '\r')
+                break;
+            prevPos--;
+            lineData.prepend(ch);
         }
-        else if (head.startsWith("\xFE\xFF"))
+        file->seek(prevPos);
+        line = decoder(QByteArrayView(lineData));
+
+        if (line.isEmpty())
+            continue;
+
+        if (comment)
         {
-            stream->setEncoding(QStringDecoder::Utf16BE);
+            if (line.startsWith(comment.value().start))
+                comment.reset();
+            continue;
         }
-        else if (head.startsWith("\xFF\xFE\x00\x00"))
+
+        if (comments)
         {
-            stream->setEncoding(QStringDecoder::Utf32LE);
+            bool flag = false;
+
+            for (const auto& c : *comments)
+            {
+                if (c.finish)
+                {
+                    if (line.endsWith(c.finish.value()))
+                    {
+                        if (!line.startsWith(c.start))
+                            comment = c;
+
+                        flag = true;
+                        break;
+                    }
+                }
+
+                if (line.startsWith(c.start))
+                {
+                    flag = true;
+                    break;
+                }
+            }
+
+            if (flag)
+                continue;
         }
-        else if (head.startsWith("\x00\x00\xFE\xFF"))
-        {
-            stream->setEncoding(QStringDecoder::Utf32BE);
-        }
-        else
-        {
-            stream->setEncoding(QStringDecoder::Utf8);
-        }
+
+        qDebug() << "Found line:" << line;
+        return line;
     }
+    return std::nullopt;
 }
 
 std::optional<QString> Log::nextLine()
 {
     QString line;
     std::optional<Format::Comment> comment;
-    while (!stream->atEnd())
+    while (!buffer.isEmpty() || !file->atEnd())
     {
-        line = stream->readLine();
+        qsizetype pos = buffer.indexOf('\n');
+        while(pos == -1 && !file->atEnd())
+        {
+            buffer.append(decoder(file->read(512)));
+            pos = buffer.indexOf('\n');
+        }
+
+        line = buffer.left(pos);
+        buffer.remove(0, line.size() + 1);
+
         if (line.isEmpty())
             continue;
 
@@ -88,6 +154,73 @@ std::optional<QString> Log::nextLine()
         return line;
     }
     return std::nullopt;
+}
+
+void Log::seek(qint64 pos)
+{
+    if (pos > 0)
+    {
+        if (!file->seek(pos))
+            throw std::runtime_error("cannot seek to position " + std::to_string(pos) + " in log file: " + file->errorString().toStdString());
+    }
+    else if (pos < 0)
+    {
+        if (!file->seek(file->size() + pos))
+            throw std::runtime_error("cannot seek to position " + std::to_string(pos) + " in log file: " + file->errorString().toStdString());
+    }
+    else
+    {
+        file->seek(0);
+    }
+    buffer.clear();
+}
+
+void Log::goToEnd()
+{
+    seek(file->size());
+}
+
+qint64 Log::getFilePosition() const
+{
+    return static_cast<int>(file->pos()) - buffer.size();
+}
+
+QStringConverter::Encoding Log::checkFileForBom()
+{
+    QStringConverter::Encoding encoding;
+
+    QByteArray head = file->read(4);
+    file->seek(0);
+
+    if (head.startsWith("\xEF\xBB\xBF"))
+    {
+        encoding = QStringConverter::Utf8;
+        file->seek(3);
+    }
+    else if (head.startsWith("\xFF\xFE"))
+    {
+        encoding = QStringDecoder::Utf16LE;
+        file->seek(2);
+    }
+    else if (head.startsWith("\xFE\xFF"))
+    {
+        encoding = QStringDecoder::Utf16BE;
+        file->seek(2);
+    }
+    else if (head.startsWith("\xFF\xFE\x00\x00"))
+    {
+        encoding = QStringDecoder::Utf32LE;
+    }
+    else if (head.startsWith("\x00\x00\xFE\xFF"))
+    {
+        encoding = QStringDecoder::Utf32BE;
+    }
+    else
+    {
+        encoding = QStringDecoder::Utf8;
+    }
+
+    return encoding;
 }
 
 bool Log::isCommentEnd(const Format::Comment& comment, const QString& line) const

@@ -7,8 +7,11 @@
 LogService::LogService(QObject *parent) :
     QObject{parent},
     iteratorRequests(ThreadSafePtr<std::deque<IteratorRequest>>::DefaultConstructor{}),
-    iterators(ThreadSafePtr<std::map<int, std::shared_ptr<LogEntryIterator>>>::DefaultConstructor{}),
+    iterators(ThreadSafePtr<std::map<int, std::shared_ptr<LogEntryIterator<>>>>::DefaultConstructor{}),
+    reverseIteratorRequests(ThreadSafePtr<std::deque<ReverseIteratorRequest>>::DefaultConstructor{}),
+    reverseIterators(ThreadSafePtr<std::map<int, std::shared_ptr<LogEntryIterator<false>>>>::DefaultConstructor{}),
     dataRequests(ThreadSafePtr<std::deque<DataRequest>>::DefaultConstructor{}),
+    dataRequestsReverse(ThreadSafePtr<std::deque<DataRequestReverse>>::DefaultConstructor{}),
     dataRequestResults(ThreadSafePtr<std::map<int, std::vector<LogEntry>>>::DefaultConstructor{})
 {}
 
@@ -33,7 +36,7 @@ int LogService::requestIterator(const std::chrono::system_clock::time_point& sta
     return index;
 }
 
-std::shared_ptr<LogEntryIterator> LogService::getIterator(int index)
+std::shared_ptr<LogEntryIterator<>> LogService::getIterator(int index)
 {
     auto lockedIteratorList = iterators.getLocker();
 
@@ -48,7 +51,37 @@ std::shared_ptr<LogEntryIterator> LogService::getIterator(int index)
     return nullptr;
 }
 
-int LogService::requestLogEntries(const std::shared_ptr<LogEntryIterator>& iterator, int entryCount)
+int LogService::requestReverseIterator(const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime)
+{
+    if (!logManager || logManager->getMinTime() > endTime)
+    {
+        qCritical() << "Invalid reverse iterator request parameters.";
+        return -1;
+    }
+
+    int index = nextRequestIndex++;
+    reverseIteratorRequests->emplace_back(index, startTime, endTime);
+    QMetaObject::invokeMethod(this, "handleReverseIteratorRequest", Qt::QueuedConnection);
+
+    return index;
+}
+
+std::shared_ptr<LogEntryIterator<false>> LogService::getReverseIterator(int index)
+{
+    auto lockedIteratorList = reverseIterators.getLocker();
+
+    auto it = lockedIteratorList->find(index);
+    if (it != lockedIteratorList->end())
+    {
+        auto iterator = it->second;
+        lockedIteratorList->erase(it);
+        return iterator;
+    }
+    qCritical() << "Iterator request with index" << index << "not found.";
+    return nullptr;
+}
+
+int LogService::requestLogEntries(const std::shared_ptr<LogEntryIterator<true>>& iterator, int entryCount)
 {
     if (!logManager || !iterator || entryCount <= 0 || !iterator->hasLogs())
     {
@@ -59,6 +92,21 @@ int LogService::requestLogEntries(const std::shared_ptr<LogEntryIterator>& itera
     int index = nextRequestIndex++;
     dataRequests->emplace_back(index, iterator, entryCount);
     QMetaObject::invokeMethod(this, "handleDataRequest", Qt::QueuedConnection);
+
+    return index;
+}
+
+int LogService::requestLogEntries(const std::shared_ptr<LogEntryIterator<false>>& iterator, int entryCount)
+{
+    if (!logManager || !iterator || entryCount <= 0 || !iterator->hasLogs())
+    {
+        qCritical() << "Invalid log entry request parameters.";
+        return -1;
+    }
+
+    int index = nextRequestIndex++;
+    dataRequestsReverse->emplace_back(index, iterator, entryCount);
+    QMetaObject::invokeMethod(this, "handleDataRequestReverse", Qt::QueuedConnection);
 
     return index;
 }
@@ -236,7 +284,7 @@ void LogService::handleIteratorRequest()
     auto& request = *it;
     lockedIteratorRequests.unlock();
 
-    iterators->emplace(request.index, std::make_shared<LogEntryIterator>(logManager->getIterator(request.startTime, request.endTime)));
+    iterators->emplace(request.index, std::make_shared<LogEntryIterator<>>(logManager->getIterator<true>(request.startTime, request.endTime)));
 
     iteratorCreated(request.index);
 
@@ -276,6 +324,75 @@ void LogService::handleDataRequest()
             break;
 
         result.emplace_back(std::move(entry.value()));
+    }
+
+    dataLoaded(request.index);
+
+    lockedDataRequests.lock();
+    lockedDataRequests->pop_front();
+
+    QT_SLOT_END
+}
+
+void LogService::handleReverseIteratorRequest()
+{
+    QT_SLOT_BEGIN
+
+    auto lockedIteratorRequests = reverseIteratorRequests.getLocker();
+
+    auto it = lockedIteratorRequests->begin();
+    if (it == lockedIteratorRequests->end())
+    {
+        qWarning() << "No iterator requests available.";
+        return;
+    }
+
+    auto& request = *it;
+    lockedIteratorRequests.unlock();
+
+    reverseIterators->emplace(request.index, std::make_shared<LogEntryIterator<false>>(logManager->getIterator<false>(request.startTime, request.endTime)));
+
+    iteratorCreated(request.index);
+
+    lockedIteratorRequests.lock();
+    iteratorRequests->pop_front();
+
+    QT_SLOT_END
+}
+
+void LogService::handleDataRequestReverse()
+{
+    QT_SLOT_BEGIN
+
+    auto lockedDataRequests = dataRequestsReverse.getLocker();
+
+    while (lockedDataRequests->begin() != lockedDataRequests->end() && !lockedDataRequests->begin()->active)
+        lockedDataRequests->pop_front();
+
+    if (lockedDataRequests->begin() == lockedDataRequests->end())
+    {
+        qWarning() << "No active data requests available.";
+        return;
+    }
+
+    auto& request = *lockedDataRequests->begin();
+
+    lockedDataRequests.unlock();
+
+    std::vector<LogEntry>& result = dataRequestResults->emplace(request.index, std::vector<LogEntry>{}).first->second;
+    result.clear();
+
+    result.resize(request.entryCount);
+    for (size_t i = request.entryCount - 1; i < request.entryCount; --i)
+    {
+        auto entry = request.iterator->next();
+        if (!entry)
+        {
+            result.erase(result.begin(), result.begin() + i + 1);
+            break;
+        }
+
+        result[i] = std::move(entry.value());
     }
 
     dataLoaded(request.index);
@@ -333,5 +450,20 @@ LogService::IteratorRequest::IteratorRequest(int index, const std::chrono::syste
     endTime(end)
 {}
 
-LogService::DataRequest::DataRequest(int index, std::shared_ptr<LogEntryIterator> it, int count) : index(index), iterator(std::move(it)), entryCount(count)
+LogService::ReverseIteratorRequest::ReverseIteratorRequest(int index, const std::chrono::system_clock::time_point& start, const std::chrono::system_clock::time_point& end) :
+    index(index),
+    startTime(start),
+    endTime(end)
+{}
+
+LogService::DataRequest::DataRequest(int index, const std::shared_ptr<LogEntryIterator<true>>& it, int count) :
+    index(index),
+    iterator(std::move(it)),
+    entryCount(count)
+{}
+
+LogService::DataRequestReverse::DataRequestReverse(int index, const std::shared_ptr<LogEntryIterator<false>>& it, int count) :
+    index(index),
+    iterator(std::move(it)),
+    entryCount(count)
 {}

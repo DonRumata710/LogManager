@@ -21,10 +21,10 @@ std::map<std::string, std::shared_ptr<Format>> FormatManager::getFormats() const
 void FormatManager::addFormat(const std::shared_ptr<Format>& format)
 {
     if (!format)
-        throw std::logic_error("Format cannot be null");
+        throw std::logic_error("format cannot be null");
 
     if (format->name.isEmpty())
-        throw std::logic_error("Format name cannot be empty");
+        throw std::logic_error("format name cannot be empty");
 
     QJsonDocument doc;
     QJsonObject formatObj;
@@ -100,7 +100,7 @@ void FormatManager::addFormat(const std::shared_ptr<Format>& format)
 
     formats[format->name.toStdString()] = format;
 
-    qDebug() << "Format created: " << format->name;
+    qDebug() << "Format created:" << format->name;
 }
 
 void FormatManager::removeFormat(const QString& name)
@@ -115,12 +115,12 @@ void FormatManager::removeFormat(const QString& name)
             if (!QFile::remove(filePath))
                 qWarning() << "Failed to remove file:" << filePath;
             else
-                qDebug() << "Format removed: " << name;
+                qDebug() << "Format removed:" << name;
         }
     }
     else
     {
-        qWarning() << "Format not found: " << name;
+        qWarning() << "Format not found:" << name;
     }
 }
 

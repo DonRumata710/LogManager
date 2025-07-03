@@ -37,7 +37,7 @@ const std::unordered_set<QString>& LogStorage::getModules() const
     return modules;
 }
 
-const std::pair<const std::chrono::system_clock::time_point, LogStorage::LogMetadata>& LogStorage::findLog(const QString& module, const std::chrono::system_clock::time_point& time) const
+const LogStorage::LogMetaEntry& LogStorage::findLog(const QString& module, const std::chrono::system_clock::time_point& time) const
 {
     auto it = docs.find(module);
     if (it == docs.end())
@@ -59,7 +59,31 @@ const std::pair<const std::chrono::system_clock::time_point, LogStorage::LogMeta
     return emptyPair;
 }
 
-const std::pair<const std::chrono::system_clock::time_point, LogStorage::LogMetadata>& LogStorage::findNextLog(const QString& module, const std::chrono::system_clock::time_point& time) const
+const LogStorage::LogMetaEntry& LogStorage::findPrevLog(const QString& module, const std::chrono::system_clock::time_point& time) const
+{
+    auto it = docs.find(module);
+    if (it == docs.end())
+    {
+        qCritical() << "Unknown module:" << module;
+    }
+    else
+    {
+        auto logIt = it->second.find(time);
+        if (logIt != it->second.end())
+        {
+            ++logIt;
+            if (logIt != it->second.end())
+                return *logIt;
+        }
+    }
+
+    qDebug() << "Previous log not found for module" << module << "at time" << QDateTime::fromSecsSinceEpoch(std::chrono::system_clock::to_time_t(time));
+
+    static const std::pair<const std::chrono::system_clock::time_point, LogStorage::LogMetadata> emptyPair;
+    return emptyPair;
+}
+
+const LogStorage::LogMetaEntry& LogStorage::findNextLog(const QString& module, const std::chrono::system_clock::time_point& time) const
 {
     auto it = docs.find(module);
     if (it == docs.end())

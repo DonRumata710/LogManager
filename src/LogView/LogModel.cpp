@@ -6,6 +6,8 @@
 LogModel::LogModel(LogService* logService, const QDateTime& startTime, const QDateTime& endTime, QObject *parent) :
     QAbstractItemModel(parent),
     service(logService),
+    startTime(startTime),
+    endTime(endTime.addMSecs(1)),
     modules(logService->getLogManager()->getModules())
 {
     connect(service, &LogService::iteratorCreated, this, &LogModel::handleIterator);
@@ -43,13 +45,29 @@ void LogModel::setModules(const std::unordered_set<QString>& _modules)
     for (const auto& module : _modules)
     {
         if (!service->getLogManager()->getModules().contains(module))
-            throw std::runtime_error("Unexpected module: " + module.toStdString());
+            throw std::runtime_error("unexpected module: " + module.toStdString());
     }
 
     beginResetModel();
     modules = _modules;
     update();
     endResetModel();
+}
+
+bool LogModel::canFetchUpMore() const
+{
+    return reverseIterator && reverseIterator->hasLogs();
+}
+
+void LogModel::fetchUpMore()
+{
+    if (!dataRequests.empty())
+        return;
+
+    if (!canFetchUpMore())
+        return;
+
+    dataRequests[service->requestLogEntries(reverseIterator, blockSize)] = DataRequestType::Prepend;
 }
 
 bool LogModel::canFetchDownMore() const
@@ -65,7 +83,7 @@ void LogModel::fetchDownMore()
     if (!canFetchDownMore())
         return;
 
-    dataRequests[service->requestLogEntries(iterator, BatchSize)] = DataRequestType::Append;
+    dataRequests[service->requestLogEntries(iterator, blockSize)] = DataRequestType::Append;
 }
 
 const std::vector<Format::Field>& LogModel::getFields() const
@@ -80,10 +98,10 @@ const std::unordered_set<QVariant, VariantHash> LogModel::availableValues(int se
 
     if (section == static_cast<int>(PredefinedColumn::Module))
     {
-        std::unordered_set<QVariant, VariantHash> modules;
-        for (const auto& module : service->getLogManager()->getModules())
-            modules.emplace(module);
-        return modules;
+        std::unordered_set<QVariant, VariantHash> res;
+        for (const auto& module : modules)
+            res.emplace(module);
+        return res;
     }
 
     const auto& field = getField(section);
@@ -270,19 +288,13 @@ void LogModel::handleData(int index)
 {
     QT_SLOT_BEGIN
 
-    auto it = dataRequests.find(index);
-    if (it == dataRequests.end())
-        return;
-
-    auto requestType = it->second;
-    dataRequests.erase(it);
-
+    DataRequestType requestType = handleDataRequest(index);
     auto data = service->getResult(index);
 
     switch(requestType)
     {
     case DataRequestType::Append:
-        beginInsertRows(QModelIndex(), logs.size(), logs.size() + BatchSize - 1);
+        beginInsertRows(QModelIndex(), logs.size(), logs.size() + data.size() - 1);
         for (const auto& entry : data)
         {
             LogItem item;
@@ -291,10 +303,35 @@ void LogModel::handleData(int index)
             logs.push_back(item);
         }
         endInsertRows();
+
+        if (iterator)
+            entryCache.emplace(iterator->getCache());
+
+        if (logs.size() > blockSize * blockCount)
+        {
+            qDebug() << "Logs size exceeds block count limit (" << blockSize * blockCount << ") and will be truncated at the beginning.";
+
+            decltype(entryCache)::iterator cacheIt;
+            if (reverseIterator)
+                cacheIt = entryCache.find({ reverseIterator->getCurrentTime() });
+            else
+                cacheIt = entryCache.begin();
+
+            if (cacheIt == entryCache.end())
+                qCritical() << "LogModel::handleData: no cache found for reverse iterator";
+            else if (++cacheIt != entryCache.end())
+                reverseIterator = std::make_shared<LogEntryIterator<false>>(service->getLogManager()->createIterator<false>(cacheIt->heap, startTime.toStdSysMilliseconds(), cacheIt->time));
+
+            beginRemoveRows(QModelIndex(), 0, logs.size() - blockSize * blockCount - 1);
+            logs.erase(logs.begin(), logs.begin() + logs.size() - blockSize * blockCount);
+            for (size_t i = 0; i < logs.size(); ++i)
+                logs[i].index = i;
+            endRemoveRows();
+        }
         break;
 
     case DataRequestType::Prepend:
-        beginInsertRows(QModelIndex(), 0, BatchSize - 1);
+        beginInsertRows(QModelIndex(), 0, data.size() - 1);
         for (size_t i = data.size() - 1; i < data.size(); --i)
         {
             LogItem item;
@@ -305,19 +342,56 @@ void LogModel::handleData(int index)
         for (size_t i = data.size(); i < logs.size(); ++i)
             logs[i].index = i;
         endInsertRows();
+
+        if (reverseIterator)
+            entryCache.emplace(reverseIterator->getCache());
+
+        if (logs.size() > blockSize * blockCount)
+        {
+            qDebug() << "Logs size exceeds block count limit (" << blockSize * blockCount << ") and will be truncated at the end.";
+
+            decltype(entryCache)::iterator cacheIt;
+            if (iterator)
+                cacheIt = entryCache.find({ iterator->getCurrentTime() });
+            else
+                cacheIt = entryCache.end();
+
+            if (cacheIt != entryCache.begin())
+                --cacheIt;
+
+            if (cacheIt != entryCache.end())
+                iterator = std::make_shared<LogEntryIterator<true>>(service->getLogManager()->createIterator<true>(cacheIt->heap));
+
+            beginRemoveRows(QModelIndex(), blockSize * blockCount, logs.size() - 1);
+            logs.erase(logs.begin() + blockSize * blockCount, logs.end());
+            endRemoveRows();
+        }
         break;
 
     case DataRequestType::Replace:
         beginResetModel();
         logs.clear();
-        for (const auto& entry : data)
+
+        for (int i = 0; i < data.size(); ++i)
         {
             LogItem item;
-            item.entry = entry;
+            item.entry = data[i];
             item.index = logs.size();
             logs.push_back(item);
         }
         endResetModel();
+
+        if (iterator)
+            entryCache.emplace(iterator->getCache());
+
+        if (logs.size() > blockSize * blockCount)
+            qWarning() << "LogModel::handleData: logs size exceeds block count limit (" << blockSize * blockCount << ")";
+        else
+            dataRequests[service->requestLogEntries(iterator, blockSize)] = DataRequestType::Append;
+        break;
+
+    default:
+        qWarning() << "LogModel::handleData: unexpected data request type:" << static_cast<int>(requestType);
         break;
     }
 
@@ -326,8 +400,14 @@ void LogModel::handleData(int index)
 
 void LogModel::update()
 {
+    if (!iterator)
+        return;
+
+    if (entryCache.empty())
+        entryCache.emplace(iterator->getCache());
+
     dataRequests.clear();
-    dataRequests[service->requestLogEntries(iterator, BatchSize * 4)] = DataRequestType::Replace;
+    dataRequests[service->requestLogEntries(iterator, blockSize)] = DataRequestType::Replace;
 }
 
 const Format::Field& LogModel::getField(int section) const
@@ -340,4 +420,15 @@ const Format::Field& LogModel::getField(int section) const
 size_t LogModel::getParentIndex(const QModelIndex& index) const
 {
     return *reinterpret_cast<size_t*>(index.internalPointer());
+}
+
+LogModel::DataRequestType LogModel::handleDataRequest(int index)
+{
+    auto it = dataRequests.find(index);
+    if (it == dataRequests.end())
+        return DataRequestType::None;
+
+    auto requestType = it->second;
+    dataRequests.erase(it);
+    return requestType;
 }

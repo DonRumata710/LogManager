@@ -70,7 +70,7 @@ LogManager::LogManager(const std::vector<QString>& folders, const std::vector<st
 
     if (!foundFiles)
     {
-        throw std::runtime_error("No suitable files found in the specified folders.");
+        throw std::runtime_error("no suitable files found in the specified folders.");
     }
 }
 
@@ -87,7 +87,7 @@ LogManager::LogManager(const QString& filename, const std::vector<std::shared_pt
     if (!result)
     {
         qDebug() << "No suitable format found for file:" << filename;
-        throw std::runtime_error("No suitable format found for file: " + path.string() + '.');
+        throw std::runtime_error("no suitable format found for file: " + path.string() + '.');
     }
 }
 
@@ -114,11 +114,6 @@ std::chrono::system_clock::time_point LogManager::getMinTime() const
 std::chrono::system_clock::time_point LogManager::getMaxTime() const
 {
     return logStorage->getMaxTime();
-}
-
-LogEntryIterator LogManager::getIterator(const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime)
-{
-    return LogEntryIterator(logStorage, startTime, endTime);
 }
 
 bool LogManager::addFile(const QString& filename, const QString& stem, const QString& extension, std::function<std::unique_ptr<QIODevice>(const QString&)> createFileFunc, const std::vector<std::shared_ptr<Format>>& formats)

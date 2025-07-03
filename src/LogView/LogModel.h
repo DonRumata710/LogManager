@@ -5,6 +5,8 @@
 #include <QAbstractTableModel>
 #include <QRegularExpression>
 
+#include <boost/container/flat_set.hpp>
+
 #include <memory>
 #include <deque>
 
@@ -23,6 +25,9 @@ public:
     explicit LogModel(LogService* logManager, const QDateTime& startTime, const QDateTime& endTime, QObject *parent = nullptr);
 
     void setModules(const std::unordered_set<QString>& modules);
+
+    bool canFetchUpMore() const;
+    void fetchUpMore();
 
     bool canFetchDownMore() const;
     void fetchDownMore();
@@ -56,13 +61,6 @@ public slots:
     void handleData(int);
 
 private:
-    void update();
-
-    const Format::Field& getField(int section) const;
-
-    size_t getParentIndex(const QModelIndex& index) const;
-
-private:
     struct LogItem
     {
         LogEntry entry;
@@ -71,16 +69,40 @@ private:
 
     enum class DataRequestType
     {
+        None,
         Append,
         Prepend,
         Replace
     };
 
+    struct MergeHeapCacheComparator
+    {
+        bool operator()(const MergeHeapCache& lhs, const MergeHeapCache& rhs) const
+        {
+            return lhs.time < rhs.time;
+        }
+    };
+
+    typedef boost::container::flat_set<MergeHeapCache, MergeHeapCacheComparator> MergeHeapCacheContainer;
+
+private:
+    void update();
+
+    const Format::Field& getField(int section) const;
+
+    size_t getParentIndex(const QModelIndex& index) const;
+
+    DataRequestType handleDataRequest(int index);
+
 private:
     LogService* service;
 
+    QDateTime startTime;
+    QDateTime endTime;
+
     int iteratorIndex;
-    std::shared_ptr<LogEntryIterator> iterator;
+    std::shared_ptr<LogEntryIterator<true>> iterator;
+    std::shared_ptr<LogEntryIterator<false>> reverseIterator;
 
     std::unordered_map<int, DataRequestType> dataRequests;
 
@@ -88,5 +110,8 @@ private:
     std::unordered_set<QString> modules;
     std::deque<LogItem> logs;
 
-    static const int BatchSize = 1000;
+    MergeHeapCacheContainer entryCache;
+
+    static const int blockSize = 1000;
+    static const int blockCount = 4;
 };

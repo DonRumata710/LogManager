@@ -21,6 +21,7 @@ public:
         FileBuilder fileBuilder;
         QString filename;
     };
+    typedef std::pair<const std::chrono::system_clock::time_point, LogMetadata> LogMetaEntry;
 
 public:
     LogStorage();
@@ -30,8 +31,9 @@ public:
     const std::unordered_set<std::shared_ptr<Format>>& getFormats() const;
     const std::unordered_set<QString>& getModules() const;
 
-    const std::pair<const std::chrono::system_clock::time_point, LogMetadata>& findLog(const QString& module, const std::chrono::system_clock::time_point& time) const;
-    const std::pair<const std::chrono::system_clock::time_point, LogMetadata>& findNextLog(const QString& module, const std::chrono::system_clock::time_point& time) const;
+    const LogMetaEntry& findLog(const QString& module, const std::chrono::system_clock::time_point& time) const;
+    const LogMetaEntry& findPrevLog(const QString& module, const std::chrono::system_clock::time_point& time) const;
+    const LogMetaEntry& findNextLog(const QString& module, const std::chrono::system_clock::time_point& time) const;
 
     std::unordered_set<QVariant, VariantHash>& getEnumList(const QString& field);
     const std::unordered_set<QVariant, VariantHash>& getEnumList(const QString& field) const;
