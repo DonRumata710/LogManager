@@ -8,6 +8,7 @@
 #include <QDateTime>
 
 #include <unordered_set>
+#include <memory>
 
 
 class LogManager

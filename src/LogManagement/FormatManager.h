@@ -3,6 +3,7 @@
 #include "Format.h"
 
 #include <map>
+#include <memory>
 
 
 class FormatManager

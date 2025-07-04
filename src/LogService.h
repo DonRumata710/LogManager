@@ -8,6 +8,11 @@
 #include <QFile>
 #include <QTreeView>
 
+#include <map>
+#include <deque>
+#include <vector>
+#include <memory>
+
 
 class LogService : public QObject
 {

@@ -45,16 +45,16 @@ macro(check_local_hints)
 
         list(APPEND CMAKE_PREFIX_PATH ${_LOCAL_HINTS})
 
-        file(GLOB packages RELATIVE ${_LOCAL_HINTS} ${_LOCAL_HINTS}/*)
+        file(GLOB packages RELATIVE ${_LOCAL_HINTS} ${_LOCAL_HINTS}*)
 
         foreach(package ${packages})
             add_external_dependency(${_LOCAL_HINTS} ${package})
         endforeach()
 
-        file(GLOB packages RELATIVE ${LOCAL_HINTS}/any ${LOCAL_HINTS}/any/*)
+        file(GLOB packages RELATIVE ${LOCAL_HINTS}/any/ ${LOCAL_HINTS}/any/*)
 
         foreach(package ${packages})
-            add_external_dependency(${LOCAL_HINTS} ${package})
+            add_external_dependency(${LOCAL_HINTS}/any/ ${package})
         endforeach()
     endif()
 endmacro()

@@ -5,6 +5,8 @@
 #include <QIODevice>
 
 #include <optional>
+#include <memory>
+#include <vector>
 
 
 class Log
