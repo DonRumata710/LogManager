@@ -95,6 +95,10 @@ private:
     DataRequestType handleDataRequest(int index);
 
 private:
+    static int loadBlockSize();
+    static int loadBlockCount();
+
+private:
     LogService* service;
 
     QDateTime startTime;
@@ -112,6 +116,6 @@ private:
 
     MergeHeapCacheContainer entryCache;
 
-    static const int blockSize = 1000;
-    static const int blockCount = 4;
+    int blockSize = 2000;
+    int blockCount = 4;
 };

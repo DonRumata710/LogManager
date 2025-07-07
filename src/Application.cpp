@@ -1,5 +1,8 @@
 #include "Application.h"
 
+#include <QSettings>
+#include <QDir>
+
 
 Application::Application(int& argc, char** argv) :
     QApplication(argc, argv)
@@ -9,6 +12,13 @@ Application::Application(int& argc, char** argv) :
 
     logService = new LogService();
     logService->moveToThread(serviceThread);
+
+    setApplicationName(APPLICATION_NAME);
+    setApplicationVersion(APPLICATION_VERSION);
+    setOrganizationName("");
+
+    QSettings::setDefaultFormat(QSettings::Format::IniFormat);
+    QSettings::setPath(QSettings::Format::IniFormat, QSettings::Scope::UserScope, QDir::currentPath() + "/" + applicationName() + ".ini");
 }
 
 Application::~Application()

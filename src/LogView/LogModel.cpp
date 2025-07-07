@@ -1,6 +1,8 @@
 #include "LogModel.h"
 
-#include "Utils.h"
+#include "LogViewUtils.h"
+#include "./Settings.h"
+#include "./Utils.h"
 
 
 LogModel::LogModel(LogService* logService, const QDateTime& startTime, const QDateTime& endTime, QObject *parent) :
@@ -8,7 +10,9 @@ LogModel::LogModel(LogService* logService, const QDateTime& startTime, const QDa
     service(logService),
     startTime(startTime),
     endTime(endTime.addMSecs(1)),
-    modules(logService->getLogManager()->getModules())
+    modules(logService->getLogManager()->getModules()),
+    blockSize(loadBlockSize()),
+    blockCount(loadBlockCount())
 {
     connect(service, &LogService::iteratorCreated, this, &LogModel::handleIterator);
     connect(service, &LogService::dataLoaded, this, &LogModel::handleData);
@@ -420,6 +424,30 @@ const Format::Field& LogModel::getField(int section) const
 size_t LogModel::getParentIndex(const QModelIndex& index) const
 {
     return *reinterpret_cast<size_t*>(index.internalPointer());
+}
+
+int LogModel::loadBlockSize()
+{
+    static const int defaultSize = 2000;
+
+    Settings settings;
+    if (settings.contains(LogViewSettings + "/blockSize"))
+        return settings.value(LogViewSettings + "/blockSize", defaultSize).toInt();
+    else
+        settings.setValue(LogViewSettings + "/blockSize", defaultSize);
+    return defaultSize;
+}
+
+int LogModel::loadBlockCount()
+{
+    static const int defaultSize = 4;
+
+    Settings settings;
+    if (settings.contains(LogViewSettings + "/blockCount"))
+        return settings.value(LogViewSettings + "/blockCount", defaultSize).toInt();
+    else
+        settings.setValue(LogViewSettings + "/blockCount", defaultSize);
+    return defaultSize;
 }
 
 LogModel::DataRequestType LogModel::handleDataRequest(int index)

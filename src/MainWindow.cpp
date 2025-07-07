@@ -4,6 +4,7 @@
 #include "Application.h"
 #include "Utils.h"
 #include "InitialDataDialog.h"
+#include "Settings.h"
 #include "LogView/LogModel.h"
 #include "LogView/FilterHeader.h"
 #include "LogView/LogFilterModel.h"
@@ -21,6 +22,19 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
     setWindowTitle(QApplication::instance()->applicationName());
+
+    Settings settings;
+    qDebug() << "Settings location: " << settings.fileName();
+
+    if (settings.contains(objectName() + "/geometry") && settings.contains(objectName() + "/state"))
+    {
+        restoreGeometry(settings.value(objectName() + "/geometry").toByteArray());
+        restoreState(settings.value(objectName() + "/state").toByteArray());
+    }
+    else
+    {
+        setWindowState(Qt::WindowState::WindowMaximized);
+    }
 
     for (const auto& format : formatManager.getFormats())
     {
@@ -50,6 +64,10 @@ MainWindow::MainWindow(QWidget *parent) :
 
 MainWindow::~MainWindow()
 {
+    Settings settings;
+    settings.setValue(objectName() + "/geometry", saveGeometry());
+    settings.setValue(objectName() + "/state", saveState());
+
     delete ui;
 }
 
