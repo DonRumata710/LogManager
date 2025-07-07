@@ -27,6 +27,48 @@ void LogStorage::addLog(const QString& module, const std::chrono::system_clock::
     }
 }
 
+LogStorage LogStorage::getNarrowedStorage(const std::unordered_set<QString>& modules, const std::chrono::system_clock::time_point& newMinTime, const std::chrono::system_clock::time_point& newMaxTime) const
+{
+    LogStorage res;
+
+    if (newMinTime == std::chrono::system_clock::time_point() || newMinTime < minTime)
+    {
+        res.minTime = minTime;
+        qWarning() << "Narrowed storage requested with minTime before existing minTime:" << QDateTime::fromSecsSinceEpoch(std::chrono::system_clock::to_time_t(minTime));
+    }
+    else
+    {
+        res.minTime = newMinTime;
+    }
+
+    if (newMaxTime == std::chrono::system_clock::time_point() || newMaxTime > maxTime)
+    {
+        res.maxTime = maxTime;
+        qWarning() << "Narrowed storage requested with maxTime after existing maxTime:" << QDateTime::fromSecsSinceEpoch(std::chrono::system_clock::to_time_t(maxTime));
+    }
+    else
+    {
+        res.maxTime = newMaxTime;
+    }
+
+    res.modules = modules;
+    for (const auto& module : modules)
+    {
+        res.docs[module] = docs.at(module);
+
+        const auto& format = res.docs[module].begin()->second.format;
+        res.usedFormats.insert(format);
+    }
+
+    for (const auto& format : res.usedFormats)
+    {
+        for (const auto& field : format->fields)
+            res.enumLists[format->name] = getEnumList(field.name);
+    }
+
+    return res;
+}
+
 const std::unordered_set<std::shared_ptr<Format>>& LogStorage::getFormats() const
 {
     return usedFormats;

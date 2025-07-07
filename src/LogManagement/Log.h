@@ -25,11 +25,15 @@ public:
 private:
     QStringConverter::Encoding checkFileForBom();
 
+    bool getToNextLine(qint64& pos, QString& line);
+
     bool isCommentEnd(const Format::Comment& comment, const QString& line) const;
 
 private:
     std::unique_ptr<QIODevice> file;
     QStringDecoder decoder;
     std::shared_ptr<std::vector<Format::Comment>> comments;
-    QString buffer;
+    qint64 fileStart = 0;
+    QByteArray buffer;
+    qsizetype ecodingWidth = 1;
 };

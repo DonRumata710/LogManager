@@ -10,10 +10,9 @@
 #include <filesystem>
 
 
-LogManager::LogManager(const std::vector<QString>& folders, const std::vector<std::shared_ptr<Format>>& formats)
+LogManager::LogManager(const std::vector<QString>& folders, const std::vector<std::shared_ptr<Format>>& formats) :
+    logStorage(std::make_shared<LogStorage>())
 {
-    logStorage = std::make_shared<LogStorage>();
-
     bool foundFiles = false;
     for (const auto& folder : folders)
     {
@@ -74,16 +73,14 @@ LogManager::LogManager(const std::vector<QString>& folders, const std::vector<st
     }
 }
 
-LogManager::LogManager(const QString& filename, const std::vector<std::shared_ptr<Format>>& formats)
+LogManager::LogManager(const QString& filename, const std::vector<std::shared_ptr<Format>>& formats) :
+    logStorage(std::make_shared<LogStorage>())
 {
-    logStorage = std::make_shared<LogStorage>();
-
     std::filesystem::path path = filename.toStdString();
     auto fileCreationFunc = [](const QString& filename) {
         return std::make_unique<QFile>(filename);
     };
     auto result = addFile(filename, QString::fromStdString(path.stem().string()), QString::fromStdString(path.extension().string()), fileCreationFunc, formats);
-
     if (!result)
     {
         qDebug() << "No suitable format found for file:" << filename;
@@ -114,6 +111,11 @@ std::chrono::system_clock::time_point LogManager::getMinTime() const
 std::chrono::system_clock::time_point LogManager::getMaxTime() const
 {
     return logStorage->getMaxTime();
+}
+
+Session LogManager::createSession(const std::unordered_set<QString>& modules, const std::chrono::system_clock::time_point& minTime, const std::chrono::system_clock::time_point& maxTime) const
+{
+    return Session(std::make_shared<LogStorage>(logStorage->getNarrowedStorage(modules, minTime, maxTime)));
 }
 
 bool LogManager::addFile(const QString& filename, const QString& stem, const QString& extension, std::function<std::unique_ptr<QIODevice>(const QString&)> createFileFunc, const std::vector<std::shared_ptr<Format>>& formats)

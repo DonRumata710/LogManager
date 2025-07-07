@@ -22,9 +22,7 @@ public:
     };
 
 public:
-    explicit LogModel(LogService* logManager, const QDateTime& startTime, const QDateTime& endTime, QObject *parent = nullptr);
-
-    void setModules(const std::unordered_set<QString>& modules);
+    explicit LogModel(LogService* logService, QObject *parent = nullptr);
 
     bool canFetchUpMore() const;
     void fetchUpMore();

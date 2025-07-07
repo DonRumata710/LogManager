@@ -322,10 +322,11 @@ void MainWindow::logManagerCreated()
         return;
     }
 
+    logService->createSession(modules, startDate.toStdSysMilliseconds(), endDate.addMSecs(1).toStdSysMilliseconds());
+
     auto proxyModel = new LogFilterModel(this);
 
-    auto logModel = new LogModel(logService, startDate, endDate, proxyModel);
-    logModel->setModules(modules);
+    auto logModel = new LogModel(logService, proxyModel);
 
     proxyModel->setSourceModel(logModel);
 

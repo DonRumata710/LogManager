@@ -20,6 +20,16 @@ const ThreadSafePtr<LogManager>& LogService::getLogManager() const
     return logManager;
 }
 
+void LogService::createSession(const std::unordered_set<QString>& modules, const std::chrono::system_clock::time_point& minTime, const std::chrono::system_clock::time_point& maxTime)
+{
+    session = logManager->createSession(modules, minTime, maxTime);
+}
+
+const ThreadSafePtr<Session>& LogService::getSession() const
+{
+    return session;
+}
+
 int LogService::requestIterator(const std::chrono::system_clock::time_point& startTime,
                                 const std::chrono::system_clock::time_point& endTime)
 {
@@ -272,6 +282,12 @@ void LogService::handleIteratorRequest()
 {
     QT_SLOT_BEGIN
 
+    if (!session)
+    {
+        qCritical() << "Session is not initialized.";
+        return;
+    }
+
     auto lockedIteratorRequests = iteratorRequests.getLocker();
 
     auto it = lockedIteratorRequests->begin();
@@ -284,7 +300,7 @@ void LogService::handleIteratorRequest()
     auto& request = *it;
     lockedIteratorRequests.unlock();
 
-    iterators->emplace(request.index, std::make_shared<LogEntryIterator<>>(logManager->getIterator<true>(request.startTime, request.endTime)));
+    iterators->emplace(request.index, std::make_shared<LogEntryIterator<>>(session->getIterator<true>(request.startTime, request.endTime)));
 
     iteratorCreated(request.index);
 
@@ -350,7 +366,7 @@ void LogService::handleReverseIteratorRequest()
     auto& request = *it;
     lockedIteratorRequests.unlock();
 
-    reverseIterators->emplace(request.index, std::make_shared<LogEntryIterator<false>>(logManager->getIterator<false>(request.startTime, request.endTime)));
+    reverseIterators->emplace(request.index, std::make_shared<LogEntryIterator<false>>(session->getIterator<false>(request.startTime, request.endTime)));
 
     iteratorCreated(request.index);
 
@@ -433,7 +449,7 @@ void LogService::exportDataToFile(const QString& filename, const QDateTime& star
         return;
     }
 
-    auto iterator = logManager->getIterator(startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
+    auto iterator = session->getIterator(startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
     while (iterator.hasLogs())
     {
         auto entry = iterator.next();

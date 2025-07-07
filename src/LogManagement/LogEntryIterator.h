@@ -32,12 +32,15 @@ public:
         std::shared_ptr<Log> log;
 
         LogEntry entry;
+
         QString line;
+        qint64 lineStart = 0;
+
         qint64 entryPos = 0;
 
         HeapItem() = default;
-        HeapItem(const LogStorage::LogMetaEntry* metadata, QString&& module, std::shared_ptr<Log>&& log, LogEntry&& entry, QString&& line) :
-            metadata(metadata), module(std::move(module)), log(std::move(log)), entry(std::move(entry)), line(std::move(line))
+        HeapItem(const LogStorage::LogMetaEntry* metadata, QString&& module, std::shared_ptr<Log>&& log, LogEntry&& entry, QString&& line, qint64 lineStart, qint64 entryPos) :
+            metadata(metadata), module(std::move(module)), log(std::move(log)), entry(std::move(entry)), line(std::move(line)), lineStart(lineStart), entryPos(entryPos)
         {}
 
         bool operator<(const HeapItem& other) const
@@ -64,15 +67,7 @@ public:
             HeapItemCache res;
             res.module = module;
             res.time = metadata->first;
-            res.pos = log->getFilePosition();
-            if constexpr (straight)
-            {
-                res.pos -= line.toStdString().size();
-            }
-            else
-            {
-                //res.pos += entry.line.toStdString().size();
-            }
+            res.pos = entryPos;
             return res;
         }
     };
@@ -170,7 +165,7 @@ public:
 
         auto nextEntry = getPreparedEntry(top);
         if (nextEntry && nextEntry->time >= startTime && nextEntry->time <= endTime)
-            mergeHeap.emplace(std::move(top.metadata), std::move(top.module), std::move(top.log), std::move(*nextEntry), std::move(top.line));
+            mergeHeap.emplace(std::move(top.metadata), std::move(top.module), std::move(top.log), std::move(*nextEntry), std::move(top.line), top.lineStart, top.entryPos);
 
         if constexpr (!straight)
             endTime = top.entry.time;
@@ -209,9 +204,7 @@ private:
 
         std::optional<QString> line = heapItem.line;
         if constexpr (!straight)
-        {
             line = heapItem.log->prevLine();
-        }
 
         while (line.has_value())
         {
@@ -227,6 +220,7 @@ private:
                             entry.additionalLines += '\n';
                         entry.additionalLines += line.value();
                     }
+                    heapItem.lineStart = heapItem.log->getFilePosition();
                 }
                 else
                 {
@@ -244,15 +238,14 @@ private:
                 if (!entry.line.isEmpty())
                 {
                     heapItem.line = line.value();
-                    heapItem.entryPos = heapItem.log->getFilePosition() - line.value().toStdString().size();
                     return entry;
                 }
                 entry.line = line.value();
+                heapItem.entryPos = heapItem.lineStart;
             }
             else
             {
                 entry.line.prepend(line.value());
-                heapItem.entryPos = heapItem.log->getFilePosition() - line.value().toStdString().size();
             }
 
             entry.time = parseTime(parts[format->timeFieldIndex], format);
@@ -297,9 +290,12 @@ private:
 
             if constexpr(!straight)
             {
+                heapItem.entryPos = heapItem.log->getFilePosition();
                 return entry;
             }
 
+            if constexpr (straight)
+                heapItem.lineStart = heapItem.log->getFilePosition();
             line = (heapItem.log.get()->*(straight ? &Log::nextLine : &Log::prevLine))();
         }
 

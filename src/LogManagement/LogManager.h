@@ -3,7 +3,7 @@
 #include "Format.h"
 #include "Log.h"
 #include "LogStorage.h"
-#include "LogEntryIterator.h"
+#include "Session.h"
 
 #include <QDateTime>
 
@@ -25,17 +25,7 @@ public:
     std::chrono::system_clock::time_point getMinTime() const;
     std::chrono::system_clock::time_point getMaxTime() const;
 
-    template<bool straight = true>
-    LogEntryIterator<straight> getIterator(const std::chrono::system_clock::time_point& startTime = std::chrono::system_clock::time_point(), const std::chrono::system_clock::time_point& endTime = std::chrono::system_clock::time_point::max())
-    {
-        return LogEntryIterator<straight>(logStorage, startTime, endTime);
-    }
-
-    template<bool straight = true>
-    LogEntryIterator<straight> createIterator(const std::vector<HeapItemCache>& cache, const std::chrono::system_clock::time_point& startTime = std::chrono::system_clock::time_point(), const std::chrono::system_clock::time_point& endTime = std::chrono::system_clock::time_point::max())
-    {
-        return LogEntryIterator<straight>(cache, logStorage, startTime, endTime);
-    }
+    Session createSession(const std::unordered_set<QString>& modules, const std::chrono::system_clock::time_point& minTime, const std::chrono::system_clock::time_point& maxTime) const;
 
 private:
     bool addFile(const QString& filename, const QString& stem, const QString& extension, std::function<std::unique_ptr<QIODevice>(const QString&)> createFileFunc, const std::vector<std::shared_ptr<Format>>& formats);

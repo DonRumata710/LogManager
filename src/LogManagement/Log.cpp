@@ -7,7 +7,7 @@ Log::Log(std::unique_ptr<QIODevice>&& _file, const std::optional<QStringConverte
 {
     if (!file->isOpen())
     {
-        if (!file->open(QIODevice::ReadOnly | QIODevice::Text))
+        if (!file->open(QIODevice::ReadOnly))
             throw std::runtime_error("cannot open log file: " + file->errorString().toStdString());
     }
 
@@ -15,6 +15,7 @@ Log::Log(std::unique_ptr<QIODevice>&& _file, const std::optional<QStringConverte
     if (_encoding)
         encoding = _encoding.value();
     decoder = QStringDecoder(encoding);
+    fileStart = file->pos();
 }
 
 Log::Log(std::unique_ptr<QIODevice>&& _file, qint64 pos, const std::optional<QStringConverter::Encoding>& encoding, const std::shared_ptr<std::vector<Format::Comment>>& _comment) :
@@ -112,14 +113,21 @@ std::optional<QString> Log::nextLine()
     while (!buffer.isEmpty() || !file->atEnd())
     {
         qsizetype pos = buffer.indexOf('\n');
-        while(pos == -1 && !file->atEnd())
+        while(true)
         {
-            buffer.append(decoder(file->read(512)));
-            pos = buffer.indexOf('\n');
-        }
+            if (getToNextLine(pos, line))
+                break;
 
-        line = buffer.left(pos);
-        buffer.remove(0, line.size() + 1);
+            auto oldSize = buffer.size();
+            buffer.append(file->read(512));
+            if (oldSize == buffer.size())
+            {
+                pos = buffer.size();
+                continue;
+            }
+
+            pos = buffer.indexOf('\n', oldSize);
+        }
 
         if (line.isEmpty())
             continue;
@@ -182,7 +190,7 @@ void Log::goToEnd()
 
 qint64 Log::getFilePosition() const
 {
-    return static_cast<int>(file->pos()) - buffer.size();
+    return file->pos() - buffer.size();
 }
 
 QStringConverter::Encoding Log::checkFileForBom()
@@ -192,28 +200,33 @@ QStringConverter::Encoding Log::checkFileForBom()
     QByteArray head = file->read(4);
     file->seek(0);
 
-    if (head.startsWith("\xEF\xBB\xBF"))
+    if (head.startsWith(QByteArray{ "\xEF\xBB\xBF", 3 }))
     {
         encoding = QStringConverter::Utf8;
         file->seek(3);
+        ecodingWidth = 1;
     }
-    else if (head.startsWith("\xFF\xFE"))
+    else if (head.startsWith(QByteArray{ "\xFF\xFE", 2 }))
     {
         encoding = QStringDecoder::Utf16LE;
         file->seek(2);
+        ecodingWidth = 2;
     }
-    else if (head.startsWith("\xFE\xFF"))
+    else if (head.startsWith(QByteArray{ "\xFE\xFF", 2 }))
     {
         encoding = QStringDecoder::Utf16BE;
         file->seek(2);
+        ecodingWidth = 2;
     }
-    else if (head.startsWith("\xFF\xFE\x00\x00"))
+    else if (head.startsWith(QByteArray{ "\xFF\xFE\x00\x00", 4 }))
     {
         encoding = QStringDecoder::Utf32LE;
+        ecodingWidth = 4;
     }
-    else if (head.startsWith("\x00\x00\xFE\xFF"))
+    else if (head.startsWith(QByteArray{ "\x00\x00\xFE\xFF", 4 }))
     {
         encoding = QStringDecoder::Utf32BE;
+        ecodingWidth = 4;
     }
     else
     {
@@ -221,6 +234,27 @@ QStringConverter::Encoding Log::checkFileForBom()
     }
 
     return encoding;
+}
+
+bool Log::getToNextLine(qint64& pos, QString& line)
+{
+    while (pos != -1)
+    {
+        pos = (pos + ecodingWidth - 1) & ~(ecodingWidth - 1);
+        auto str = decoder.decode(QByteArrayView{ buffer.constData(), pos + 1 });
+        line.append(str);
+        buffer = buffer.mid(str.data.size());
+
+        if (line.endsWith('\n'))
+        {
+            while (!line.isEmpty() && (line.endsWith('\n') || line.endsWith('\r')))
+                line.chop(1);
+            return true;
+        }
+
+        pos = buffer.indexOf('\n', pos);
+    }
+    return false;
 }
 
 bool Log::isCommentEnd(const Format::Comment& comment, const QString& line) const

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "LogManagement/LogManager.h"
+#include "LogManagement/Session.h"
 #include "ThreadSafePtr.h"
 #include "LogFilter.h"
 
@@ -22,6 +23,11 @@ public:
     explicit LogService(QObject *parent = nullptr);
 
     const ThreadSafePtr<LogManager>& getLogManager() const;
+
+    void createSession(const std::unordered_set<QString>& modules,
+                        const std::chrono::system_clock::time_point& minTime,
+                        const std::chrono::system_clock::time_point& maxTime);
+    const ThreadSafePtr<Session>& getSession() const;
 
     int requestIterator(const std::chrono::system_clock::time_point& startTime,
                         const std::chrono::system_clock::time_point& endTime);
@@ -103,6 +109,7 @@ private:
 
 private:
     ThreadSafePtr<LogManager> logManager;
+    ThreadSafePtr<Session> session;
 
     int nextRequestIndex = 0;
     ThreadSafePtr<std::deque<IteratorRequest>> iteratorRequests;

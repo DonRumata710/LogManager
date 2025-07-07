@@ -1,5 +1,7 @@
 #pragma once
 
+#include <chrono>
+
 
 #define QT_SLOT_BEGIN \
     qDebug() << "start" << __FUNCTION__; \
@@ -12,3 +14,8 @@
     } catch (...) { \
         qCritical() << "Unknown exception in slot"; \
     }
+
+
+class QDateTime;
+
+QDateTime DateTimeFromChronoSystemClock(const std::chrono::system_clock::time_point& tp);

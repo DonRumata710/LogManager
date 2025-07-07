@@ -5,12 +5,12 @@
 #include "./Utils.h"
 
 
-LogModel::LogModel(LogService* logService, const QDateTime& startTime, const QDateTime& endTime, QObject *parent) :
+LogModel::LogModel(LogService* logService, QObject *parent) :
     QAbstractItemModel(parent),
     service(logService),
-    startTime(startTime),
-    endTime(endTime.addMSecs(1)),
-    modules(logService->getLogManager()->getModules()),
+    startTime(DateTimeFromChronoSystemClock(logService->getSession()->getMinTime())),
+    endTime(DateTimeFromChronoSystemClock(logService->getSession()->getMaxTime())),
+    modules(logService->getSession()->getModules()),
     blockSize(loadBlockSize()),
     blockCount(loadBlockCount())
 {
@@ -42,20 +42,6 @@ LogModel::LogModel(LogService* logService, const QDateTime& startTime, const QDa
             fields.push_back(field);
         }
     }
-}
-
-void LogModel::setModules(const std::unordered_set<QString>& _modules)
-{
-    for (const auto& module : _modules)
-    {
-        if (!service->getLogManager()->getModules().contains(module))
-            throw std::runtime_error("unexpected module: " + module.toStdString());
-    }
-
-    beginResetModel();
-    modules = _modules;
-    update();
-    endResetModel();
 }
 
 bool LogModel::canFetchUpMore() const
@@ -324,7 +310,7 @@ void LogModel::handleData(int index)
             if (cacheIt == entryCache.end())
                 qCritical() << "LogModel::handleData: no cache found for reverse iterator";
             else if (++cacheIt != entryCache.end())
-                reverseIterator = std::make_shared<LogEntryIterator<false>>(service->getLogManager()->createIterator<false>(cacheIt->heap, startTime.toStdSysMilliseconds(), cacheIt->time));
+                reverseIterator = std::make_shared<LogEntryIterator<false>>(service->getSession()->createIterator<false>(cacheIt->heap, startTime.toStdSysMilliseconds(), cacheIt->time));
 
             beginRemoveRows(QModelIndex(), 0, logs.size() - blockSize * blockCount - 1);
             logs.erase(logs.begin(), logs.begin() + logs.size() - blockSize * blockCount);
@@ -364,7 +350,7 @@ void LogModel::handleData(int index)
                 --cacheIt;
 
             if (cacheIt != entryCache.end())
-                iterator = std::make_shared<LogEntryIterator<true>>(service->getLogManager()->createIterator<true>(cacheIt->heap));
+                iterator = std::make_shared<LogEntryIterator<true>>(service->getSession()->createIterator<true>(cacheIt->heap));
 
             beginRemoveRows(QModelIndex(), blockSize * blockCount, logs.size() - 1);
             logs.erase(logs.begin() + blockSize * blockCount, logs.end());
