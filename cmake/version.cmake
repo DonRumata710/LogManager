@@ -92,10 +92,8 @@ function(create_git_version_tag)
             @ONLY
         )
 
-        add_custom_target(
-            TARGET git_tag
-            COMMAND ${CMAKE_COMMAND} -D AUTO_TAG_PUSH=${AUTO_TAG_PUSH}
-                                     -P ${CMAKE_BINARY_DIR}/AddGitTag.cmake
+        add_custom_target(tag
+            COMMAND ${CMAKE_COMMAND} -DAUTO_TAG_PUSH=${AUTO_TAG_PUSH} -P ${CMAKE_BINARY_DIR}/AddGitTag.cmake
             COMMENT "[auto-tag] Checking/creating Git tag"
             VERBATIM
         )
