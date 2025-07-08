@@ -77,18 +77,27 @@ function(get_git_tag_version versionVar dirtyFlag)
         endif()
 
         set(${versionVar} "${version}" PARENT_SCOPE)
+        message("\nGit tag version: ${version}\n")
     endif()
 endfunction()
 
 function(create_git_version_tag)
-    set(GIT_TAG "v${PROJECT_VERSION}")
-    string(REGEX REPLACE "\\.0+$" "" VERSION_PREFIX "${PROJECT_VERSION}")
-    set(TAG_PREFIX "v${VERSION_PREFIX}")
+    option(ENABLE_AUTO_TAG "Create a Git version tag after build" ON)
+    option(AUTO_TAG_PUSH  "Push the new tag to origin" OFF)
 
-    add_custom_target(tag
-        COMMAND ${CMAKE_COMMAND} -E echo "Checking for existing tags at HEAD starting with '${TAG_PREFIX}'..."
-        COMMAND cmd /C "git tag --points-at HEAD > build\\.taglist.tmp && (findstr /B ${TAG_PREFIX} build\\.taglist.tmp >nul && (echo Tag with prefix ${TAG_PREFIX} already exists. Skipping.) || (echo Creating and pushing tag ${GIT_TAG}... && git tag ${GIT_TAG}))"
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        COMMENT "Create git tag ${GIT_TAG} if not already tagged with prefix ${TAG_PREFIX}"
-    )
+    if(ENABLE_AUTO_TAG)
+        configure_file(
+            ${CMAKE_CURRENT_LIST_DIR}/cmake/AddGitTag.cmake.in
+            ${CMAKE_BINARY_DIR}/AddGitTag.cmake
+            @ONLY
+        )
+
+        add_custom_target(
+            TARGET git_tag
+            COMMAND ${CMAKE_COMMAND} -D AUTO_TAG_PUSH=${AUTO_TAG_PUSH}
+                                     -P ${CMAKE_BINARY_DIR}/AddGitTag.cmake
+            COMMENT "[auto-tag] Checking/creating Git tag"
+            VERBATIM
+        )
+    endif()
 endfunction()

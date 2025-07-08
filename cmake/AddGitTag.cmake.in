@@ -1,0 +1,53 @@
+execute_process(
+    COMMAND git rev-parse --is-inside-work-tree
+    WORKING_DIRECTORY "@CMAKE_SOURCE_DIR@"
+    RESULT_VARIABLE _git_ok
+    OUTPUT_QUIET ERROR_QUIET
+)
+if(NOT _git_ok EQUAL 0)
+    message(STATUS "[auto-tag] Not a Git checkout – skipping.")
+    return()
+endif()
+
+execute_process(
+    COMMAND git tag --points-at HEAD --list "v[0-9]*"
+    WORKING_DIRECTORY "@CMAKE_SOURCE_DIR@"
+    OUTPUT_VARIABLE _head_tags
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+if(_head_tags STREQUAL "")
+    set(_version_tag "v@PROJECT_VERSION@")
+
+    execute_process(
+        COMMAND git tag -l "${_version_tag}"
+        WORKING_DIRECTORY "@CMAKE_SOURCE_DIR@"
+        OUTPUT_VARIABLE _exists_elsewhere
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    if(_exists_elsewhere STREQUAL "")
+        message(STATUS "[auto-tag] Creating tag ${_version_tag}")
+        execute_process(
+            COMMAND git tag "${_version_tag}"
+            WORKING_DIRECTORY "@CMAKE_SOURCE_DIR@"
+        )
+
+        # Optional push – won’t hard-fail the build if it errors
+        if("@AUTO_TAG_PUSH@" STREQUAL "ON")
+            execute_process(
+                COMMAND git push origin "${_version_tag}"
+                WORKING_DIRECTORY "@CMAKE_SOURCE_DIR@"
+                RESULT_VARIABLE _push_rc
+                OUTPUT_QUIET ERROR_QUIET
+            )
+            if(NOT _push_rc EQUAL 0)
+                message(WARNING "[auto-tag] Push failed; tag exists only locally.")
+            endif()
+        endif()
+    else()
+        message(STATUS "[auto-tag] Tag ${_version_tag} already exists elsewhere – leaving things alone.")
+    endif()
+else()
+    message(STATUS "[auto-tag] HEAD already tagged: ${_head_tags}")
+endif()
