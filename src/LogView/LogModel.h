@@ -54,6 +54,10 @@ public:
 
     Qt::ItemFlags flags(const QModelIndex& index) const override;
 
+signals:
+    void startPageSwap();
+    void endPageSwap();
+
 public slots:
     void handleIterator(int);
     void handleData(int);

@@ -6,7 +6,6 @@
 #include "InitialDataDialog.h"
 #include "Settings.h"
 #include "LogView/LogModel.h"
-#include "LogView/FilterHeader.h"
 #include "LogView/LogFilterModel.h"
 #include "FormatCreation/FormatCreationWizard.h"
 
@@ -43,13 +42,6 @@ MainWindow::MainWindow(QWidget *parent) :
     }
 
     setLogActionsEnabled(!selectedFormats.empty());
-
-    auto header = new FilterHeader(Qt::Horizontal, ui->logView);
-    ui->logView->setHeader(header);
-    ui->logView->setUniformRowHeights(false);
-
-    connect(ui->logView->verticalScrollBar(), &QScrollBar::valueChanged, this, &MainWindow::checkFetchNeeded);
-    connect(ui->logView->verticalScrollBar(), &QScrollBar::rangeChanged, this, &MainWindow::checkFetchNeeded);
 
     auto logService = qobject_cast<Application*>(QApplication::instance())->getLogService();
     connect(this, &MainWindow::openFile, logService, &LogService::openFile);
@@ -194,36 +186,6 @@ void MainWindow::on_actionDeselect_all_triggered()
     QT_SLOT_BEGIN
 
     updateFormatActions(false);
-
-    QT_SLOT_END
-}
-
-void MainWindow::checkFetchNeeded()
-{
-    QT_SLOT_BEGIN
-
-    QScrollBar* sb = ui->logView->verticalScrollBar();
-    int min = sb->minimum();
-    int max = sb->maximum();
-    int value = sb->value();
-    int range = max - min;
-
-    auto* model = qobject_cast<LogModel*>(ui->logView->model());
-    auto* proxyModel = qobject_cast<QAbstractProxyModel*>(ui->logView->model());
-    if (proxyModel)
-        model = qobject_cast<LogModel*>(proxyModel->sourceModel());
-
-    if (!model || model->rowCount() == 0)
-    {
-        qWarning() << "Unexpected model type in log view";
-        return;
-    }
-
-    if (value - min >= range * 0.9 || max == 0)
-        model->fetchDownMore();
-
-    if (value - min <= range * 0.1 || max == 0)
-        model->fetchUpMore();
 
     QT_SLOT_END
 }
@@ -390,7 +352,7 @@ void MainWindow::switchModel(QAbstractItemModel* model)
     }
 
     auto oldModel = ui->logView->model();
-    ui->logView->setModel(model);
+    ui->logView->setLogModel(model);
     ui->logView->header()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
     if (oldModel)
         delete oldModel;

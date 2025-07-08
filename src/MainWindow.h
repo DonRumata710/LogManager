@@ -29,8 +29,6 @@ private slots:
     void on_actionSelect_all_triggered();
     void on_actionDeselect_all_triggered();
 
-    void checkFetchNeeded();
-
     void on_actionExport_as_is_triggered();
 
     void on_actionFull_export_triggered();

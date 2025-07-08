@@ -284,6 +284,9 @@ void LogModel::handleData(int index)
     switch(requestType)
     {
     case DataRequestType::Append:
+        if (logs.size() + data.size() > blockSize * blockCount)
+            startPageSwap();
+
         beginInsertRows(QModelIndex(), logs.size(), logs.size() + data.size() - 1);
         for (const auto& entry : data)
         {
@@ -317,10 +320,15 @@ void LogModel::handleData(int index)
             for (size_t i = 0; i < logs.size(); ++i)
                 logs[i].index = i;
             endRemoveRows();
+
+            endPageSwap();
         }
         break;
 
     case DataRequestType::Prepend:
+        if (logs.size() + data.size() > blockSize * blockCount)
+            startPageSwap();
+
         beginInsertRows(QModelIndex(), 0, data.size() - 1);
         for (size_t i = data.size() - 1; i < data.size(); --i)
         {
@@ -355,6 +363,8 @@ void LogModel::handleData(int index)
             beginRemoveRows(QModelIndex(), blockSize * blockCount, logs.size() - 1);
             logs.erase(logs.begin() + blockSize * blockCount, logs.end());
             endRemoveRows();
+
+            endPageSwap();
         }
         break;
 
