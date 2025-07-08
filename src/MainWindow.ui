@@ -18,6 +18,9 @@
     <item>
      <widget class="LogView" name="logView"/>
     </item>
+    <item>
+     <widget class="SearchBar" name="searchBar" native="true"/>
+    </item>
    </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -121,6 +124,12 @@
    <class>LogView</class>
    <extends>QTreeView</extends>
    <header>LogView/LogView.h</header>
+  </customwidget>
+  <customwidget>
+   <class>SearchBar</class>
+   <extends>QWidget</extends>
+   <header>SearchBar.h</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>

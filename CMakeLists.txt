@@ -6,6 +6,7 @@ if (EXISTS "${CMAKE_SOURCE_DIR}/local.cmake")
 endif()
 include(cmake/local_hints.cmake)
 include(cmake/version.cmake)
+include(cmake/resources.cmake)
 list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_SOURCE_DIR}/cmake/modules")
 
 get_git_tag_version(gitVersion dirtyFlag)
@@ -33,11 +34,26 @@ endif()
 
 file(GLOB_RECURSE SOURCES src/*.cpp)
 file(GLOB_RECURSE HEADERS src/*.h)
-file(GLOB_RECURSE RESOURCE_FILE qtres/*.qrc)
 file(GLOB_RECURSE UI_FILES ui/*.ui src/*.ui)
 file(GLOB_RECURSE RESOURCES res/*)
 
-add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${RESOURCE_FILE} ${UI_FILES} ${TS_FILES} ${RESOURCES})
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/qtres)
+    file(GLOB_RECURSE RESOURCE_FILE qtres/*.qrc)
+    if("${RESOURCE_FILE}" STREQUAL "")
+        file(GLOB_RECURSE QT_RESOURCES CONFIGURE_DEPENDS
+            ${CMAKE_CURRENT_SOURCE_DIR}/qtres/*
+        )
+
+        if(NOT "${QT_RESOURCES}" STREQUAL "")
+            set(qrcName "${TARGET}_resources")
+            set(RESOURCE_FILE "${CMAKE_CURRENT_SOURCE_DIR}/qtres/${qrcName}.qrc")
+
+            generate_qrc_file("${QT_RESOURCES}" "${CMAKE_CURRENT_SOURCE_DIR}/qtres" "${PROJECT_NAME}/" "${RESOURCE_FILE}")
+        endif()
+    endif()
+endif()
+
+add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${RESOURCE_FILE} ${QT_RESOURCES} ${UI_FILES} ${TS_FILES} ${RESOURCES})
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE APPLICATION_NAME="${PROJECT_NAME}"
     APPLICATION_VERSION="${PROJECT_VERSION}"
