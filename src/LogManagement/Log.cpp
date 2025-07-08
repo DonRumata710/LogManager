@@ -100,7 +100,6 @@ std::optional<QString> Log::prevLine()
                 continue;
         }
 
-        qDebug() << "Found line:" << line;
         return line;
     }
     return std::nullopt;
