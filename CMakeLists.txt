@@ -87,6 +87,8 @@ install(DIRECTORY "${CMAKE_BINARY_DIR}/deploy_folder/"
     FILES_MATCHING PATTERN "*"
 )
 
+create_git_version_tag()
+
 include (CPackComponent)
 
 set(outputDir "${CMAKE_BINARY_DIR}/output")

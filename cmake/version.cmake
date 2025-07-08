@@ -59,16 +59,18 @@ function(get_git_tag_version versionVar dirtyFlag)
         OUTPUT_STRIP_TRAILING_WHITESPACE
         ERROR_QUIET
     )
-    if(version MATCHES "^v([0-9]+)\\.([0-9]+)-?([0-9]+)?-?([a-z0-9][a-z0-9][a-z0-9][a-z0-9]+)?-?(dirty)?$")
+    if(version MATCHES "^v([0-9]+)\\.([0-9]+)(\\.[0-9]+)?-?([0-9]+)?-?([a-z0-9][a-z0-9][a-z0-9][a-z0-9]+)?-?(dirty)?$")
         set(version "${CMAKE_MATCH_1}.${CMAKE_MATCH_2}")
 
         if (DEFINED CMAKE_MATCH_3 AND NOT ${CMAKE_MATCH_3} STREQUAL "")
-            set(version "${version}.${CMAKE_MATCH_3}")
+            set(version "${version}${CMAKE_MATCH_3}")
+        elseif(DEFINED CMAKE_MATCH_4 AND NOT ${CMAKE_MATCH_4} STREQUAL "")
+            set(version "${version}.${CMAKE_MATCH_4}")
         else()
             set(version "${version}.0")
         endif()
 
-        if(CMAKE_MATCH_5 STREQUAL "")
+        if(CMAKE_MATCH_6 STREQUAL "")
             set(${dirtyFlag} false PARENT_SCOPE)
         else()
             set(${dirtyFlag} true PARENT_SCOPE)
@@ -76,4 +78,17 @@ function(get_git_tag_version versionVar dirtyFlag)
 
         set(${versionVar} "${version}" PARENT_SCOPE)
     endif()
+endfunction()
+
+function(create_git_version_tag)
+    set(GIT_TAG "v${PROJECT_VERSION}")
+    string(REGEX REPLACE "\\.0+$" "" VERSION_PREFIX "${PROJECT_VERSION}")
+    set(TAG_PREFIX "v${VERSION_PREFIX}")
+
+    add_custom_target(tag
+        COMMAND ${CMAKE_COMMAND} -E echo "Checking for existing tags at HEAD starting with '${TAG_PREFIX}'..."
+        COMMAND cmd /C "git tag --points-at HEAD > build\\.taglist.tmp && (findstr /B ${TAG_PREFIX} build\\.taglist.tmp >nul && (echo Tag with prefix ${TAG_PREFIX} already exists. Skipping.) || (echo Creating and pushing tag ${GIT_TAG}... && git tag ${GIT_TAG}))"
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "Create git tag ${GIT_TAG} if not already tagged with prefix ${TAG_PREFIX}"
+    )
 endfunction()
