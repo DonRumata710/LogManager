@@ -71,6 +71,11 @@ std::unordered_set<QString> InitialDataDialog::getModules() const
     return checkedItems;
 }
 
+bool InitialDataDialog::scrollToEnd() const
+{
+    return ui->cbScrollToEnd->isChecked();
+}
+
 void InitialDataDialog::on_bSelect_clicked()
 {
     QT_SLOT_BEGIN

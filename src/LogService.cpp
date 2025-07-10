@@ -307,7 +307,7 @@ void LogService::handleIteratorRequest()
 
     iterators->emplace(request.index, std::make_shared<LogEntryIterator<>>(session->getIterator<true>(request.startTime, request.endTime)));
 
-    iteratorCreated(request.index);
+    iteratorCreated(request.index, true);
 
     lockedIteratorRequests.lock();
     iteratorRequests->pop_front();
@@ -373,10 +373,10 @@ void LogService::handleReverseIteratorRequest()
 
     reverseIterators->emplace(request.index, std::make_shared<LogEntryIterator<false>>(session->getIterator<false>(request.startTime, request.endTime)));
 
-    iteratorCreated(request.index);
+    iteratorCreated(request.index, false);
 
     lockedIteratorRequests.lock();
-    iteratorRequests->pop_front();
+    reverseIteratorRequests->pop_front();
 
     QT_SLOT_END
 }

@@ -345,12 +345,15 @@ Qt::ItemFlags LogModel::flags(const QModelIndex& index) const
     return QAbstractItemModel::flags(index) | Qt::ItemIsSelectable | Qt::ItemIsEditable;
 }
 
-void LogModel::handleIterator(int index)
+void LogModel::handleIterator(int index, bool isStraight)
 {
     QT_SLOT_BEGIN
     if (iteratorIndex == index)
     {
-        iterator = service->getIterator(index);
+        if (isStraight)
+            iterator = service->getIterator(index);
+        else
+            reverseIterator = service->getReverseIterator(index);
         update();
     }
     QT_SLOT_END
@@ -502,7 +505,12 @@ void LogModel::update()
         return;
 
     if (entryCache.empty())
-        entryCache.emplace(iterator->getCache());
+    {
+        if (iterator)
+            entryCache.emplace(iterator->getCache());
+        if (reverseIterator && !iterator)
+            entryCache.emplace(reverseIterator->getCache());
+    }
 
     dataRequests.clear();
 

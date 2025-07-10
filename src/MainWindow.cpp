@@ -338,6 +338,7 @@ void MainWindow::logManagerCreated()
     auto startDate = dialog.getStartDate();
     auto endDate = dialog.getEndDate();
     auto modules = dialog.getModules();
+    auto scrollToEnd = dialog.scrollToEnd();
 
     if (startDate > endDate)
     {
@@ -356,6 +357,11 @@ void MainWindow::logManagerCreated()
     auto proxyModel = new LogFilterModel(this);
 
     auto logModel = new LogModel(logService, proxyModel);
+
+    if (scrollToEnd)
+        logModel->goToTime(std::chrono::system_clock::time_point::max());
+    else
+        logModel->goToTime(std::chrono::system_clock::time_point::min());
 
     proxyModel->setSourceModel(logModel);
 

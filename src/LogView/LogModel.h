@@ -68,7 +68,7 @@ signals:
     void endPageSwap();
 
 public slots:
-    void handleIterator(int);
+    void handleIterator(int, bool);
     void handleData(int);
 
 private:

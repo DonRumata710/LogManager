@@ -43,7 +43,7 @@ public:
 
 signals:
     void logManagerCreated();
-    void iteratorCreated(int);
+    void iteratorCreated(int, bool isStraight);
     void dataLoaded(int);
 
 public slots:

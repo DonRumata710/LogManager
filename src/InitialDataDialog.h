@@ -22,6 +22,7 @@ public:
     QDateTime getStartDate() const;
     QDateTime getEndDate() const;
     std::unordered_set<QString> getModules() const;
+    bool scrollToEnd() const;
 
 private slots:
     void on_bSelect_clicked();
