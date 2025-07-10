@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>503</width>
-    <height>111</height>
+    <height>135</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -115,21 +115,21 @@
        <number>9</number>
       </property>
       <item>
-       <widget class="QCheckBox" name="checkBox">
+       <widget class="QCheckBox" name="cbLastColumnSearch">
         <property name="text">
          <string>Search only in last column</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="checkBox_2">
+       <widget class="QCheckBox" name="cbRegExpSuppor">
         <property name="text">
          <string>Regular expression support</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="checkBox_3">
+       <widget class="QCheckBox" name="cbBackward">
         <property name="text">
          <string>Backward direction</string>
         </property>

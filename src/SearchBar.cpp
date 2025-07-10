@@ -44,3 +44,23 @@ void SearchBar::on_toolButton_clicked()
     QT_SLOT_END
 }
 
+
+void SearchBar::on_bLocalSearch_clicked()
+{
+    QT_SLOT_BEGIN
+
+    localSearch(ui->lineEdit->text(), ui->cbLastColumnSearch->isChecked(), ui->cbRegExpSuppor->isChecked(), ui->cbBackward->isChecked());
+
+    QT_SLOT_END
+}
+
+
+void SearchBar::on_bCommonSearch_clicked()
+{
+    QT_SLOT_BEGIN
+
+    commonSearch(ui->lineEdit->text(), ui->cbLastColumnSearch->isChecked(), ui->cbRegExpSuppor->isChecked(), ui->cbBackward->isChecked());
+
+    QT_SLOT_END
+}
+

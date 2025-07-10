@@ -26,6 +26,7 @@ public:
     LogStorage();
 
     void addLog(const QString& module, const std::chrono::system_clock::time_point& time, const std::shared_ptr<Format>& format, LogMetadata&& log);
+    void finalize();
 
     LogStorage getNarrowedStorage(const std::unordered_set<QString>& modules, const std::chrono::system_clock::time_point& minTime, const std::chrono::system_clock::time_point& maxTime) const;
 

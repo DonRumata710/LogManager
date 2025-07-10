@@ -3,4 +3,4 @@
 #include <QString>
 
 
-QString LogViewSettings = "LogView";
+const QString LogViewSettings{ "LogView" };

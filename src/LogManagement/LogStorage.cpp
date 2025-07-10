@@ -1,4 +1,5 @@
 #include "LogStorage.h"
+#include "LogManagement/LogUtils.h"
 
 #include <QDebug>
 #include <QDateTime>
@@ -24,6 +25,37 @@ void LogStorage::addLog(const QString& module, const std::chrono::system_clock::
     else
     {
         qWarning() << "Log already exists for module" << module << "at time" << QDateTime::fromSecsSinceEpoch(std::chrono::system_clock::to_time_t(time));
+    }
+}
+
+void LogStorage::finalize()
+{
+    for (auto& module : docs)
+    {
+        auto& logMap = module.second;
+        if (logMap.empty())
+            throw std::logic_error("LogStorage::finalize: No logs found for module " + module.first.toStdString());
+
+        const auto& lastLog = *logMap.rbegin();
+        auto log = lastLog.second.fileBuilder(lastLog.second.filename, lastLog.second.format);
+        log->goToEnd();
+
+        auto line = log->prevLine();
+        if (!line)
+        {
+            qCritical() << "Log file is empty or could not be read:" << lastLog.second.filename;
+            continue;
+        }
+
+        auto parts = splitLine(line.value(), lastLog.second.format);
+        if (parts.size() <= lastLog.second.format->timeFieldIndex)
+            continue;
+
+        if (!checkFormat(parts, lastLog.second.format))
+            continue;
+
+        auto time = parseTime(parts[lastLog.second.format->timeFieldIndex], lastLog.second.format);
+        maxTime = time + std::chrono::milliseconds(1);
     }
 }
 
@@ -90,7 +122,9 @@ const LogStorage::LogMetaEntry& LogStorage::findLog(const QString& module, const
     {
         auto logIt = it->second.lower_bound(time);
         if (logIt != it->second.begin() && logIt == it->second.end())
-                --logIt;
+            --logIt;
+        if (!logIt->second.fileBuilder && logIt != it->second.begin())
+            --logIt;
         if (logIt != it->second.end())
             return *logIt;
     }

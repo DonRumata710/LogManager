@@ -80,13 +80,15 @@ public:
     {
         for (const auto& module : logStorage->getModules())
         {
-            const auto& metadata = logStorage->findLog(module, startTime);
+            const auto& metadata = logStorage->findLog(module, straight ? startTime : endTime);
             if (metadata.second.fileBuilder)
             {
                 HeapItem heapItem;
                 heapItem.metadata = &metadata;
                 heapItem.module = module;
                 heapItem.log = metadata.second.fileBuilder(metadata.second.filename, metadata.second.format);
+                if (!straight)
+                    heapItem.log->goToEnd();
 
                 heapItem.line = heapItem.log->nextLine().value_or(QString());
 

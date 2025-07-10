@@ -71,6 +71,8 @@ LogManager::LogManager(const std::vector<QString>& folders, const std::vector<st
     {
         throw std::runtime_error("no suitable files found in the specified folders.");
     }
+
+    logStorage->finalize();
 }
 
 LogManager::LogManager(const QString& filename, const std::vector<std::shared_ptr<Format>>& formats) :
@@ -86,6 +88,8 @@ LogManager::LogManager(const QString& filename, const std::vector<std::shared_pt
         qDebug() << "No suitable format found for file:" << filename;
         throw std::runtime_error("no suitable format found for file: " + path.string() + '.');
     }
+
+    logStorage->finalize();
 }
 
 const std::unordered_set<std::shared_ptr<Format>>& LogManager::getFormats() const

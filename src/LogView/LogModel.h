@@ -21,8 +21,17 @@ public:
         Module = 1
     };
 
+    enum class MetaData
+    {
+        Line = Qt::UserRole,
+        Message
+    };
+
 public:
     explicit LogModel(LogService* logService, QObject *parent = nullptr);
+
+    void goToTime(const QDateTime& time);
+    void goToTime(const std::chrono::system_clock::time_point& time);
 
     bool canFetchUpMore() const;
     void fetchUpMore();
@@ -74,7 +83,8 @@ private:
         None,
         Append,
         Prepend,
-        Replace
+        ReplaceForward,
+        ReplaceBackward
     };
 
     struct MergeHeapCacheComparator
@@ -120,4 +130,6 @@ private:
 
     int blockSize = 2000;
     int blockCount = 4;
+
+    std::chrono::system_clock::time_point anchorTime;
 };

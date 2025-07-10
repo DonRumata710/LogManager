@@ -17,8 +17,6 @@ LogModel::LogModel(LogService* logService, QObject *parent) :
     connect(service, &LogService::iteratorCreated, this, &LogModel::handleIterator);
     connect(service, &LogService::dataLoaded, this, &LogModel::handleData);
 
-    iteratorIndex = service->requestIterator(startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
-
     bool flag = false;
     for (const auto& format : logService->getLogManager()->getFormats())
     {
@@ -42,6 +40,61 @@ LogModel::LogModel(LogService* logService, QObject *parent) :
             fields.push_back(field);
         }
     }
+}
+
+void LogModel::goToTime(const QDateTime& time)
+{
+    goToTime(time.toStdSysMilliseconds());
+}
+
+void LogModel::goToTime(const std::chrono::system_clock::time_point& time)
+{
+    beginResetModel();
+
+    logs.clear();
+
+    anchorTime = time;
+    if (entryCache.empty())
+    {
+        if (time < getStartTime().toStdSysMilliseconds())
+            iteratorIndex = service->requestIterator(startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
+        else if (time > getEndTime().toStdSysMilliseconds())
+            iteratorIndex = service->requestReverseIterator(startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
+        else if (time - getStartTime().toStdSysMilliseconds() < getEndTime().toStdSysMilliseconds() - time)
+            iteratorIndex = service->requestIterator(time, endTime.toStdSysMilliseconds());
+        else
+            iteratorIndex = service->requestReverseIterator(startTime.toStdSysMilliseconds(), time);
+        return;
+    }
+
+    const MergeHeapCache* upperEntryCache = nullptr;
+    const MergeHeapCache* lowerEntryCache = nullptr;
+
+    auto cacheIt = entryCache.upper_bound(MergeHeapCache{ time });
+    if (cacheIt != entryCache.end())
+        upperEntryCache = &*cacheIt;
+    if (cacheIt != entryCache.begin())
+    {
+        --cacheIt;
+        lowerEntryCache = &*cacheIt;
+    }
+
+    if (lowerEntryCache && (!upperEntryCache || time - lowerEntryCache->time < upperEntryCache->time - time))
+    {
+        if (!reverseIterator || reverseIterator->getCurrentTime() != lowerEntryCache->time)
+            reverseIterator = std::make_shared<LogEntryIterator<false>>(service->getSession()->createIterator<false>(lowerEntryCache->heap, time, lowerEntryCache->time));
+        if (!iterator || iterator->getCurrentTime() != lowerEntryCache->time)
+            iterator = std::make_shared<LogEntryIterator<true>>(service->getSession()->createIterator<true>(lowerEntryCache->heap, time, lowerEntryCache->time));
+    }
+    else if (upperEntryCache && (!lowerEntryCache || upperEntryCache->time - time < time - lowerEntryCache->time))
+    {
+        if (!reverseIterator || reverseIterator->getCurrentTime() != upperEntryCache->time)
+            reverseIterator = std::make_shared<LogEntryIterator<false>>(service->getSession()->createIterator<false>(upperEntryCache->heap, time, upperEntryCache->time));
+        if (!iterator || iterator->getCurrentTime() != upperEntryCache->time)
+            iterator = std::make_shared<LogEntryIterator<true>>(service->getSession()->createIterator<true>(upperEntryCache->heap, time, upperEntryCache->time));
+    }
+
+    endResetModel();
 }
 
 bool LogModel::canFetchUpMore() const
@@ -227,7 +280,10 @@ QVariant LogModel::data(const QModelIndex& index, int role) const
         return QVariant();
     }
 
-    if (role == Qt::DisplayRole || role == Qt::EditRole)
+    switch(role)
+    {
+    case Qt::DisplayRole:
+    case Qt::EditRole:
     {
         if (index.internalPointer() != nullptr)
         {
@@ -250,6 +306,22 @@ QVariant LogModel::data(const QModelIndex& index, int role) const
             if (valueIt != log.entry.values.end())
                 return valueIt->second;
         }
+        break;
+    }
+    case static_cast<int>(MetaData::Line):
+        if (index.internalPointer() == nullptr)
+            return logs[index.row()].entry.line;
+        break;
+    case static_cast<int>(MetaData::Message):
+        if (index.internalPointer() == nullptr)
+        {
+            const auto& log = logs[index.row()];
+            const auto& field = getField(index.column());
+            auto valueIt = log.entry.values.find(field.name);
+            if (valueIt != log.entry.values.end())
+                return valueIt->second.toString() + '\n' + logs[index.row()].entry.additionalLines;
+        }
+        break;
     }
 
     return QVariant();
@@ -368,7 +440,8 @@ void LogModel::handleData(int index)
         }
         break;
 
-    case DataRequestType::Replace:
+    case DataRequestType::ReplaceForward:
+    case DataRequestType::ReplaceBackward:
         beginResetModel();
         logs.clear();
 
@@ -381,8 +454,10 @@ void LogModel::handleData(int index)
         }
         endResetModel();
 
-        if (iterator)
+        if (iterator && requestType == DataRequestType::ReplaceForward)
             entryCache.emplace(iterator->getCache());
+        else if (reverseIterator && requestType == DataRequestType::ReplaceBackward)
+            entryCache.emplace(reverseIterator->getCache());
 
         if (logs.size() > blockSize * blockCount)
             qWarning() << "LogModel::handleData: logs size exceeds block count limit (" << blockSize * blockCount << ")";
@@ -400,14 +475,18 @@ void LogModel::handleData(int index)
 
 void LogModel::update()
 {
-    if (!iterator)
+    if (!iterator && !reverseIterator)
         return;
 
     if (entryCache.empty())
         entryCache.emplace(iterator->getCache());
 
     dataRequests.clear();
-    dataRequests[service->requestLogEntries(iterator, blockSize)] = DataRequestType::Replace;
+
+    if (iterator)
+        dataRequests[service->requestLogEntries(iterator, blockSize)] = DataRequestType::ReplaceForward;
+    if (reverseIterator)
+        dataRequests[service->requestLogEntries(reverseIterator, blockSize)] = (iterator ? DataRequestType::Prepend : DataRequestType::ReplaceBackward);
 }
 
 const Format::Field& LogModel::getField(int section) const
@@ -425,24 +504,26 @@ size_t LogModel::getParentIndex(const QModelIndex& index) const
 int LogModel::loadBlockSize()
 {
     static const int defaultSize = 2000;
+    static const QString BlockSizeParameter = "/blockSize";
 
     Settings settings;
-    if (settings.contains(LogViewSettings + "/blockSize"))
-        return settings.value(LogViewSettings + "/blockSize", defaultSize).toInt();
+    if (settings.contains(LogViewSettings + BlockSizeParameter))
+        return settings.value(LogViewSettings + BlockSizeParameter, defaultSize).toInt();
     else
-        settings.setValue(LogViewSettings + "/blockSize", defaultSize);
+        settings.setValue(LogViewSettings + BlockSizeParameter, defaultSize);
     return defaultSize;
 }
 
 int LogModel::loadBlockCount()
 {
     static const int defaultSize = 4;
+    static const QString BlockCountParameter = "/blockCount";
 
     Settings settings;
-    if (settings.contains(LogViewSettings + "/blockCount"))
-        return settings.value(LogViewSettings + "/blockCount", defaultSize).toInt();
+    if (settings.contains(LogViewSettings + BlockCountParameter))
+        return settings.value(LogViewSettings + BlockCountParameter, defaultSize).toInt();
     else
-        settings.setValue(LogViewSettings + "/blockCount", defaultSize);
+        settings.setValue(LogViewSettings + BlockCountParameter, defaultSize);
     return defaultSize;
 }
 

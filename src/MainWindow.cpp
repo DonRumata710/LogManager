@@ -22,6 +22,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     setWindowTitle(QApplication::instance()->applicationName());
 
+    ui->searchBar->hide();
+
     Settings settings;
     qDebug() << "Settings location: " << settings.fileName();
 
@@ -117,6 +119,7 @@ void MainWindow::on_actionClose_triggered()
 
     switchModel(nullptr);
     setCloseActionEnabled(false);
+    ui->searchBar->hide();
 
     QT_SLOT_END
 }
@@ -190,6 +193,57 @@ void MainWindow::on_actionDeselect_all_triggered()
     QT_SLOT_END
 }
 
+void MainWindow::on_searchBar_localSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward)
+{
+    QT_SLOT_BEGIN
+
+    search(ui->logView->currentIndex(), searchTerm, lastColumn, regexEnabled, backward, false);
+
+    QT_SLOT_END
+}
+
+void MainWindow::on_searchBar_commonSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward)
+{
+    QT_SLOT_BEGIN
+
+    search(ui->logView->currentIndex(), searchTerm, lastColumn, regexEnabled, backward, true);
+
+    QT_SLOT_END
+}
+
+void MainWindow::search(const QModelIndex& from, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool globalSearch)
+{
+    QT_SLOT_BEGIN
+
+    auto model = getLogModel();
+
+    size_t start = from.row() + (backward ? -1 : 1);
+    for (size_t i = start; i < model->rowCount(); backward ? --i : ++i)
+    {
+        QModelIndex index{ model->index(i, 0) };
+
+        QString textToSearch = model->data(index, static_cast<int>(lastColumn ? LogModel::MetaData::Message : LogModel::MetaData::Line)).toString();
+
+        if (regexEnabled)
+        {
+            QRegularExpression regex(searchTerm, QRegularExpression::CaseInsensitiveOption);
+            if (regex.match(textToSearch).hasMatch())
+            {
+                ui->logView->scrollTo(index, QTreeView::ScrollHint::PositionAtCenter);
+                ui->logView->selectionModel()->setCurrentIndex(index, QItemSelectionModel::SelectionFlag::SelectCurrent);
+                return;
+            }
+        }
+    }
+
+    if (globalSearch)
+    {
+
+    }
+
+    QT_SLOT_END
+}
+
 void MainWindow::on_actionExport_as_is_triggered()
 {
     QT_SLOT_BEGIN
@@ -211,14 +265,12 @@ void MainWindow::on_actionFull_export_triggered()
     if (fileName.isEmpty())
         return;
 
-    auto logFilterModel = qobject_cast<LogFilterModel*>(ui->logView->model());
-    if (!logFilterModel)
+    auto logModel = getLogModel();
+    if (!logModel)
     {
-        qWarning() << "Log model is not set.";
+        qCritical() << "Unexpected model type in log view";
         return;
     }
-
-    auto logModel = qobject_cast<LogModel*>(logFilterModel->sourceModel());
 
     bool originFormat = fileName.endsWith(".log", Qt::CaseInsensitive);
     if (originFormat)
@@ -294,6 +346,9 @@ void MainWindow::logManagerCreated()
 
     switchModel(proxyModel);
     setCloseActionEnabled(true);
+    ui->searchBar->show();
+
+    connect(ui->searchBar, &SearchBar::localSearch, logModel, &LogModel::localSearch);
 
     QT_SLOT_END
 }
@@ -356,4 +411,18 @@ void MainWindow::switchModel(QAbstractItemModel* model)
     ui->logView->header()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
     if (oldModel)
         delete oldModel;
+}
+
+LogModel* MainWindow::getLogModel()
+{
+    auto logModel = qobject_cast<LogModel*>(ui->logView->model());
+    if (!logModel)
+    {
+        auto logFilterModel = qobject_cast<QSortFilterProxyModel*>(ui->logView->model());
+        if (logFilterModel)
+        {
+            logModel = qobject_cast<LogModel*>(logFilterModel->sourceModel());
+        }
+    }
+    return logModel;
 }

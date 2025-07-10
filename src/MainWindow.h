@@ -1,11 +1,11 @@
 #pragma once
 
 #include "LogManagement/FormatManager.h"
-#include "LogManagement/LogManager.h"
-#include "LogService.h"
+#include "LogView/LogModel.h"
 
 #include <QMainWindow>
 #include <QAbstractItemModel>
+#include <QTreeView>
 
 
 namespace Ui {
@@ -28,6 +28,11 @@ private slots:
     void on_actionRemove_format_triggered();
     void on_actionSelect_all_triggered();
     void on_actionDeselect_all_triggered();
+
+    void on_searchBar_localSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward);
+    void on_searchBar_commonSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward);
+
+    void search(const QModelIndex& from, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool globalSearch);
 
     void on_actionExport_as_is_triggered();
 
@@ -55,6 +60,8 @@ private:
     void updateFormatActions(bool enabled);
 
     void switchModel(QAbstractItemModel* model);
+
+    LogModel* getLogModel();
 
 private:
     Ui::MainWindow *ui;
