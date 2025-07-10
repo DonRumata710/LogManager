@@ -157,6 +157,11 @@ void LogService::openFolder(const QString& logDirectory, const QStringList& form
     QT_SLOT_END
 }
 
+void LogService::search(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward)
+{
+    qCritical() << "Search functionality is not implemented yet.";
+}
+
 void LogService::exportData(const QString& filename, const QDateTime& startTime, const QDateTime& endTime)
 {
     QT_SLOT_BEGIN

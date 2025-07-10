@@ -348,8 +348,6 @@ void MainWindow::logManagerCreated()
     setCloseActionEnabled(true);
     ui->searchBar->show();
 
-    connect(ui->searchBar, &SearchBar::localSearch, logModel, &LogModel::localSearch);
-
     QT_SLOT_END
 }
 
