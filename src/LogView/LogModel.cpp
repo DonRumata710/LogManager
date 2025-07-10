@@ -64,6 +64,7 @@ void LogModel::goToTime(const std::chrono::system_clock::time_point& time)
             iteratorIndex = service->requestIterator(time, endTime.toStdSysMilliseconds());
         else
             iteratorIndex = service->requestReverseIterator(startTime.toStdSysMilliseconds(), time);
+        endResetModel();
         return;
     }
 
@@ -136,7 +137,7 @@ const std::vector<Format::Field>& LogModel::getFields() const
 
 const std::unordered_set<QVariant, VariantHash> LogModel::availableValues(int section) const
 {
-    if (section < 0 || section >= fields.size())
+    if (section < 0 || section >= columnCount())
         return {};
 
     if (section == static_cast<int>(PredefinedColumn::Module))
@@ -163,12 +164,12 @@ QDateTime convertToQDateTime(const std::chrono::system_clock::time_point& timePo
 
 QDateTime LogModel::getStartTime() const
 {
-    return convertToQDateTime(iterator->getStartTime());
+    return startTime;
 }
 
 QDateTime LogModel::getEndTime() const
 {
-    return convertToQDateTime(iterator->getEndTime());
+    return endTime;
 }
 
 QStringList LogModel::getFieldsName()
@@ -211,6 +212,9 @@ QModelIndex LogModel::index(int row, int column, const QModelIndex& parent) cons
         if (row < 0 || row >= 1)
             return QModelIndex();
 
+        if (column < 0 || column >= columnCount())
+            return QModelIndex();
+
         return createIndex(row, column, &logs[parent.row()].index);
     }
 
@@ -226,10 +230,10 @@ QModelIndex LogModel::parent(const QModelIndex& index) const
         return QModelIndex();
 
     size_t parentIndex = getParentIndex(index);
-    if (parentIndex >= logs.size() || logs[parentIndex].entry.additionalLines.isEmpty() || index.column() < 0 || index.column() >= 1)
+    if (parentIndex >= logs.size() || logs[parentIndex].entry.additionalLines.isEmpty() || index.column() < 0 || index.column() >= columnCount())
         return QModelIndex();
 
-    return createIndex(parentIndex, index.column());
+    return createIndex(parentIndex, 0);
 }
 
 int LogModel::rowCount(const QModelIndex& parent) const
@@ -260,6 +264,12 @@ bool LogModel::hasChildren(const QModelIndex& parent) const
 {
     if (parent.isValid())
     {
+        if (parent.row() < 0 || parent.row() >= logs.size() ||
+            parent.column() < 0 || parent.column() >= columnCount())
+        {
+            return false;
+        }
+
         if (parent.internalPointer() == nullptr)
             return !logs[parent.row()].entry.additionalLines.isEmpty();
         else
@@ -445,12 +455,25 @@ void LogModel::handleData(int index)
         beginResetModel();
         logs.clear();
 
-        for (int i = 0; i < data.size(); ++i)
+        if (requestType == DataRequestType::ReplaceForward)
         {
-            LogItem item;
-            item.entry = data[i];
-            item.index = logs.size();
-            logs.push_back(item);
+            for (int i = 0; i < data.size(); ++i)
+            {
+                LogItem item;
+                item.entry = data[i];
+                item.index = logs.size();
+                logs.push_back(item);
+            }
+        }
+        else
+        {
+            for (int i = data.size() - 1; i >= 0; --i)
+            {
+                LogItem item;
+                item.entry = data[i];
+                item.index = logs.size();
+                logs.push_back(item);
+            }
         }
         endResetModel();
 

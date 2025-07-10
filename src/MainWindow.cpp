@@ -215,6 +215,7 @@ void MainWindow::search(const QModelIndex& from, const QString& searchTerm, bool
 {
     QT_SLOT_BEGIN
 
+    auto proxyModel = qobject_cast<QSortFilterProxyModel*>(ui->logView->model());
     auto model = getLogModel();
 
     size_t start = from.row() + (backward ? -1 : 1);
@@ -224,21 +225,35 @@ void MainWindow::search(const QModelIndex& from, const QString& searchTerm, bool
 
         QString textToSearch = model->data(index, static_cast<int>(lastColumn ? LogModel::MetaData::Message : LogModel::MetaData::Line)).toString();
 
+        bool flag = false;
         if (regexEnabled)
         {
             QRegularExpression regex(searchTerm, QRegularExpression::CaseInsensitiveOption);
             if (regex.match(textToSearch).hasMatch())
-            {
-                ui->logView->scrollTo(index, QTreeView::ScrollHint::PositionAtCenter);
-                ui->logView->selectionModel()->setCurrentIndex(index, QItemSelectionModel::SelectionFlag::SelectCurrent);
-                return;
-            }
+                flag = true;
+        }
+        else
+        {
+            if (textToSearch.contains(searchTerm))
+                flag = true;
+        }
+
+        if (flag)
+        {
+            qDebug() << "Search found at row:" << i << "text:" << textToSearch;
+
+            if (proxyModel)
+                index = proxyModel->mapFromSource(index);
+
+            ui->logView->selectionModel()->setCurrentIndex(index, QItemSelectionModel::SelectionFlag::SelectCurrent | QItemSelectionModel::SelectionFlag::Rows);
+            ui->logView->scrollTo(index, QTreeView::PositionAtCenter);
+            return;
         }
     }
 
     if (globalSearch)
     {
-
+        // TODO
     }
 
     QT_SLOT_END
