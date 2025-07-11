@@ -12,11 +12,8 @@ InitialDataDialog::InitialDataDialog(const LogManager& manager, QWidget* parent)
 {
     ui->setupUi(this);
 
-    auto minMs = std::chrono::duration_cast<std::chrono::milliseconds>(manager.getMinTime().time_since_epoch()).count();
-    QDateTime minDateTime = QDateTime::fromMSecsSinceEpoch(minMs, Qt::LocalTime);
-
-    auto maxMs = std::chrono::duration_cast<std::chrono::milliseconds>(manager.getMaxTime().time_since_epoch()).count();
-    QDateTime maxDateTime = QDateTime::fromMSecsSinceEpoch(maxMs, Qt::LocalTime);
+    QDateTime minDateTime = DateTimeFromChronoSystemClock(manager.getMinTime());
+    QDateTime maxDateTime = DateTimeFromChronoSystemClock(manager.getMaxTime());
 
     ui->startTimeEdit->setMinimumDateTime(minDateTime);
     ui->startTimeEdit->setMaximumDateTime(maxDateTime);

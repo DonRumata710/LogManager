@@ -94,10 +94,7 @@ std::shared_ptr<LogEntryIterator<false>> LogService::getReverseIterator(int inde
 int LogService::requestLogEntries(const std::shared_ptr<LogEntryIterator<true>>& iterator, int entryCount)
 {
     if (!logManager || !iterator || entryCount <= 0 || !iterator->hasLogs())
-    {
-        qCritical() << "Invalid log entry request parameters.";
-        return -1;
-    }
+        throw std::runtime_error("Invalid log entry request parameters.");
 
     int index = nextRequestIndex++;
     dataRequests->emplace_back(index, iterator, entryCount);
@@ -109,10 +106,7 @@ int LogService::requestLogEntries(const std::shared_ptr<LogEntryIterator<true>>&
 int LogService::requestLogEntries(const std::shared_ptr<LogEntryIterator<false>>& iterator, int entryCount)
 {
     if (!logManager || !iterator || entryCount <= 0 || !iterator->hasLogs())
-    {
-        qCritical() << "Invalid log entry request parameters.";
-        return -1;
-    }
+        throw std::runtime_error("Invalid log entry request parameters.");
 
     int index = nextRequestIndex++;
     dataRequestsReverse->emplace_back(index, iterator, entryCount);

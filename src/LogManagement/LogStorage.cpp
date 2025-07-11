@@ -1,6 +1,8 @@
 #include "LogStorage.h"
 #include "LogManagement/LogUtils.h"
 
+#include "Utils.h"
+
 #include <QDebug>
 #include <QDateTime>
 
@@ -24,7 +26,7 @@ void LogStorage::addLog(const QString& module, const std::chrono::system_clock::
     }
     else
     {
-        qWarning() << "Log already exists for module" << module << "at time" << QDateTime::fromSecsSinceEpoch(std::chrono::system_clock::to_time_t(time));
+        qWarning() << "Log already exists for module" << module << "at time" << DateTimeFromChronoSystemClock(time);
     }
 }
 
@@ -36,23 +38,25 @@ void LogStorage::finalize()
         if (logMap.empty())
             throw std::logic_error("LogStorage::finalize: No logs found for module " + module.first.toStdString());
 
-        const auto& lastLog = *logMap.rbegin();
+        const auto& lastLog = *logMap.begin();
         auto log = lastLog.second.fileBuilder(lastLog.second.filename, lastLog.second.format);
         log->goToEnd();
 
-        auto line = log->prevLine();
-        if (!line)
+        QStringList parts;
+        do
         {
-            qCritical() << "Log file is empty or could not be read:" << lastLog.second.filename;
-            continue;
+            auto line = log->prevLine();
+            if (!line)
+            {
+                qCritical() << "Log file is empty or could not be read:" << lastLog.second.filename;
+                continue;
+            }
+
+            parts = splitLine(line.value(), lastLog.second.format);
+            if (parts.size() <= lastLog.second.format->timeFieldIndex)
+                continue;
         }
-
-        auto parts = splitLine(line.value(), lastLog.second.format);
-        if (parts.size() <= lastLog.second.format->timeFieldIndex)
-            continue;
-
-        if (!checkFormat(parts, lastLog.second.format))
-            continue;
+        while(!checkFormat(parts, lastLog.second.format));
 
         auto time = parseTime(parts[lastLog.second.format->timeFieldIndex], lastLog.second.format);
         maxTime = std::max(maxTime, time + std::chrono::milliseconds(1));

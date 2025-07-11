@@ -475,7 +475,7 @@ void LogModel::handleData(int index)
                 LogItem item;
                 item.entry = data[i];
                 item.index = logs.size();
-                logs.push_back(item);
+                logs.push_front(item);
             }
         }
         endResetModel();
@@ -486,9 +486,23 @@ void LogModel::handleData(int index)
             entryCache.emplace(reverseIterator->getCache());
 
         if (logs.size() > blockSize * blockCount)
+        {
             qWarning() << "LogModel::handleData: logs size exceeds block count limit (" << blockSize * blockCount << ")";
-        else
-            dataRequests[service->requestLogEntries(iterator, blockSize)] = DataRequestType::Append;
+        }
+        else if (requestType == DataRequestType::ReplaceForward)
+        {
+            if (reverseIterator)
+                dataRequests[service->requestLogEntries(reverseIterator, blockSize)] = DataRequestType::Prepend;
+            else
+                dataRequests[service->requestLogEntries(iterator, blockSize)] = DataRequestType::Append;
+        }
+        else if (requestType == DataRequestType::ReplaceBackward)
+        {
+            if (iterator)
+                dataRequests[service->requestLogEntries(iterator, blockSize)] = DataRequestType::Append;
+            else
+                dataRequests[service->requestLogEntries(reverseIterator, blockSize)] = DataRequestType::Prepend;
+        }
         break;
 
     default:

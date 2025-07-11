@@ -359,9 +359,14 @@ void MainWindow::logManagerCreated()
     auto logModel = new LogModel(logService, proxyModel);
 
     if (scrollToEnd)
+    {
         logModel->goToTime(std::chrono::system_clock::time_point::max());
+        ui->logView->scrollToBottom();
+    }
     else
+    {
         logModel->goToTime(std::chrono::system_clock::time_point::min());
+    }
 
     proxyModel->setSourceModel(logModel);
 
