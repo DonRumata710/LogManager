@@ -6,7 +6,7 @@
 
 
 LogStorage::LogStorage() :
-    maxTime(std::chrono::system_clock::now())
+    maxTime(std::chrono::system_clock::time_point::min())
 {}
 
 void LogStorage::addLog(const QString& module, const std::chrono::system_clock::time_point& time, const std::shared_ptr<Format>& format, LogMetadata&& log)
@@ -55,7 +55,7 @@ void LogStorage::finalize()
             continue;
 
         auto time = parseTime(parts[lastLog.second.format->timeFieldIndex], lastLog.second.format);
-        maxTime = time + std::chrono::milliseconds(1);
+        maxTime = std::max(maxTime, time + std::chrono::milliseconds(1));
     }
 }
 
