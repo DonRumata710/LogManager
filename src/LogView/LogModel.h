@@ -5,10 +5,9 @@
 #include <QAbstractTableModel>
 #include <QRegularExpression>
 
-#include <boost/container/flat_set.hpp>
-
 #include <memory>
 #include <deque>
+#include <set>
 
 
 class LogModel : public QAbstractItemModel
@@ -95,7 +94,7 @@ private:
         }
     };
 
-    typedef boost::container::flat_set<MergeHeapCache, MergeHeapCacheComparator> MergeHeapCacheContainer;
+    typedef std::set<MergeHeapCache, MergeHeapCacheComparator> MergeHeapCacheContainer;
 
 private:
     void update();
@@ -130,6 +129,4 @@ private:
 
     int blockSize = 2000;
     int blockCount = 4;
-
-    std::chrono::system_clock::time_point anchorTime;
 };

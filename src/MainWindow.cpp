@@ -22,6 +22,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     setWindowTitle(QApplication::instance()->applicationName());
 
+    searchController = new SearchController(ui->searchBar, ui->logView, this);
+
     ui->searchBar->hide();
 
     Settings settings;
@@ -189,72 +191,6 @@ void MainWindow::on_actionDeselect_all_triggered()
     QT_SLOT_BEGIN
 
     updateFormatActions(false);
-
-    QT_SLOT_END
-}
-
-void MainWindow::on_searchBar_localSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward)
-{
-    QT_SLOT_BEGIN
-
-    search(ui->logView->currentIndex(), searchTerm, lastColumn, regexEnabled, backward, false);
-
-    QT_SLOT_END
-}
-
-void MainWindow::on_searchBar_commonSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward)
-{
-    QT_SLOT_BEGIN
-
-    search(ui->logView->currentIndex(), searchTerm, lastColumn, regexEnabled, backward, true);
-
-    QT_SLOT_END
-}
-
-void MainWindow::search(const QModelIndex& from, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool globalSearch)
-{
-    QT_SLOT_BEGIN
-
-    auto proxyModel = qobject_cast<QSortFilterProxyModel*>(ui->logView->model());
-    auto model = getLogModel();
-
-    size_t start = from.row() + (backward ? -1 : 1);
-    for (size_t i = start; i < model->rowCount(); backward ? --i : ++i)
-    {
-        QModelIndex index{ model->index(i, 0) };
-
-        QString textToSearch = model->data(index, static_cast<int>(lastColumn ? LogModel::MetaData::Message : LogModel::MetaData::Line)).toString();
-
-        bool flag = false;
-        if (regexEnabled)
-        {
-            QRegularExpression regex(searchTerm, QRegularExpression::CaseInsensitiveOption);
-            if (regex.match(textToSearch).hasMatch())
-                flag = true;
-        }
-        else
-        {
-            if (textToSearch.contains(searchTerm))
-                flag = true;
-        }
-
-        if (flag)
-        {
-            qDebug() << "Search found at row:" << i << "text:" << textToSearch;
-
-            if (proxyModel)
-                index = proxyModel->mapFromSource(index);
-
-            ui->logView->selectionModel()->setCurrentIndex(index, QItemSelectionModel::SelectionFlag::SelectCurrent | QItemSelectionModel::SelectionFlag::Rows);
-            ui->logView->scrollTo(index, QTreeView::PositionAtCenter);
-            return;
-        }
-    }
-
-    if (globalSearch)
-    {
-        // TODO
-    }
 
     QT_SLOT_END
 }

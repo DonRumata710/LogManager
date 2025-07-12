@@ -2,6 +2,7 @@
 
 #include "LogManagement/FormatManager.h"
 #include "LogView/LogModel.h"
+#include "SearchController.h"
 
 #include <QMainWindow>
 #include <QAbstractItemModel>
@@ -28,11 +29,6 @@ private slots:
     void on_actionRemove_format_triggered();
     void on_actionSelect_all_triggered();
     void on_actionDeselect_all_triggered();
-
-    void on_searchBar_localSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward);
-    void on_searchBar_commonSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward);
-
-    void search(const QModelIndex& from, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool globalSearch);
 
     void on_actionExport_as_is_triggered();
 
@@ -70,4 +66,6 @@ private:
     std::vector<QAction*> formatActions;
 
     QStringList selectedFormats;
+
+    SearchController* searchController;
 };

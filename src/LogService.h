@@ -37,14 +37,40 @@ public:
                                const std::chrono::system_clock::time_point& endTime);
     std::shared_ptr<LogEntryIterator<false>> getReverseIterator(int index);
 
-    int requestLogEntries(const std::shared_ptr<LogEntryIterator<true>>& iterator, int entryCount);
-    int requestLogEntries(const std::shared_ptr<LogEntryIterator<false>>& iterator, int entryCount);
+    template<typename Iterator>
+    int requestLogEntries(const std::shared_ptr<Iterator>& iterator, int entryCount)
+    {
+        if (!logManager || !iterator || entryCount <= 0 || !iterator->hasLogs())
+            throw std::runtime_error("Invalid log entry request parameters.");
+
+        int index = nextRequestIndex++;
+        dataRequests->emplace_back(index, iterator, entryCount);
+        QMetaObject::invokeMethod(this, "handleDataRequest", Qt::QueuedConnection);
+
+        return index;
+    }
+
+    template<typename Iterator>
+    int requestLogEntries(const std::shared_ptr<Iterator>& iterator, int entryCount, const std::chrono::system_clock::time_point& until)
+    {
+        if (!logManager || !iterator || entryCount <= 0 || !iterator->hasLogs())
+            throw std::runtime_error("Invalid log entry request parameters.");
+
+        int index = nextRequestIndex++;
+        dataRequests->emplace_back(index, iterator, entryCount, until);
+        QMetaObject::invokeMethod(this, "handleDataRequest", Qt::QueuedConnection);
+
+        return index;
+    }
+
     std::vector<LogEntry> getResult(int index);
 
 signals:
     void logManagerCreated();
     void iteratorCreated(int, bool isStraight);
     void dataLoaded(int);
+
+    void searchFinished(const QString& searchTerm, const QDateTime& entryTime);
 
 public slots:
     void openFile(const QString& file, const QStringList& formats);
@@ -60,10 +86,8 @@ public slots:
 
 private slots:
     void handleIteratorRequest();
-    void handleDataRequest();
-
     void handleReverseIteratorRequest();
-    void handleDataRequestReverse();
+    void handleDataRequest();
 
 private:
     struct IteratorRequest
@@ -87,21 +111,17 @@ private:
     struct DataRequest
     {
         int index;
-        std::shared_ptr<LogEntryIterator<>> iterator;
-        int entryCount;
+        std::variant<
+            std::shared_ptr<LogEntryIterator<true>>,
+            std::shared_ptr<LogEntryIterator<false>>
+            > iterator;
+        int entriesCount;
+        std::optional<std::chrono::system_clock::time_point> until;
         bool active = true;
 
-        DataRequest(int index, const std::shared_ptr<LogEntryIterator<>>& it, int count);
-    };
-
-    struct DataRequestReverse
-    {
-        int index;
-        std::shared_ptr<LogEntryIterator<false>> iterator;
-        int entryCount;
-        bool active = true;
-
-        DataRequestReverse(int index, const std::shared_ptr<LogEntryIterator<false>>& it, int count);
+        template<typename Iterator>
+        DataRequest(int idx, const std::shared_ptr<Iterator>& it, int count, const std::optional<std::chrono::system_clock::time_point>& until = std::nullopt) : index(idx), entriesCount(count), iterator(it), until(until)
+        {}
     };
 
 private:
@@ -121,6 +141,5 @@ private:
     ThreadSafePtr<std::map<int, std::shared_ptr<LogEntryIterator<false>>>> reverseIterators;
 
     ThreadSafePtr<std::deque<DataRequest>> dataRequests;
-    ThreadSafePtr<std::deque<DataRequestReverse>> dataRequestsReverse;
     ThreadSafePtr<std::map<int, std::vector<LogEntry>>> dataRequestResults;
 };

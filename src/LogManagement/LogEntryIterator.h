@@ -94,7 +94,7 @@ public:
 
                 while (auto entry = getEntry(heapItem))
                 {
-                    if (entry->time >= startTime)
+                    if (entry->time >= startTime && entry->time <= endTime)
                     {
                         prepareEntry(entry.value());
                         heapItem.entry = std::move(*entry);
@@ -122,9 +122,10 @@ public:
 
             auto entry = getEntry(item);
             if (entry)
+            {
                 item.entry = entry.value();
-
-            mergeHeap.emplace(std::move(item));
+                mergeHeap.emplace(std::move(item));
+            }
         }
     }
 
@@ -150,6 +151,14 @@ public:
             return endTime;
         }
         return std::chrono::system_clock::time_point();
+    }
+
+    bool isValueAhead(const std::chrono::system_clock::time_point& time) const
+    {
+        if constexpr (straight)
+            return mergeHeap.top().entry.time <= time;
+        else
+            return endTime > time;
     }
 
     bool hasLogs() const

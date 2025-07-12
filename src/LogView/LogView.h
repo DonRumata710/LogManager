@@ -15,4 +15,5 @@ public:
 
 private slots:
     void checkFetchNeeded();
+    void handleReset();
 };

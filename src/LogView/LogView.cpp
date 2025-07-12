@@ -20,6 +20,19 @@ LogView::LogView(QWidget* parent) : QTreeView(parent)
 void LogView::setLogModel(QAbstractItemModel* newModel)
 {
     setModel(newModel);
+
+    auto* logModel = qobject_cast<LogModel*>(newModel);
+    auto* proxyModel = qobject_cast<QAbstractProxyModel*>(newModel);
+    if (!logModel && proxyModel)
+        logModel = qobject_cast<LogModel*>(proxyModel->sourceModel());
+
+    if (!logModel)
+    {
+        qWarning() << "Unexpected model type in log view";
+        return;
+    }
+
+    connect(logModel, &LogModel::modelReset, this, &LogView::handleReset);
 }
 
 void LogView::checkFetchNeeded()
@@ -48,6 +61,23 @@ void LogView::checkFetchNeeded()
 
     if (value - min <= range * 0.1 || max == 0)
         logModel->fetchUpMore();
+
+    QT_SLOT_END
+}
+
+void LogView::handleReset()
+{
+    QT_SLOT_BEGIN
+
+    auto* logModel = qobject_cast<LogModel*>(model());
+    auto* proxyModel = qobject_cast<QAbstractProxyModel*>(model());
+    if (proxyModel)
+        logModel = qobject_cast<LogModel*>(proxyModel->sourceModel());
+
+    if (!logModel->canFetchUpMore())
+        scrollToTop();
+    else if (!logModel->canFetchDownMore())
+        scrollToBottom();
 
     QT_SLOT_END
 }
