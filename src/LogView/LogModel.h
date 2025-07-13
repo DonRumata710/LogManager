@@ -97,13 +97,21 @@ private:
     typedef std::set<MergeHeapCache, MergeHeapCacheComparator> MergeHeapCacheContainer;
 
 private:
-    void update();
+    void skipDataRequests();
 
     const Format::Field& getField(int section) const;
 
     size_t getParentIndex(const QModelIndex& index) const;
 
     DataRequestType handleDataRequest(int index);
+
+    bool isIsolated(const MergeHeapCache& entry) const;
+
+    template<bool straight>
+    std::shared_ptr<LogEntryIterator<straight>> createIterator(const MergeHeapCache& cache, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime)
+    {
+        return std::make_shared<LogEntryIterator<straight>>(service->getSession()->createIterator<straight>(cache, startTime, endTime));
+    }
 
 private:
     static int loadBlockSize();

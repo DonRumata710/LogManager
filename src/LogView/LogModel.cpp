@@ -97,16 +97,16 @@ void LogModel::goToTime(const std::chrono::system_clock::time_point& time)
         if (!upperEntryCache || time - lowerEntryCache->time < upperEntryCache->time - time)
         {
             if (!reverseIterator || reverseIterator->getCurrentTime() != lowerEntryCache->time)
-                reverseIterator = std::make_shared<LogEntryIterator<false>>(service->getSession()->createIterator<false>(lowerEntryCache->heap, time, lowerEntryCache->time));
+                reverseIterator = createIterator<false>(*lowerEntryCache, startTime.toStdSysMilliseconds(), lowerEntryCache->time);
             if (!iterator || iterator->getCurrentTime() != lowerEntryCache->time)
-                iterator = std::make_shared<LogEntryIterator<true>>(service->getSession()->createIterator<true>(lowerEntryCache->heap, time, lowerEntryCache->time));
+                iterator = createIterator<true>(*lowerEntryCache, lowerEntryCache->time, endTime.toStdSysMilliseconds());
         }
         else if (!lowerEntryCache || upperEntryCache->time - time < time - lowerEntryCache->time)
         {
             if (!reverseIterator || reverseIterator->getCurrentTime() != upperEntryCache->time)
-                reverseIterator = std::make_shared<LogEntryIterator<false>>(service->getSession()->createIterator<false>(upperEntryCache->heap, time, upperEntryCache->time));
+                reverseIterator = createIterator<false>(*upperEntryCache, startTime.toStdSysMilliseconds(), upperEntryCache->time);
             if (!iterator || iterator->getCurrentTime() != upperEntryCache->time)
-                iterator = std::make_shared<LogEntryIterator<true>>(service->getSession()->createIterator<true>(upperEntryCache->heap, time, upperEntryCache->time));
+                iterator = createIterator<true>(*upperEntryCache, upperEntryCache->time, endTime.toStdSysMilliseconds());
         }
         return;
     }
@@ -400,11 +400,30 @@ void LogModel::handleIterator(int index, bool isStraight)
     QT_SLOT_BEGIN
     if (iteratorIndex == index)
     {
+        skipDataRequests();
+
         if (isStraight)
+        {
             iterator = service->getIterator(index);
+
+            auto newCache = iterator->getCache();
+            if (isIsolated(newCache))
+                entryCache.emplace(std::move(newCache));
+
+            reverseIterator = createIterator<false>(newCache, startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
+            dataRequests[service->requestLogEntries(iterator, blockSize)] = DataRequestType::ReplaceForward;
+        }
         else
+        {
             reverseIterator = service->getReverseIterator(index);
-        update();
+
+            auto newCache = reverseIterator->getCache();
+            if (isIsolated(newCache))
+                entryCache.emplace(std::move(newCache));
+
+            iterator = createIterator<true>(newCache, startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
+            dataRequests[service->requestLogEntries(reverseIterator, blockSize)] = DataRequestType::ReplaceBackward;
+        }
     }
     QT_SLOT_END
 }
@@ -472,7 +491,7 @@ void LogModel::handleData(int index)
             if (cacheIt == entryCache.end())
                 qCritical() << "LogModel::handleData: no cache found for reverse iterator";
             else if (++cacheIt != entryCache.end())
-                reverseIterator = std::make_shared<LogEntryIterator<false>>(service->getSession()->createIterator<false>(cacheIt->heap, startTime.toStdSysMilliseconds(), cacheIt->time));
+                reverseIterator = createIterator<false>(*cacheIt, startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
 
             beginRemoveRows(QModelIndex(), 0, logs.size() - blockSize * blockCount - 1);
             logs.erase(logs.begin(), logs.begin() + logs.size() - blockSize * blockCount);
@@ -489,11 +508,11 @@ void LogModel::handleData(int index)
             startPageSwap();
 
         beginInsertRows(QModelIndex(), 0, data.size() - 1);
-        for (size_t i = data.size() - 1; i < data.size(); --i)
+        for (int i = 0; i < data.size(); ++i)
         {
             LogItem item;
             item.entry = data[i];
-            item.index = i;
+            item.index = data.size() - i - 1;
             logs.push_front(item);
         }
         for (size_t i = data.size(); i < logs.size(); ++i)
@@ -537,7 +556,7 @@ void LogModel::handleData(int index)
                 --cacheIt;
 
             if (cacheIt != entryCache.end())
-                iterator = std::make_shared<LogEntryIterator<true>>(service->getSession()->createIterator<true>(cacheIt->heap, cacheIt->time, endTime.toStdSysMilliseconds()));
+                iterator = createIterator<true>(*cacheIt, cacheIt->time, endTime.toStdSysMilliseconds());
 
             beginRemoveRows(QModelIndex(), blockSize * blockCount, logs.size() - 1);
             logs.erase(logs.begin() + blockSize * blockCount, logs.end());
@@ -564,11 +583,11 @@ void LogModel::handleData(int index)
         }
         else
         {
-            for (int i = data.size() - 1; i >= 0; --i)
+            for (int i = 0; i < data.size(); ++i)
             {
                 LogItem item;
                 item.entry = data[i];
-                item.index = logs.size();
+                item.index = data.size() - i - 1;
                 logs.push_front(item);
             }
         }
@@ -607,35 +626,9 @@ void LogModel::handleData(int index)
     QT_SLOT_END
 }
 
-void LogModel::update()
+void LogModel::skipDataRequests()
 {
-    if (!iterator && !reverseIterator)
-        return;
-
-    if (entryCache.empty())
-    {
-        if (iterator)
-            entryCache.emplace(iterator->getCache());
-        if (reverseIterator && !iterator)
-            entryCache.emplace(reverseIterator->getCache());
-    }
-
     dataRequests.clear();
-
-    if (iterator && iterator->hasLogs())
-    {
-        dataRequests[service->requestLogEntries(iterator, blockSize)] = DataRequestType::ReplaceForward;
-
-        auto cache = iterator->getCache();
-        reverseIterator = std::make_shared<LogEntryIterator<false>>(service->getSession()->createIterator<false>(cache.heap, startTime.toStdSysMilliseconds(), cache.time));
-    }
-    if (reverseIterator && reverseIterator->hasLogs())
-    {
-        dataRequests[service->requestLogEntries(reverseIterator, blockSize)] = (iterator ? DataRequestType::Prepend : DataRequestType::ReplaceBackward);
-
-        auto cache = reverseIterator->getCache();
-        iterator = std::make_shared<LogEntryIterator<true>>(service->getSession()->createIterator<true>(cache.heap, cache.time, endTime.toStdSysMilliseconds()));
-    }
 }
 
 const Format::Field& LogModel::getField(int section) const
@@ -648,6 +641,22 @@ const Format::Field& LogModel::getField(int section) const
 size_t LogModel::getParentIndex(const QModelIndex& index) const
 {
     return *reinterpret_cast<size_t*>(index.internalPointer());
+}
+
+bool LogModel::isIsolated(const MergeHeapCache& entry) const
+{
+    auto it = entryCache.upper_bound(entry);
+    if (it != entryCache.end() && !it->heap.empty())
+        return false;
+
+    if (it != entryCache.begin())
+    {
+        --it;
+        if (!it->heap.empty() || it->time == entry.time)
+            return false;
+    }
+
+    return true;
 }
 
 int LogModel::loadBlockSize()

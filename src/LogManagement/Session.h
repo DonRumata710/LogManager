@@ -30,7 +30,7 @@ public:
     }
 
     template<bool straight = true>
-    LogEntryIterator<straight> createIterator(const std::vector<HeapItemCache>& cache, const std::chrono::system_clock::time_point& startTime = std::chrono::system_clock::time_point(), const std::chrono::system_clock::time_point& endTime = std::chrono::system_clock::time_point::max())
+    LogEntryIterator<straight> createIterator(const MergeHeapCache& cache, const std::chrono::system_clock::time_point& startTime = std::chrono::system_clock::time_point(), const std::chrono::system_clock::time_point& endTime = std::chrono::system_clock::time_point::max())
     {
         return LogEntryIterator<straight>(cache, logStorage, startTime, endTime);
     }

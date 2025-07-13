@@ -73,11 +73,12 @@ public:
     };
 
 public:
-    LogEntryIterator(const std::shared_ptr<LogStorage>& logStorage, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime) :
+    LogEntryIterator(const std::shared_ptr<LogStorage>& logStorage, const std::chrono::system_clock::time_point& _startTime, const std::chrono::system_clock::time_point& _endTime) :
         logStorage(logStorage),
-        startTime(startTime),
-        endTime(endTime)
+        startTime(_startTime),
+        endTime(_endTime)
     {
+        ++endTime;
         for (const auto& module : logStorage->getModules())
         {
             const auto& metadata = logStorage->findLog(module, straight ? startTime : endTime);
@@ -94,7 +95,7 @@ public:
 
                 while (auto entry = getEntry(heapItem))
                 {
-                    if (entry->time >= startTime && entry->time <= endTime)
+                    if (entry->time >= startTime && entry->time < endTime)
                     {
                         prepareEntry(entry.value());
                         heapItem.entry = std::move(*entry);
@@ -106,15 +107,15 @@ public:
         }
     }
 
-    LogEntryIterator(const std::vector<HeapItemCache>& heapItems,
+    LogEntryIterator(const MergeHeapCache& heapCache,
                      const std::shared_ptr<LogStorage>& logStorage,
-                     const std::chrono::system_clock::time_point& startTime,
-                     const std::chrono::system_clock::time_point& endTime) :
+                     const std::chrono::system_clock::time_point& _startTime,
+                     const std::chrono::system_clock::time_point& _endTime) :
         logStorage(logStorage),
-        startTime(startTime),
-        endTime(endTime)
+        startTime(_startTime),
+        endTime(_endTime)
     {
-        for (const auto& heapItem : heapItems)
+        for (const auto& heapItem : heapCache.heap)
         {
             HeapItem item(heapItem, logStorage);
             if constexpr (straight)
@@ -127,16 +128,9 @@ public:
                 mergeHeap.emplace(std::move(item));
             }
         }
-    }
 
-    std::chrono::system_clock::time_point getStartTime() const
-    {
-        return startTime;
-    }
-
-    std::chrono::system_clock::time_point getEndTime() const
-    {
-        return endTime;
+        if constexpr (!straight)
+            endTime = heapCache.time;
     }
 
     std::chrono::system_clock::time_point getCurrentTime() const
