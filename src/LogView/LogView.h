@@ -16,4 +16,11 @@ public:
 private slots:
     void checkFetchNeeded();
     void handleReset();
+
+    void handleFirstLineChangeStart();
+    void handleFirstLineRemoving(const QModelIndex& parent, int first, int last);
+    void handleFirstLineAddition(const QModelIndex& parent, int first, int last);
+
+private:
+    std::optional<QModelIndex> lastScrollPosition;
 };

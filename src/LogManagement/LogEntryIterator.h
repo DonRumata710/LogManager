@@ -115,17 +115,51 @@ public:
         startTime(_startTime),
         endTime(_endTime)
     {
+        auto leftModules = logStorage->getModules();
         for (const auto& heapItem : heapCache.heap)
         {
+            leftModules.erase(heapItem.module);
+
             HeapItem item(heapItem, logStorage);
             if constexpr (straight)
                 item.line = item.log->nextLine().value_or(QString());
 
-            auto entry = getEntry(item);
+            auto entry = getPreparedEntry(item);
             if (entry)
             {
                 item.entry = entry.value();
                 mergeHeap.emplace(std::move(item));
+            }
+        }
+
+        if (!leftModules.empty())
+        {
+            for (const auto& module : leftModules)
+            {
+                const auto& metadata = logStorage->findLog(module, heapCache.time);
+                if (metadata.second.fileBuilder)
+                {
+                    HeapItem heapItem;
+                    heapItem.metadata = &metadata;
+                    heapItem.module = module;
+                    heapItem.log = metadata.second.fileBuilder(metadata.second.filename, metadata.second.format);
+                    if (metadata.first < heapCache.time)
+                        heapItem.log->goToEnd();
+
+                    if constexpr (straight)
+                        heapItem.line = heapItem.log->nextLine().value_or(QString());
+
+                    while (auto entry = getEntry(heapItem))
+                    {
+                        if (entry->time >= startTime && entry->time < endTime)
+                        {
+                            prepareEntry(entry.value());
+                            heapItem.entry = std::move(*entry);
+                            mergeHeap.emplace(std::move(heapItem));
+                            break;
+                        }
+                    }
+                }
             }
         }
 

@@ -2,6 +2,7 @@
 
 #include "Utils.h"
 #include "Application.h"
+#include "SearchController.h"
 
 
 LogService::LogService(QObject *parent) :
@@ -149,7 +150,11 @@ void LogService::search(const QString& searchTerm, bool lastColumn, bool regexEn
         if (!entry)
             break;
 
-
+        if (SearchController::checkEntry(entry->line, searchTerm, lastColumn, regexEnabled))
+        {
+            emit searchFinished(searchTerm, DateTimeFromChronoSystemClock(entry->time));
+            return;
+        }
     }
 
     QT_SLOT_END

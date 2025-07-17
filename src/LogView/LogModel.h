@@ -64,7 +64,9 @@ public:
 
 signals:
     void startPageSwap();
-    void endPageSwap();
+    void endPageSwap(int rows);
+
+    void requestedTimeAvailable(const QModelIndex& index);
 
 public slots:
     void handleIterator(int, bool);
@@ -105,7 +107,14 @@ private:
 
     DataRequestType handleDataRequest(int index);
 
-    bool isIsolated(const MergeHeapCache& entry) const;
+    enum class Connection
+    {
+        None,
+        Up,
+        Down
+    };
+    Connection detectConnection(const MergeHeapCache& entry) const;
+    void reinitIteratorsWithClosestTime(const MergeHeapCache& newCache, Connection connection);
 
     template<bool straight>
     std::shared_ptr<LogEntryIterator<straight>> createIterator(const MergeHeapCache& cache, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime)
@@ -134,6 +143,8 @@ private:
     std::deque<LogItem> logs;
 
     MergeHeapCacheContainer entryCache;
+
+    QDateTime requestedTime;
 
     int blockSize = 2000;
     int blockCount = 4;

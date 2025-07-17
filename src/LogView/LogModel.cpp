@@ -50,9 +50,24 @@ void LogModel::goToTime(const QDateTime& time)
 
 void LogModel::goToTime(const std::chrono::system_clock::time_point& time)
 {
-    if (!logs.empty() && time >= logs.begin()->entry.time && time <= logs.back().entry.time)
+    if (!logs.empty() &&
+        ((time >= logs.begin()->entry.time && time <= logs.back().entry.time) ||
+         (time < getStartTime().toStdSysMilliseconds() && reverseIterator && !reverseIterator->hasLogs()) ||
+         (time > getEndTime().toStdSysMilliseconds() && iterator && !iterator->hasLogs())))
     {
         qDebug() << "LogModel::goToTime: requested time is already in the current range.";
+        QModelIndex index;
+        for (size_t i = 0; i < logs.size(); ++i)
+        {
+            if (logs[i].entry.time >= time)
+            {
+                index = createIndex(i, 0);
+                break;
+            }
+        }
+        if (!index.isValid())
+            index = createIndex(logs.size() - 1, 0);
+        requestedTimeAvailable(index);
         return;
     }
 
@@ -64,19 +79,7 @@ void LogModel::goToTime(const std::chrono::system_clock::time_point& time)
     });
 
     logs.clear();
-
-    if (entryCache.empty())
-    {
-        if (time < getStartTime().toStdSysMilliseconds())
-            iteratorIndex = service->requestIterator(startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
-        else if (time > getEndTime().toStdSysMilliseconds())
-            iteratorIndex = service->requestReverseIterator(startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
-        else if (time - getStartTime().toStdSysMilliseconds() < getEndTime().toStdSysMilliseconds() - time)
-            iteratorIndex = service->requestIterator(time, endTime.toStdSysMilliseconds());
-        else
-            iteratorIndex = service->requestReverseIterator(startTime.toStdSysMilliseconds(), time);
-        return;
-    }
+    requestedTime = DateTimeFromChronoSystemClock(time);
 
     const MergeHeapCache* upperEntryCache = nullptr;
     const MergeHeapCache* lowerEntryCache = nullptr;
@@ -118,12 +121,31 @@ void LogModel::goToTime(const std::chrono::system_clock::time_point& time)
     }
     else if (upperEntryCache && !upperEntryCache->heap.empty())
     {
-        auto newTime = lowerEntryCache->time;
+        auto newTime = upperEntryCache->time;
         --newTime;
         entryCache.emplace_hint(upperCacheIt, MergeHeapCache{ newTime });
     }
 
-    iteratorIndex = service->requestIterator(time, endTime.toStdSysMilliseconds());
+    if (time < getStartTime().toStdSysMilliseconds())
+    {
+        MergeHeapCache newCache{ getStartTime().toStdSysMilliseconds() };
+        iterator = createIterator<true>(newCache, startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
+        reverseIterator = createIterator<false>(newCache, startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
+        dataRequests[service->requestLogEntries(iterator, blockSize)] = DataRequestType::ReplaceForward;
+        entryCache.emplace(std::move(newCache));
+    }
+    else if (time > getEndTime().toStdSysMilliseconds())
+    {
+        MergeHeapCache newCache{ getEndTime().toStdSysMilliseconds() };
+        iterator = createIterator<true>(newCache, startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
+        reverseIterator = createIterator<false>(newCache, startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
+        dataRequests[service->requestLogEntries(reverseIterator, blockSize)] = DataRequestType::ReplaceBackward;
+        entryCache.emplace(std::move(newCache));
+    }
+    else
+    {
+        iteratorIndex = service->requestIterator(time, endTime.toStdSysMilliseconds());
+    }
 }
 
 bool LogModel::canFetchUpMore() const
@@ -407,22 +429,36 @@ void LogModel::handleIterator(int index, bool isStraight)
             iterator = service->getIterator(index);
 
             auto newCache = iterator->getCache();
-            if (isIsolated(newCache))
-                entryCache.emplace(std::move(newCache));
+            auto connection = detectConnection(newCache);
+            if (connection != Connection::None)
+            {
+                qWarning() << "LogModel::handleIterator: iterator expected to be isolated from previos data, but it is not";
+                reinitIteratorsWithClosestTime(newCache, connection);
+                return;
+            }
 
             reverseIterator = createIterator<false>(newCache, startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
             dataRequests[service->requestLogEntries(iterator, blockSize)] = DataRequestType::ReplaceForward;
+
+            entryCache.emplace(std::move(newCache));
         }
         else
         {
             reverseIterator = service->getReverseIterator(index);
 
             auto newCache = reverseIterator->getCache();
-            if (isIsolated(newCache))
-                entryCache.emplace(std::move(newCache));
+            auto connection = detectConnection(newCache);
+            if (connection != Connection::None)
+            {
+                qWarning() << "LogModel::handleIterator: iterator expected to be isolated from previos data, but it is not";
+                reinitIteratorsWithClosestTime(newCache, connection);
+                return;
+            }
 
             iterator = createIterator<true>(newCache, startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
             dataRequests[service->requestLogEntries(reverseIterator, blockSize)] = DataRequestType::ReplaceBackward;
+
+            entryCache.emplace(std::move(newCache));
         }
     }
     QT_SLOT_END
@@ -499,7 +535,7 @@ void LogModel::handleData(int index)
                 logs[i].index = i;
             endRemoveRows();
 
-            endPageSwap();
+            endPageSwap(logs.size() + data.size() - blockSize * blockCount);
         }
         break;
 
@@ -562,15 +598,17 @@ void LogModel::handleData(int index)
             logs.erase(logs.begin() + blockSize * blockCount, logs.end());
             endRemoveRows();
 
-            endPageSwap();
+            endPageSwap(blockSize * blockCount - data.size() - logs.size());
         }
         break;
 
     case DataRequestType::ReplaceForward:
     case DataRequestType::ReplaceBackward:
+    {
         beginResetModel();
         logs.clear();
 
+        std::chrono::system_clock::time_point requestedTimePoint = requestedTime.toStdSysMilliseconds();
         if (requestType == DataRequestType::ReplaceForward)
         {
             for (int i = 0; i < data.size(); ++i)
@@ -592,6 +630,21 @@ void LogModel::handleData(int index)
             }
         }
         endResetModel();
+
+        if (requestedTime.isValid())
+        {
+            int requestedEntry = -1;
+            for (int i = 0; i < logs.size(); ++i)
+            {
+                if (logs[i].entry.time >= requestedTimePoint)
+                {
+                    requestedEntry = logs[i].index;
+                    break;
+                }
+            }
+            if (requestedEntry != -1)
+                requestedTimeAvailable(createIndex(requestedEntry, 0));
+        }
 
         if (iterator && requestType == DataRequestType::ReplaceForward)
             entryCache.emplace(iterator->getCache());
@@ -617,6 +670,7 @@ void LogModel::handleData(int index)
                 dataRequests[service->requestLogEntries(reverseIterator, blockSize)] = DataRequestType::Prepend;
         }
         break;
+    }
 
     default:
         qWarning() << "LogModel::handleData: unexpected data request type:" << static_cast<int>(requestType);
@@ -643,20 +697,73 @@ size_t LogModel::getParentIndex(const QModelIndex& index) const
     return *reinterpret_cast<size_t*>(index.internalPointer());
 }
 
-bool LogModel::isIsolated(const MergeHeapCache& entry) const
+LogModel::DataRequestType LogModel::handleDataRequest(int index)
+{
+    auto it = dataRequests.find(index);
+    if (it == dataRequests.end())
+        return DataRequestType::None;
+
+    auto requestType = it->second;
+    dataRequests.erase(it);
+    return requestType;
+}
+
+LogModel::Connection LogModel::detectConnection(const MergeHeapCache& entry) const
 {
     auto it = entryCache.upper_bound(entry);
     if (it != entryCache.end() && !it->heap.empty())
-        return false;
+        return Connection::Up;
 
     if (it != entryCache.begin())
     {
         --it;
         if (!it->heap.empty() || it->time == entry.time)
-            return false;
+            return Connection::Down;
     }
 
-    return true;
+    return Connection::None;
+}
+
+void LogModel::reinitIteratorsWithClosestTime(const MergeHeapCache& newCache, Connection connection)
+{
+    switch (connection)
+    {
+    default:
+    case Connection::Up:
+    {
+        auto it = entryCache.upper_bound(newCache);
+        if (it == entryCache.end())
+            throw std::logic_error("LogModel::handleIterator: unexpected end of cache");
+
+        iterator = createIterator<true>(*it, startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
+        reverseIterator = createIterator<false>(*it, startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
+
+        break;
+    }
+    case Connection::Down:
+    {
+        auto it = entryCache.upper_bound(newCache);
+        if (it == entryCache.begin())
+            throw std::logic_error("LogModel::handleIterator: unexpected beginning of cache");
+        --it;
+
+        iterator = createIterator<true>(*it, startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
+        reverseIterator = createIterator<false>(*it, startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
+
+        break;
+    }
+    }
+
+    if (iterator->hasLogs())
+    {
+        dataRequests[service->requestLogEntries(iterator, blockSize)] = DataRequestType::ReplaceForward;
+        if (reverseIterator->hasLogs())
+            dataRequests[service->requestLogEntries(reverseIterator, blockSize)] = DataRequestType::Prepend;
+    }
+    else
+    {
+        dataRequests[service->requestLogEntries(reverseIterator, blockSize)] = DataRequestType::ReplaceBackward;
+    }
 }
 
 int LogModel::loadBlockSize()
@@ -683,15 +790,4 @@ int LogModel::loadBlockCount()
     else
         settings.setValue(LogViewSettings + BlockCountParameter, defaultSize);
     return defaultSize;
-}
-
-LogModel::DataRequestType LogModel::handleDataRequest(int index)
-{
-    auto it = dataRequests.find(index);
-    if (it == dataRequests.end())
-        return DataRequestType::None;
-
-    auto requestType = it->second;
-    dataRequests.erase(it);
-    return requestType;
 }

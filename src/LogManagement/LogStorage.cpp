@@ -59,7 +59,8 @@ void LogStorage::finalize()
         while(!checkFormat(parts, lastLog.second.format));
 
         auto time = parseTime(parts[lastLog.second.format->timeFieldIndex], lastLog.second.format);
-        maxTime = std::max(maxTime, time + std::chrono::milliseconds(1));
+        ++time;
+        maxTime = std::max(maxTime, time);
     }
 }
 
@@ -127,8 +128,8 @@ const LogStorage::LogMetaEntry& LogStorage::findLog(const QString& module, const
         auto logIt = it->second.lower_bound(time);
         if (logIt != it->second.begin() && logIt == it->second.end())
             --logIt;
-        if (!logIt->second.fileBuilder && logIt != it->second.begin())
-            --logIt;
+        if (logIt != it->second.end() && !logIt->second.fileBuilder)
+            ++logIt;
         if (logIt != it->second.end())
             return *logIt;
     }

@@ -8,7 +8,9 @@
 #include <QSortFilterProxyModel>
 
 
-SearchController::SearchController(SearchBar* searchBar, QAbstractItemView* logView, QObject* parent) : QObject(parent)
+SearchController::SearchController(SearchBar* searchBar, QAbstractItemView* logView, QObject* parent) :
+    QObject(parent),
+    logView(logView)
 {
     connect(searchBar, &SearchBar::localSearch, this, &SearchController::localSearch);
     connect(searchBar, &SearchBar::commonSearch, this, &SearchController::commonSearch);
@@ -28,6 +30,34 @@ SearchController::SearchController(SearchBar* searchBar, QAbstractItemView* logV
     }
 
     connect(this, &SearchController::startGlobalSearch, logService, &LogService::search);
+    connect(logService, &LogService::searchFinished, this, &SearchController::handleSearchResult);
+}
+
+void SearchController::updateModel()
+{
+    auto proxyModel = qobject_cast<QSortFilterProxyModel*>(logView->model());
+    auto model = qobject_cast<LogModel*>(logView->model());
+    if (!model && proxyModel)
+        model = qobject_cast<LogModel*>(proxyModel->sourceModel());
+
+    connect(model, &LogModel::requestedTimeAvailable, this, &SearchController::handleLoadingFinished);
+}
+
+bool SearchController::checkEntry(const QString& textToSearch, const QString& searchTerm, bool lastColumn, bool regexEnabled)
+{
+    if (regexEnabled)
+    {
+        QRegularExpression regex(searchTerm, QRegularExpression::CaseInsensitiveOption);
+        if (regex.match(textToSearch).hasMatch())
+            return true;
+    }
+    else
+    {
+        if (textToSearch.contains(searchTerm))
+            return true;
+    }
+
+    return false;
 }
 
 void SearchController::localSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward)
@@ -68,6 +98,19 @@ void SearchController::handleSearchResult(const QString& searchTerm, const QDate
     QT_SLOT_END
 }
 
+void SearchController::handleLoadingFinished(const QModelIndex& index)
+{
+    QT_SLOT_BEGIN
+
+    if (!currentSearchTerm.isEmpty())
+    {
+        logView->scrollTo(index, QTreeView::ScrollHint::PositionAtCenter);
+        currentSearchTerm.clear();
+    }
+
+    QT_SLOT_END
+}
+
 void SearchController::search(const QModelIndex& from, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool globalSearch)
 {
     QT_SLOT_BEGIN
@@ -81,23 +124,8 @@ void SearchController::search(const QModelIndex& from, const QString& searchTerm
     for (size_t i = start; i < model->rowCount(); backward ? --i : ++i)
     {
         QModelIndex index{ model->index(i, 0) };
-
         QString textToSearch = model->data(index, static_cast<int>(lastColumn ? LogModel::MetaData::Message : LogModel::MetaData::Line)).toString();
-
-        bool flag = false;
-        if (regexEnabled)
-        {
-            QRegularExpression regex(searchTerm, QRegularExpression::CaseInsensitiveOption);
-            if (regex.match(textToSearch).hasMatch())
-                flag = true;
-        }
-        else
-        {
-            if (textToSearch.contains(searchTerm))
-                flag = true;
-        }
-
-        if (flag)
+        if (checkEntry(textToSearch, searchTerm, lastColumn, regexEnabled))
         {
             qDebug() << "Search found at row:" << i << "text:" << textToSearch;
 
@@ -113,6 +141,7 @@ void SearchController::search(const QModelIndex& from, const QString& searchTerm
     if (globalSearch)
     {
         qDebug() << "Starting global search for term:" << searchTerm;
+        currentSearchTerm = searchTerm;
         startGlobalSearch(searchTerm, lastColumn, regexEnabled, backward);
     }
 

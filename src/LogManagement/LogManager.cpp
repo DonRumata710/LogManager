@@ -42,7 +42,11 @@ LogManager::LogManager(const std::vector<QString>& folders, const std::vector<st
                     auto innerExtension = info.name.mid(module.size());
 
                     auto fileCreationFunc = [filename](const QString& innerFilename) {
-                        return std::make_unique<QuaZipFile>(filename, innerFilename);
+                        QuaZipFile zipFile(filename, innerFilename);
+                        std::unique_ptr<QBuffer> buffer = std::make_unique<QBuffer>();
+                        if (!LogManager::readIntoBuffer(zipFile, *buffer))
+                            throw std::runtime_error("Failed to read file from archive: " + filename.toStdString() + ", inner file: " + innerFilename.toStdString());
+                        return buffer;
                     };
                     auto result = addFile(innerFilename, module, innerExtension, fileCreationFunc, formats);
                     if (result)
@@ -200,4 +204,15 @@ std::optional<std::pair<std::shared_ptr<Format>, std::chrono::system_clock::time
 Log LogManager::createLog(const QString& filename, std::function<std::unique_ptr<QIODevice>(const QString&)> createFileFunc, std::shared_ptr<Format> format)
 {
     return Log(createFileFunc(filename), format->encoding, std::shared_ptr<std::vector<Format::Comment>>(format, &format->comments));
+}
+
+bool LogManager::readIntoBuffer(QIODevice& source, QBuffer& targetBuffer)
+{
+    if (!source.isOpen() && !source.open(QIODevice::ReadOnly))
+        throw std::runtime_error("cannot open log file: " + source.errorString().toStdString());
+
+    QByteArray data = source.readAll();
+    targetBuffer.close();
+    targetBuffer.setData(data);
+    return targetBuffer.open(QIODevice::ReadOnly);
 }

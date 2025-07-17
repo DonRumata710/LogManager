@@ -23,7 +23,6 @@ set(CMAKE_AUTORCC ON)
 check_local_hints()
 
 find_package(Qt6 COMPONENTS Core Gui Widgets REQUIRED)
-find_package(Qt6 REQUIRED COMPONENTS Core)
 find_package(QuaZip-Qt6 COMPONENTS QuaZip)
 find_package(Boost COMPONENTS headers REQUIRED)
 
@@ -56,8 +55,6 @@ endif()
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${RESOURCE_FILE} ${QT_RESOURCES} ${UI_FILES} ${TS_FILES} ${RESOURCES})
 
-
-target_link_libraries(LogManager PRIVATE Qt6::Core)
 target_compile_definitions(${PROJECT_NAME} PRIVATE APPLICATION_NAME="${PROJECT_NAME}"
     APPLICATION_VERSION="${PROJECT_VERSION}"
 )

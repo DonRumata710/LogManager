@@ -33,6 +33,11 @@ void LogView::setLogModel(QAbstractItemModel* newModel)
     }
 
     connect(logModel, &LogModel::modelReset, this, &LogView::handleReset);
+
+    connect(logModel, &LogModel::rowsAboutToBeInserted, this, &LogView::handleFirstLineChangeStart);
+    connect(logModel, &LogModel::rowsAboutToBeRemoved, this, &LogView::handleFirstLineChangeStart);
+    connect(logModel, &LogModel::rowsInserted, this, &LogView::handleFirstLineAddition);
+    connect(logModel, &LogModel::rowsRemoved, this, &LogView::handleFirstLineRemoving);
 }
 
 void LogView::checkFetchNeeded()
@@ -75,9 +80,81 @@ void LogView::handleReset()
         logModel = qobject_cast<LogModel*>(proxyModel->sourceModel());
 
     if (!logModel->canFetchUpMore())
+    {
         scrollToTop();
+    }
     else if (!logModel->canFetchDownMore())
+    {
         scrollToBottom();
+    }
+    else
+    {
+        scrollTo(logModel->index(model()->rowCount() / 2, 0));
+    }
 
+    QT_SLOT_END
+}
+
+void LogView::handleFirstLineChangeStart()
+{
+    QT_SLOT_BEGIN
+
+    auto* logModel = qobject_cast<LogModel*>(model());
+    auto* proxyModel = qobject_cast<QAbstractProxyModel*>(model());
+    if (proxyModel)
+        logModel = qobject_cast<LogModel*>(proxyModel->sourceModel());
+
+    lastScrollPosition = indexAt(QPoint{});
+    if (proxyModel)
+        lastScrollPosition = proxyModel->mapToSource(lastScrollPosition.value());
+
+    QT_SLOT_END
+}
+
+void LogView::handleFirstLineRemoving(const QModelIndex& parent, int first, int last)
+{
+    QT_SLOT_BEGIN
+    if (lastScrollPosition)
+    {
+        if (lastScrollPosition->row() < first)
+            return;
+
+        auto* logModel = qobject_cast<LogModel*>(model());
+        auto* proxyModel = qobject_cast<QAbstractProxyModel*>(model());
+        if (proxyModel)
+            logModel = qobject_cast<LogModel*>(proxyModel->sourceModel());
+
+        auto newIndex = logModel->index(lastScrollPosition->row() - last + first, lastScrollPosition->column());
+        scrollTo(proxyModel->mapFromSource(newIndex));
+        lastScrollPosition.reset();
+    }
+    else
+    {
+        qWarning() << "Last scroll position not set";
+    }
+    QT_SLOT_END
+}
+
+void LogView::handleFirstLineAddition(const QModelIndex& parent, int first, int last)
+{
+    QT_SLOT_BEGIN
+    if (lastScrollPosition)
+    {
+        if (lastScrollPosition->row() < first)
+            return;
+
+        auto* logModel = qobject_cast<LogModel*>(model());
+        auto* proxyModel = qobject_cast<QAbstractProxyModel*>(model());
+        if (proxyModel)
+            logModel = qobject_cast<LogModel*>(proxyModel->sourceModel());
+
+        auto newIndex = logModel->index(lastScrollPosition->row() + last - first, lastScrollPosition->column());
+        scrollTo(proxyModel->mapFromSource(newIndex));
+        lastScrollPosition.reset();
+    }
+    else
+    {
+        qWarning() << "Last scroll position not set";
+    }
     QT_SLOT_END
 }

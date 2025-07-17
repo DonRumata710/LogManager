@@ -6,6 +6,7 @@
 #include "Session.h"
 
 #include <QDateTime>
+#include <QBuffer>
 
 #include <unordered_set>
 #include <memory>
@@ -32,6 +33,8 @@ private:
     std::optional<std::pair<std::shared_ptr<Format>, std::chrono::system_clock::time_point>> scanLogFile(const QString& filename, std::function<std::unique_ptr<QIODevice>(const QString&)> createFileFunc, const std::vector<std::shared_ptr<Format>>& formats);
 
     Log createLog(const QString& filename, std::function<std::unique_ptr<QIODevice>(const QString&)> createFileFunc, std::shared_ptr<Format> format);
+
+    static bool readIntoBuffer(QIODevice& source, QBuffer& targetBuffer);
 
 private:
     std::shared_ptr<LogStorage> logStorage;
