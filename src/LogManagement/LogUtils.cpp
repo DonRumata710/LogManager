@@ -73,3 +73,21 @@ std::chrono::system_clock::time_point parseTime(const QString& timeStr, const st
     ss >> std::chrono::parse(format->timeRegex.toStdString(), tp);
     return tp;
 }
+
+int getEncodingWidth(QStringConverter::Encoding encoding)
+{
+    switch (encoding)
+    {
+    case QStringConverter::Utf8:
+    case QStringConverter::Latin1:
+        return 1;
+    case QStringConverter::Utf16LE:
+    case QStringConverter::Utf16BE:
+        return 2;
+    case QStringConverter::Utf32LE:
+    case QStringConverter::Utf32BE:
+        return 4;
+    default:
+        return 1;
+    }
+}

@@ -35,5 +35,5 @@ private:
     std::shared_ptr<std::vector<Format::Comment>> comments;
     qint64 fileStart = 0;
     QByteArray buffer;
-    qsizetype ecodingWidth = 1;
+    qsizetype encodingWidth = 1;
 };

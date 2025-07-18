@@ -1,5 +1,7 @@
 #include "Log.h"
 
+#include "LogUtils.h"
+
 
 Log::Log(std::unique_ptr<QIODevice>&& _file, const std::optional<QStringConverter::Encoding>& _encoding, const std::shared_ptr<std::vector<Format::Comment>>& _comments) :
     file(std::move(_file)),
@@ -13,7 +15,10 @@ Log::Log(std::unique_ptr<QIODevice>&& _file, const std::optional<QStringConverte
 
     QStringConverter::Encoding encoding = checkFileForBom();
     if (_encoding)
+    {
         encoding = _encoding.value();
+        encodingWidth = getEncodingWidth(encoding);
+    }
     decoder = QStringDecoder(encoding);
     fileStart = file->pos();
 }
@@ -203,29 +208,29 @@ QStringConverter::Encoding Log::checkFileForBom()
     {
         encoding = QStringConverter::Utf8;
         file->seek(3);
-        ecodingWidth = 1;
+        encodingWidth = 1;
     }
     else if (head.startsWith(QByteArray{ "\xFF\xFE", 2 }))
     {
         encoding = QStringDecoder::Utf16LE;
         file->seek(2);
-        ecodingWidth = 2;
+        encodingWidth = 2;
     }
     else if (head.startsWith(QByteArray{ "\xFE\xFF", 2 }))
     {
         encoding = QStringDecoder::Utf16BE;
         file->seek(2);
-        ecodingWidth = 2;
+        encodingWidth = 2;
     }
     else if (head.startsWith(QByteArray{ "\xFF\xFE\x00\x00", 4 }))
     {
         encoding = QStringDecoder::Utf32LE;
-        ecodingWidth = 4;
+        encodingWidth = 4;
     }
     else if (head.startsWith(QByteArray{ "\x00\x00\xFE\xFF", 4 }))
     {
         encoding = QStringDecoder::Utf32BE;
-        ecodingWidth = 4;
+        encodingWidth = 4;
     }
     else
     {
@@ -239,8 +244,8 @@ bool Log::getToNextLine(qint64& pos, QString& line)
 {
     while (pos != -1)
     {
-        pos = (pos + ecodingWidth - 1) & ~(ecodingWidth - 1);
-        auto str = decoder.decode(QByteArrayView{ buffer.constData(), pos + 1 });
+        pos = ((pos + encodingWidth - 1) & ~(encodingWidth - 1)) + encodingWidth;
+        auto str = decoder.decode(QByteArrayView{ buffer.constData(), pos });
         line.append(str);
         buffer = buffer.mid(str.data.size());
 
