@@ -59,8 +59,7 @@ void LogStorage::finalize()
         while(!checkFormat(parts, lastLog.second.format));
 
         auto time = parseTime(parts[lastLog.second.format->timeFieldIndex], lastLog.second.format);
-        ++time;
-        maxTime = std::max(maxTime, time);
+        maxTime = std::max(maxTime, time + std::chrono::milliseconds(1));
     }
 }
 
