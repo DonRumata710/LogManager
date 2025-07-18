@@ -5,6 +5,8 @@
 #include "Utils.h"
 #include "ScopeGuard.h"
 
+#include <QFontDatabase>
+
 
 LogModel::LogModel(LogService* logService, QObject *parent) :
     QAbstractItemModel(parent),
@@ -364,6 +366,9 @@ QVariant LogModel::data(const QModelIndex& index, int role) const
 
     switch(role)
     {
+    case Qt::FontRole:
+        return QFontDatabase::systemFont(QFontDatabase::FixedFont);
+
     case Qt::DisplayRole:
     case Qt::EditRole:
     {

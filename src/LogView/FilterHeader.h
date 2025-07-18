@@ -29,8 +29,7 @@ protected:
 private:
     void updatePositions();
     void setupEditors();
-
-    void adjustColumnWidths(QAbstractItemModel* model);
+    void adjustLastColumn();
 
 private:
     std::vector<QWidget*> editors;

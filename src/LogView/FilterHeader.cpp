@@ -82,7 +82,7 @@ void FilterHeader::setModel(QAbstractItemModel* model)
 {
     QHeaderView::setModel(model);
     setupEditors();
-    adjustColumnWidths(model);
+    adjustLastColumn();
     setSectionHidden(static_cast<int>(LogModel::PredefinedColumn::Module), true);
     connect(model, &QAbstractItemModel::modelReset, this, &FilterHeader::updateEditors);
     connect(model, &QAbstractItemModel::rowsInserted, this, &FilterHeader::updateEditors);
@@ -198,8 +198,8 @@ void FilterHeader::setupEditors()
     updatePositions();
 }
 
-void FilterHeader::adjustColumnWidths(QAbstractItemModel* model)
+void FilterHeader::adjustLastColumn()
 {
-    if (model && model->columnCount() > 0)
-        setSectionResizeMode(model->columnCount() - 1, QHeaderView::ResizeMode::Stretch);
+    if (model() && model()->columnCount() > 0)
+        setSectionResizeMode(model()->columnCount() - 1, QHeaderView::ResizeMode::Stretch);
 }

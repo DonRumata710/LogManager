@@ -15,6 +15,7 @@ public:
 
 private slots:
     void checkFetchNeeded();
+    void handleFirstDataLoaded();
     void handleReset();
 
     void handleFirstLineChangeStart();

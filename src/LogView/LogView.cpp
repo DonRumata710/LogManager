@@ -33,6 +33,7 @@ void LogView::setLogModel(QAbstractItemModel* newModel)
     }
 
     connect(logModel, &LogModel::modelReset, this, &LogView::handleReset);
+    connect(logModel, &LogModel::modelReset, this, &LogView::handleFirstDataLoaded);
 
     connect(logModel, &LogModel::rowsAboutToBeInserted, this, &LogView::handleFirstLineChangeStart);
     connect(logModel, &LogModel::rowsAboutToBeRemoved, this, &LogView::handleFirstLineChangeStart);
@@ -66,6 +67,17 @@ void LogView::checkFetchNeeded()
 
     if (value - min <= range * 0.1 || max == 0)
         logModel->fetchUpMore();
+
+    QT_SLOT_END
+}
+
+void LogView::handleFirstDataLoaded()
+{
+    QT_SLOT_BEGIN
+
+    for (int i = 0; i < model()->columnCount() - 1; ++i)
+        resizeColumnToContents(i);
+    disconnect(model(), &QAbstractItemModel::modelReset, this, &LogView::handleFirstDataLoaded);
 
     QT_SLOT_END
 }
@@ -116,7 +128,7 @@ void LogView::handleFirstLineRemoving(const QModelIndex& parent, int first, int 
     QT_SLOT_BEGIN
     if (lastScrollPosition)
     {
-        if (lastScrollPosition->row() < first)
+        if (parent.isValid() || lastScrollPosition->row() < first)
             return;
 
         auto* logModel = qobject_cast<LogModel*>(model());
@@ -125,7 +137,7 @@ void LogView::handleFirstLineRemoving(const QModelIndex& parent, int first, int 
             logModel = qobject_cast<LogModel*>(proxyModel->sourceModel());
 
         auto newIndex = logModel->index(lastScrollPosition->row() - last + first, lastScrollPosition->column());
-        scrollTo(proxyModel->mapFromSource(newIndex));
+        scrollTo(proxyModel->mapFromSource(newIndex), QAbstractItemView::ScrollHint::PositionAtTop);
         lastScrollPosition.reset();
     }
     else
@@ -140,7 +152,7 @@ void LogView::handleFirstLineAddition(const QModelIndex& parent, int first, int 
     QT_SLOT_BEGIN
     if (lastScrollPosition)
     {
-        if (lastScrollPosition->row() < first)
+        if (parent.isValid() || lastScrollPosition->row() < first)
             return;
 
         auto* logModel = qobject_cast<LogModel*>(model());
@@ -149,7 +161,7 @@ void LogView::handleFirstLineAddition(const QModelIndex& parent, int first, int 
             logModel = qobject_cast<LogModel*>(proxyModel->sourceModel());
 
         auto newIndex = logModel->index(lastScrollPosition->row() + last - first, lastScrollPosition->column());
-        scrollTo(proxyModel->mapFromSource(newIndex));
+        scrollTo(proxyModel->mapFromSource(newIndex), QAbstractItemView::ScrollHint::PositionAtTop);
         lastScrollPosition.reset();
     }
     else
