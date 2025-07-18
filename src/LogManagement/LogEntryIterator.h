@@ -255,9 +255,18 @@ private:
                     if (!entry.line.isEmpty())
                     {
                         entry.line += '\n' + line.value();
-                        if (!entry.additionalLines.isEmpty())
-                            entry.additionalLines += '\n';
-                        entry.additionalLines += line.value();
+                        if (straight)
+                        {
+                            if (!entry.additionalLines.isEmpty())
+                                entry.additionalLines += '\n';
+                            entry.additionalLines += line.value();
+                        }
+                        else
+                        {
+                            if (!entry.additionalLines.isEmpty())
+                                entry.additionalLines.prepend('\n');
+                            entry.additionalLines.prepend(line.value());
+                        }
                     }
                     heapItem.lineStart = heapItem.log->getFilePosition();
                 }
