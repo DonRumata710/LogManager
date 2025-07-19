@@ -1,38 +1,23 @@
 #include "LogFilter.h"
 
 
-LogFilter::LogFilter(const std::unordered_map<int, QRegularExpression>& columnFilters, const std::unordered_map<int, std::unordered_set<QString>>& variants, const QStringList& fields) :
+LogFilter::LogFilter(const std::unordered_map<int, QRegularExpression>& columnFilters, const std::unordered_map<int, std::unordered_set<QString>>& variants, const QStringList& fields, const std::unordered_set<QString>& modules) :
     columnFilters(columnFilters),
     variants(variants),
-    fields(fields)
+    fields(fields),
+    modules(modules)
 {}
 
-void LogFilter::setFilterWildcard(int column, const QString& pattern)
+bool LogFilter::isEmpty() const
 {
-    if (pattern.isEmpty())
-        columnFilters.erase(column);
-    else
-        columnFilters[column] = QRegularExpression{ QRegularExpression::wildcardToRegularExpression(pattern) };
-}
-
-void LogFilter::setFilterRegularExpression(int column, const QString& pattern)
-{
-    if (pattern.isEmpty())
-        columnFilters.erase(column);
-    else
-        columnFilters[column] = QRegularExpression(pattern);
-}
-
-void LogFilter::setVariantList(int column, const QStringList& values)
-{
-    if (values.isEmpty())
-        variants.erase(column);
-    else
-        variants[column] = std::unordered_set<QString>{ values.begin(), values.end() };
+    return columnFilters.empty() && variants.empty();
 }
 
 bool LogFilter::check(const LogEntry& entry) const
 {
+    if (!modules.empty() && !modules.contains(entry.module))
+        return false;
+
     for (const auto& filter : columnFilters)
     {
         int column = filter.first;

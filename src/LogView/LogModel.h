@@ -23,7 +23,8 @@ public:
     enum class MetaData
     {
         Line = Qt::UserRole,
-        Message
+        Message,
+        Time
     };
 
 public:
@@ -43,6 +44,9 @@ public:
 
     QDateTime getStartTime() const;
     QDateTime getEndTime() const;
+
+    QDateTime getFirstEntryTime() const;
+    QDateTime getLastEntryTime() const;
 
     QStringList getFieldsName();
 

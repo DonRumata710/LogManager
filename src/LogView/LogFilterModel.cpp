@@ -1,5 +1,7 @@
 #include "LogFilterModel.h"
 
+#include "LogModel.h"
+
 #include <QRegularExpression>
 
 
@@ -37,10 +39,21 @@ void LogFilterModel::setVariantList(int column, const QStringList& values)
 
 LogFilter LogFilterModel::exportFilter() const
 {
+    auto filterVariants = variants;
     QStringList fields;
+    std::unordered_set<QString> modules;
     for (int i = 0; i < sourceModel()->columnCount(); ++i)
+    {
+        if (i == static_cast<int>(LogModel::PredefinedColumn::Module))
+        {
+            modules = filterVariants.at(i);
+            filterVariants.erase(i);
+            continue;
+        }
+
         fields.append(sourceModel()->headerData(i, Qt::Horizontal, Qt::DisplayRole).toString());
-    return LogFilter{ columnFilters, variants, fields };
+    }
+    return LogFilter{ columnFilters, filterVariants, fields, modules };
 }
 
 bool LogFilterModel::filterAcceptsRow(int source_row, const QModelIndex& source_parent) const

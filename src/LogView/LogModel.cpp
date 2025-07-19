@@ -246,11 +246,28 @@ QDateTime LogModel::getEndTime() const
     return endTime;
 }
 
+QDateTime LogModel::getFirstEntryTime() const
+{
+    if (logs.empty())
+        return QDateTime();
+
+    return convertToQDateTime(logs.front().entry.time);
+}
+
+QDateTime LogModel::getLastEntryTime() const
+{
+    if (logs.empty())
+        return QDateTime();
+
+    return convertToQDateTime(logs.back().entry.time);
+}
+
 QStringList LogModel::getFieldsName()
 {
     QStringList fieldNames;
     for (const auto& field : fields)
         fieldNames.append(field.name);
+    fieldNames.insert(fieldNames.begin() + 1, "__module");
     return fieldNames;
 }
 
@@ -407,6 +424,13 @@ QVariant LogModel::data(const QModelIndex& index, int role) const
             auto valueIt = log.entry.values.find(field.name);
             if (valueIt != log.entry.values.end())
                 return valueIt->second.toString() + '\n' + logs[index.row()].entry.additionalLines;
+        }
+        break;
+    case static_cast<int>(MetaData::Time):
+        if (index.internalPointer() == nullptr)
+        {
+            const auto& log = logs[index.row()];
+            return convertToQDateTime(log.entry.time);
         }
         break;
     }

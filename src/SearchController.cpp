@@ -3,6 +3,7 @@
 #include "Application.h"
 #include "LogService.h"
 #include "LogView/LogModel.h"
+#include "LogView/LogFilterModel.h"
 #include "Utils.h"
 
 #include <QSortFilterProxyModel>
@@ -30,6 +31,7 @@ SearchController::SearchController(SearchBar* searchBar, QAbstractItemView* logV
     }
 
     connect(this, &SearchController::startGlobalSearch, logService, &LogService::search);
+    connect(this, &SearchController::startGlobalSearchWithFilter, logService, &::LogService::searchWithFilter);
     connect(logService, &LogService::searchFinished, this, &SearchController::handleSearchResult);
 }
 
@@ -60,20 +62,20 @@ bool SearchController::checkEntry(const QString& textToSearch, const QString& se
     return false;
 }
 
-void SearchController::localSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward)
+void SearchController::localSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters)
 {
     QT_SLOT_BEGIN
 
-    search(logView->currentIndex(), searchTerm, lastColumn, regexEnabled, backward, false);
+    search(logView->currentIndex(), searchTerm, lastColumn, regexEnabled, backward, useFilters, false);
 
     QT_SLOT_END
 }
 
-void SearchController::commonSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward)
+void SearchController::commonSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters)
 {
     QT_SLOT_BEGIN
 
-    search(logView->currentIndex(), searchTerm, lastColumn, regexEnabled, backward, true);
+    search(logView->currentIndex(), searchTerm, lastColumn, regexEnabled, backward, useFilters, true);
 
     QT_SLOT_END
 }
@@ -111,11 +113,11 @@ void SearchController::handleLoadingFinished(const QModelIndex& index)
     QT_SLOT_END
 }
 
-void SearchController::search(const QModelIndex& from, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool globalSearch)
+void SearchController::search(const QModelIndex& from, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters, bool globalSearch)
 {
     QT_SLOT_BEGIN
 
-    auto proxyModel = qobject_cast<QSortFilterProxyModel*>(logView->model());
+    auto proxyModel = qobject_cast<LogFilterModel*>(logView->model());
     auto model = qobject_cast<LogModel*>(logView->model());
     if (!model && proxyModel)
         model = qobject_cast<LogModel*>(proxyModel->sourceModel());
@@ -124,6 +126,9 @@ void SearchController::search(const QModelIndex& from, const QString& searchTerm
     for (size_t i = start; i < model->rowCount(); backward ? --i : ++i)
     {
         QModelIndex index{ model->index(i, 0) };
+        if (proxyModel && !proxyModel->filterAcceptsRow(i, QModelIndex()))
+            continue;
+
         QString textToSearch = model->data(index, static_cast<int>(lastColumn ? LogModel::MetaData::Message : LogModel::MetaData::Line)).toString();
         if (checkEntry(textToSearch, searchTerm, lastColumn, regexEnabled))
         {
@@ -142,7 +147,12 @@ void SearchController::search(const QModelIndex& from, const QString& searchTerm
     {
         qDebug() << "Starting global search for term:" << searchTerm;
         currentSearchTerm = searchTerm;
-        startGlobalSearch(searchTerm, lastColumn, regexEnabled, backward);
+
+        QDateTime startTime = backward ? model->getStartTime() : model->getLastEntryTime();
+        if (useFilters)
+            startGlobalSearchWithFilter(model->getStartTime(), searchTerm, lastColumn, regexEnabled, backward, proxyModel->exportFilter());
+        else
+            startGlobalSearch(model->getStartTime(), searchTerm, lastColumn, regexEnabled, backward);
     }
 
     QT_SLOT_END

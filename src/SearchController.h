@@ -2,6 +2,7 @@
 
 #include "SearchBar.h"
 #include "LogManagement/LogEntry.h"
+#include "LogFilter.h"
 
 #include <QObject>
 #include <QAbstractItemView>
@@ -20,17 +21,18 @@ public:
     static bool checkEntry(const QString& textToSearch, const QString& searchTerm, bool lastColumn, bool regexEnabled);
 
 signals:
-    void startGlobalSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward);
+    void startGlobalSearch(const QDateTime& startTime, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward);
+    void startGlobalSearchWithFilter(const QDateTime& startTime, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, const LogFilter& filter);
 
 public slots:
-    void localSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward);
-    void commonSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward);
+    void localSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters);
+    void commonSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters);
 
     void handleSearchResult(const QString& searchTerm, const QDateTime& entryTime);
     void handleLoadingFinished(const QModelIndex& index);
 
 private:
-    void search(const QModelIndex& from, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool globalSearch);
+    void search(const QModelIndex& from, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters, bool globalSearch);
 
 private:
     QAbstractItemView* logView;

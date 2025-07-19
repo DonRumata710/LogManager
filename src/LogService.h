@@ -76,7 +76,8 @@ public slots:
     void openFile(const QString& file, const QStringList& formats);
     void openFolder(const QString& logDirectory, const QStringList& formats);
 
-    void search(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward);
+    void search(const QDateTime& time, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward);
+    void searchWithFilter(const QDateTime& time, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, const LogFilter& filter);
 
     void exportData(const QString& filename, const QDateTime& startTime, const QDateTime& endTime);
     void exportData(const QString& filename, const QDateTime& startTime, const QDateTime& endTime, const QStringList& fields);

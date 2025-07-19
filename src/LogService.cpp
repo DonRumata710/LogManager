@@ -127,7 +127,7 @@ void LogService::openFolder(const QString& logDirectory, const QStringList& form
     QT_SLOT_END
 }
 
-void LogService::search(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward)
+void LogService::search(const QDateTime& time, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward)
 {
     QT_SLOT_BEGIN
 
@@ -143,7 +143,7 @@ void LogService::search(const QString& searchTerm, bool lastColumn, bool regexEn
         return;
     }
 
-    auto iterator = LogEntryIterator<>(session->getIterator<true>(session->getMinTime(), session->getMaxTime()));
+    auto iterator = LogEntryIterator<>(session->getIterator<true>(time.toStdSysMilliseconds(), session->getMaxTime()));
     while(iterator.hasLogs())
     {
         auto entry = iterator.next();
@@ -151,6 +151,39 @@ void LogService::search(const QString& searchTerm, bool lastColumn, bool regexEn
             break;
 
         if (SearchController::checkEntry(entry->line, searchTerm, lastColumn, regexEnabled))
+        {
+            emit searchFinished(searchTerm, DateTimeFromChronoSystemClock(entry->time));
+            return;
+        }
+    }
+
+    QT_SLOT_END
+}
+
+void LogService::searchWithFilter(const QDateTime& time, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, const LogFilter& filter)
+{
+    QT_SLOT_BEGIN
+
+    if (!session)
+    {
+        qCritical() << "Session is not initialized.";
+        return;
+    }
+
+    if (searchTerm.isEmpty())
+    {
+        qWarning() << "Search term is empty.";
+        return;
+    }
+
+    auto iterator = LogEntryIterator<>(session->getIterator<true>(time.toStdSysMilliseconds(), session->getMaxTime()));
+    while(iterator.hasLogs())
+    {
+        auto entry = iterator.next();
+        if (!entry)
+            break;
+
+        if (SearchController::checkEntry(entry->line, searchTerm, lastColumn, regexEnabled) && filter.check(entry.value()))
         {
             emit searchFinished(searchTerm, DateTimeFromChronoSystemClock(entry->time));
             return;

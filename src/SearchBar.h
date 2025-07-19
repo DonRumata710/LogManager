@@ -15,14 +15,13 @@ public:
     ~SearchBar();
 
 signals:
-    void localSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward);
-    void commonSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward);
+    void localSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters);
+    void commonSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters);
 
 private slots:
     void on_toolButton_clicked();
 
     void on_bLocalSearch_clicked();
-
     void on_bCommonSearch_clicked();
 
 private:
