@@ -40,10 +40,7 @@ MainWindow::MainWindow(QWidget *parent) :
     }
 
     for (const auto& format : formatManager.getFormats())
-    {
         addFormat(format.first);
-        selectedFormats += format.second->name;
-    }
 
     setLogActionsEnabled(!selectedFormats.empty());
 
@@ -85,31 +82,40 @@ void MainWindow::on_actionOpen_file_triggered()
     QT_SLOT_BEGIN
 
     QString extensions;
-    QMap<QString, QString> formatMap;
+    QMap<QString, QStringList> extToFormatNames;
+
     for (const auto& formatName : std::as_const(selectedFormats))
     {
         auto format = formatManager.getFormats().at(formatName.toStdString());
         if (!format)
             continue;
 
-        formatMap.insert(format->extension, format->name);
-
-        if (!extensions.isEmpty())
-            extensions += ";;";
-        extensions += formatName + " (*" + format->extension + ")";
+        extToFormatNames[format->extension].append(format->name);
     }
 
-    QString file = QFileDialog::getOpenFileName(this, tr("Open File"), QDir::currentPath(), extensions);    
+    QStringList filters;
+    for (auto it = extToFormatNames.constBegin(); it != extToFormatNames.constEnd(); ++it)
+    {
+        QStringList names = it.value();
+        QString ext = it.key();
+        QString combinedName = names.join(", ");
+        filters << QString("%1 (*%2)").arg(combinedName, ext);
+    }
+
+    filters << tr("Archive files (*.zip)");
+
+    QString extensionsString = filters.join(";;");
+
+    QString file = QFileDialog::getOpenFileName(this, tr("Open File"), QDir::currentPath(), extensionsString);
     if (file.isEmpty())
         return;
 
+    QString extension = file.mid(file.lastIndexOf('.'));
     QStringList formats;
-    auto range = formatMap.equal_range(file.mid(file.lastIndexOf('.')));
-    for (auto it = range.first; it != range.second; ++it)
-    {
-        formats += *it;
-    }
-
+    if (extension == ".zip")
+        formats = selectedFormats;
+    else
+        formats = extToFormatNames[extension];
     openFile(file, formats);
 
     QT_SLOT_END

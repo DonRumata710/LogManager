@@ -26,32 +26,7 @@ LogManager::LogManager(const std::vector<QString>& folders, const std::vector<st
 
             if (extension == ".zip" || extension == ".gz" || extension == ".tar" || extension == ".7z")
             {
-                QuaZip zip(filename);
-                if (!zip.open(QuaZip::mdUnzip))
-                {
-                    qDebug() << "Failed to open archive:" << filename;
-                    continue;
-                }
-
-                QuaZipFileInfo info;
-                for (bool more = zip.goToFirstFile(); more; more = zip.goToNextFile())
-                {
-                    zip.getCurrentFileInfo(&info);
-                    auto innerFilename = info.name;
-                    auto module = info.name.mid(0, info.name.lastIndexOf('.'));
-                    auto innerExtension = info.name.mid(module.size());
-
-                    auto fileCreationFunc = [filename](const QString& innerFilename) {
-                        QuaZipFile zipFile(filename, innerFilename);
-                        std::unique_ptr<QBuffer> buffer = std::make_unique<QBuffer>();
-                        if (!LogManager::readIntoBuffer(zipFile, *buffer))
-                            throw std::runtime_error("Failed to read file from archive: " + filename.toStdString() + ", inner file: " + innerFilename.toStdString());
-                        return buffer;
-                    };
-                    auto result = addFile(innerFilename, module, innerExtension, fileCreationFunc, formats);
-                    if (result)
-                        foundFiles = true;
-                }
+                foundFiles |= scanArchive(filename, formats);
             }
             else
             {
@@ -61,10 +36,7 @@ LogManager::LogManager(const std::vector<QString>& folders, const std::vector<st
                 };
                 auto result = addFile(filename, module, extension, fileCreationFunc, formats);
                 if (!result)
-                {
-                    qDebug() << "No suitable format found for file:" << filename;
                     continue;
-                }
 
                 foundFiles = true;
             }
@@ -72,9 +44,7 @@ LogManager::LogManager(const std::vector<QString>& folders, const std::vector<st
     }
 
     if (!foundFiles)
-    {
-        throw std::runtime_error("no suitable files found in the specified folders.");
-    }
+        throw std::runtime_error("no suitable files found in the specified folders");
 
     logStorage->finalize();
 }
@@ -82,15 +52,22 @@ LogManager::LogManager(const std::vector<QString>& folders, const std::vector<st
 LogManager::LogManager(const QString& filename, const std::vector<std::shared_ptr<Format>>& formats) :
     logStorage(std::make_shared<LogStorage>())
 {
-    std::filesystem::path path = filename.toStdString();
-    auto fileCreationFunc = [](const QString& filename) {
-        return std::make_unique<QFile>(filename);
-    };
-    auto result = addFile(filename, QString::fromStdString(path.stem().string()), QString::fromStdString(path.extension().string()), fileCreationFunc, formats);
-    if (!result)
+    auto extension = QString::fromStdString(std::filesystem::path(filename.toStdString()).extension().string());
+    if (extension == ".zip" || extension == ".gz" || extension == ".tar" || extension == ".7z")
     {
-        qDebug() << "No suitable format found for file:" << filename;
-        throw std::runtime_error("no suitable format found for file: " + path.string() + '.');
+        bool foundFiles = scanArchive(filename, formats);
+        if (!foundFiles)
+            throw std::runtime_error("no suitable files found in the specified archive: " + filename.toStdString());
+    }
+    else
+    {
+        std::filesystem::path path = filename.toStdString();
+        auto fileCreationFunc = [](const QString& filename) {
+            return std::make_unique<QFile>(filename);
+        };
+        auto result = addFile(filename, QString::fromStdString(path.stem().string()), QString::fromStdString(path.extension().string()), fileCreationFunc, formats);
+        if (!result)
+            throw std::runtime_error("no suitable format found for file: " + path.string());
     }
 
     logStorage->finalize();
@@ -124,6 +101,55 @@ std::chrono::system_clock::time_point LogManager::getMaxTime() const
 Session LogManager::createSession(const std::unordered_set<QString>& modules, const std::chrono::system_clock::time_point& minTime, const std::chrono::system_clock::time_point& maxTime) const
 {
     return Session(std::make_shared<LogStorage>(logStorage->getNarrowedStorage(modules, minTime, maxTime)));
+}
+
+bool LogManager::scanArchive(const QString& filename, const std::vector<std::shared_ptr<Format> >& formats)
+{
+    QuaZip zip(filename);
+    if (!zip.open(QuaZip::mdUnzip))
+    {
+        qDebug() << "Failed to open archive:" << filename;
+        return false;
+    }
+
+    QuaZipFileInfo info;
+    bool foundFiles = false;
+    for (bool more = zip.goToFirstFile(); more; more = zip.goToNextFile())
+    {
+        try
+        {
+            zip.getCurrentFileInfo(&info);
+            auto innerFilename = info.name;
+
+            int slashPos = innerFilename.lastIndexOf('/');
+            if (slashPos == -1)
+                slashPos = innerFilename.lastIndexOf('\\');
+            ++slashPos;
+
+            int dotPos = innerFilename.lastIndexOf('.');
+            if (dotPos < slashPos)
+                dotPos = -1;
+
+            auto module = innerFilename.mid(slashPos, dotPos - slashPos);
+            auto innerExtension = info.name.mid(dotPos);
+
+            auto fileCreationFunc = [filename](const QString& innerFilename) {
+                QuaZipFile zipFile(filename, innerFilename);
+                std::unique_ptr<QBuffer> buffer = std::make_unique<QBuffer>();
+                LogManager::readIntoBuffer(zipFile, *buffer);
+                return buffer;
+            };
+            auto result = addFile(innerFilename, module, innerExtension, fileCreationFunc, formats);
+            if (result)
+                foundFiles = true;
+        }
+        catch (const std::exception& ex)
+        {
+            qDebug() << "Failed to process file in archive" << info.name << "because of error:" << ex.what();
+            continue;
+        }
+    }
+    return foundFiles;
 }
 
 bool LogManager::addFile(const QString& filename, const QString& stem, const QString& extension, std::function<std::unique_ptr<QIODevice>(const QString&)> createFileFunc, const std::vector<std::shared_ptr<Format>>& formats)
@@ -182,20 +208,28 @@ std::optional<std::pair<std::shared_ptr<Format>, std::chrono::system_clock::time
 {
     for (const auto& format : formats)
     {
-        Log log(createLog(filename, createFileFunc, format));
-        auto line = log.nextLine();
-        if (!line)
-            continue;
+        try
+        {
+            Log log(createLog(filename, createFileFunc, format));
+            auto line = log.nextLine();
+            if (!line)
+                continue;
 
-        auto parts = splitLine(line.value(), format);
-        if (parts.size() <= format->timeFieldIndex)
-            continue;
+            auto parts = splitLine(line.value(), format);
+            if (parts.size() <= format->timeFieldIndex)
+                continue;
 
-        if (!checkFormat(parts, format))
-            continue;
+            if (!checkFormat(parts, format))
+                continue;
 
-        auto time = parseTime(parts[format->timeFieldIndex], format);
-        return std::make_pair(format, time);
+            auto time = parseTime(parts[format->timeFieldIndex], format);
+            return std::make_pair(format, time);
+        }
+        catch (const std::exception& ex)
+        {
+            qDebug() << "Failed to scan log file" << filename << "with format" << format->name << ":" << ex.what();
+            continue;
+        }
     }
 
     return std::nullopt;
@@ -206,7 +240,7 @@ Log LogManager::createLog(const QString& filename, std::function<std::unique_ptr
     return Log(createFileFunc(filename), format->encoding, std::shared_ptr<std::vector<Format::Comment>>(format, &format->comments));
 }
 
-bool LogManager::readIntoBuffer(QIODevice& source, QBuffer& targetBuffer)
+void LogManager::readIntoBuffer(QIODevice& source, QBuffer& targetBuffer)
 {
     if (!source.isOpen() && !source.open(QIODevice::ReadOnly))
         throw std::runtime_error("cannot open log file: " + source.errorString().toStdString());
@@ -214,5 +248,4 @@ bool LogManager::readIntoBuffer(QIODevice& source, QBuffer& targetBuffer)
     QByteArray data = source.readAll();
     targetBuffer.close();
     targetBuffer.setData(data);
-    return targetBuffer.open(QIODevice::ReadOnly);
 }
