@@ -53,7 +53,11 @@ void FormatManager::addFormat(const std::shared_ptr<Format>& format)
     if (!commentArray.empty())
         formatObj.insert("comments", commentArray);
 
-    formatObj.insert("separator", format->separator);
+    if (!format->separator.isEmpty())
+        formatObj.insert("separator", format->separator);
+    if (format->lineRegex.isValid() && !format->lineRegex.pattern().isEmpty())
+        formatObj.insert("lineRegex", format->lineRegex.pattern());
+
     formatObj.insert("timeFieldIndex", format->timeFieldIndex);
     formatObj.insert("timeRegex", format->timeRegex);
 
@@ -163,7 +167,11 @@ void FormatManager::loadFormats()
                 }
             }
 
-            format->separator = formatObj.value("separator").toString();
+            if (formatObj.contains("separator"))
+                format->separator = formatObj.value("separator").toString();
+            if (formatObj.contains("lineRegex"))
+                format->lineRegex = QRegularExpression(formatObj.value("lineRegex").toString());
+
             format->timeFieldIndex = formatObj.value("timeFieldIndex").toInt(-1);
             format->timeRegex = formatObj.value("timeRegex").toString();
 

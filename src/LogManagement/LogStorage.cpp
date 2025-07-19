@@ -49,7 +49,7 @@ void LogStorage::finalize()
             if (!line)
             {
                 qCritical() << "Log file is empty or could not be read:" << lastLog.second.filename;
-                continue;
+                break;
             }
 
             parts = splitLine(line.value(), lastLog.second.format);
@@ -57,6 +57,9 @@ void LogStorage::finalize()
                 continue;
         }
         while(!checkFormat(parts, lastLog.second.format));
+
+        if (parts.empty())
+            continue;
 
         auto time = parseTime(parts[lastLog.second.format->timeFieldIndex], lastLog.second.format);
         maxTime = std::max(maxTime, time + std::chrono::milliseconds(1));

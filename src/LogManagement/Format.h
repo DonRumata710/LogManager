@@ -86,6 +86,8 @@ struct Format
     std::vector<Comment> comments;
 
     QString separator;
+    QRegularExpression lineRegex;
+
     int timeFieldIndex = -1;
     QString timeRegex;
 

@@ -241,7 +241,9 @@ private:
 
         const auto& format = heapItem.metadata->second.format;
 
-        std::optional<QString> line = heapItem.line;
+        std::optional<QString> line;
+        if (!heapItem.line.isEmpty())
+            line = heapItem.line;
         if constexpr (!straight)
             line = heapItem.log->prevLine();
 
