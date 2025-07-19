@@ -12,13 +12,8 @@ multiple modules.
 - Display logs using a table with on-demand fetching.
 - Apply per-column filters directly in the table view.
 - Manage log formats (add or remove) via JSON descriptions.
-
-## Branches
-
-This repository contains two branches:
-- The default branch builds a Qt-only version with no additional dependencies.
-- The alternative branch adds archive support using the [QuaZip](https://github.com/stachenov/quazip)
-  library, enabling it to open log files stored in ZIP archives.
+- Perform local or global search with optional regular expressions.
+- Export results to CSV files or the original log format.
 
 ## Building
 
@@ -27,12 +22,12 @@ This project uses CMake and requires Qt&nbsp;6 and a C++20 capable compiler.
 ## Format Definitions
 
 Log formats are described with JSON files. Each file specifies modules, file
-extensions, encoding, comment styles, field separators and regular expressions
-for extracting data. Formats are loaded at startup and can be added or removed
-using the GUI.
+extensions, encoding, comment styles and either field separators or a regular
+expression for the entire line. Formats are loaded at startup and can be added
+or removed using the GUI.
 Each JSON file may contain the following keys:
 
-- `modules` - names of modules present in the log. The this list is used
+- `modules` - names of modules present in the log. This list is optional and used
   to detect if file matches this format.
 - `logFileRegex` - regular expression that matches log file names. It can contain
   named capturing group `module` which is used for filtering.
