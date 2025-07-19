@@ -15,10 +15,10 @@ Log::Log(std::unique_ptr<QIODevice>&& _file, const std::optional<QStringConverte
 
     QStringConverter::Encoding encoding = checkFileForBom();
     if (_encoding)
-    {
         encoding = _encoding.value();
-        encodingWidth = getEncodingWidth(encoding);
-    }
+
+    encodingWidth = getEncodingWidth(encoding);
+
     decoder = QStringDecoder(encoding);
     fileStart = file->pos();
 }
@@ -33,38 +33,32 @@ std::optional<QString> Log::prevLine()
 {
     QString line;
     std::optional<Format::Comment> comment;
-    while (file->pos() != 0)
+    decoder.resetState();
+    while (file->pos() != fileStart)
     {
-        QByteArray lineData;
+        QByteArray charData(encodingWidth, '\0');
 
-        char ch;
         int prevPos = file->pos();
-        while (prevPos > 0)
+        while (prevPos > fileStart)
         {
-            prevPos--;
+            prevPos -= encodingWidth;
             file->seek(prevPos);
-            if (!file->getChar(&ch))
+            if (file->read(charData.data(), encodingWidth) != encodingWidth)
                 return std::nullopt;
 
-            if (ch != '\n' && ch != '\r')
+            QString ch = decoder.decode(QByteArrayView(charData));
+            decoder.resetState();
+            if (ch != "\n" && ch != "\r")
             {
-                lineData.prepend(ch);
+                line.prepend(ch);
+            }
+            else if (!line.isEmpty())
+            {
                 break;
             }
         }
 
-        while (prevPos > 0)
-        {
-            file->seek(prevPos - 1);
-            if (!file->getChar(&ch))
-                return std::nullopt;
-            if (ch == '\n' || ch == '\r')
-                break;
-            prevPos--;
-            lineData.prepend(ch);
-        }
         file->seek(prevPos);
-        line = decoder(QByteArrayView(lineData));
 
         if (line.isEmpty())
             continue;
@@ -112,10 +106,11 @@ std::optional<QString> Log::prevLine()
 
 std::optional<QString> Log::nextLine()
 {
-    QString line;
     std::optional<Format::Comment> comment;
     while (!buffer.isEmpty() || !file->atEnd())
     {
+        QString line;
+
         qsizetype pos = buffer.indexOf('\n');
         while(true)
         {
@@ -208,29 +203,24 @@ QStringConverter::Encoding Log::checkFileForBom()
     {
         encoding = QStringConverter::Utf8;
         file->seek(3);
-        encodingWidth = 1;
     }
     else if (head.startsWith(QByteArray{ "\xFF\xFE", 2 }))
     {
         encoding = QStringDecoder::Utf16LE;
         file->seek(2);
-        encodingWidth = 2;
     }
     else if (head.startsWith(QByteArray{ "\xFE\xFF", 2 }))
     {
         encoding = QStringDecoder::Utf16BE;
         file->seek(2);
-        encodingWidth = 2;
     }
     else if (head.startsWith(QByteArray{ "\xFF\xFE\x00\x00", 4 }))
     {
         encoding = QStringDecoder::Utf32LE;
-        encodingWidth = 4;
     }
     else if (head.startsWith(QByteArray{ "\x00\x00\xFE\xFF", 4 }))
     {
         encoding = QStringDecoder::Utf32BE;
-        encodingWidth = 4;
     }
     else
     {
