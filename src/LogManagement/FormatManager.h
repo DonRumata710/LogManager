@@ -11,6 +11,8 @@ class FormatManager
 public:
     FormatManager();
 
+    void updateFormats();
+
     std::map<std::string, std::shared_ptr<Format>> getFormats() const;
 
     void addFormat(const std::shared_ptr<Format>& format);

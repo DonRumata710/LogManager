@@ -182,6 +182,35 @@ void MainWindow::on_actionRemove_format_triggered()
     QT_SLOT_END
 }
 
+void MainWindow::on_actionRefresh_format_triggered()
+{
+    QT_SLOT_BEGIN
+
+    QStringList selectedFormatsCopy = selectedFormats;
+
+    formatManager.updateFormats();
+
+    for (auto action : std::as_const(formatActions))
+    {
+        ui->menuFormats->removeAction(action);
+        delete action;
+    }
+    formatActions.clear();
+    selectedFormats.clear();
+
+    for (const auto& format : formatManager.getFormats())
+    {
+        addFormat(format.first);
+        if (!selectedFormatsCopy.contains(format.second->name))
+        {
+            auto action = formatActions.back();
+            action->setChecked(false);
+        }
+    }
+
+    QT_SLOT_END
+}
+
 void MainWindow::on_actionSelect_all_triggered()
 {
     QT_SLOT_BEGIN

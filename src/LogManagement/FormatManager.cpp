@@ -13,6 +13,12 @@ FormatManager::FormatManager()
     loadFormats();
 }
 
+void FormatManager::updateFormats()
+{
+    formats.clear();
+    loadFormats();
+}
+
 std::map<std::string, std::shared_ptr<Format>> FormatManager::getFormats() const
 {
     return formats;

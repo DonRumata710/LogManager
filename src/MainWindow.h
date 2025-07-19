@@ -27,6 +27,7 @@ private slots:
     void on_actionClose_triggered();
     void on_actionAdd_format_triggered();
     void on_actionRemove_format_triggered();
+    void on_actionRefresh_format_triggered();
     void on_actionSelect_all_triggered();
     void on_actionDeselect_all_triggered();
 

@@ -48,6 +48,7 @@
     <addaction name="actionAdd_format"/>
     <addaction name="actionRemove_format"/>
     <addaction name="separator"/>
+    <addaction name="actionRefresh_format"/>
     <addaction name="actionSelect_all"/>
     <addaction name="actionDeselect_all"/>
     <addaction name="separator"/>
@@ -91,6 +92,11 @@
   <action name="actionRemove_format">
    <property name="text">
     <string>Remove format</string>
+   </property>
+  </action>
+  <action name="actionRefresh_format">
+   <property name="text">
+    <string>Refresh formats</string>
    </property>
   </action>
   <action name="actionSelect_all">
