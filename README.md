@@ -38,6 +38,8 @@ Each JSON file may contain the following keys:
 - `comments` - array of objects with `start` and optional `finish` strings
   describing line comments.
 - `separator` - delimiter separating fields in a log line.
+- `lineRegex` - regular expression describing the entire log line when no
+  separator is provided. Capturing groups correspond to fields in order.
 - `timeFieldIndex` - zero-based index of the timestamp field.
 - `timeRegex` - pattern used to parse the timestamp. Std::chrono::parse format is used.
 - `fields` - array of field definitions. Each entry contains a `name`, a
