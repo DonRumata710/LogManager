@@ -5,6 +5,7 @@
 #include "SearchController.h"
 
 #include <QMainWindow>
+#include <QProgressBar>
 #include <QAbstractItemModel>
 #include <QTreeView>
 
@@ -67,6 +68,8 @@ private:
     std::vector<QAction*> formatActions;
 
     QStringList selectedFormats;
+
+    QProgressBar* progressBar = nullptr;
 
     SearchController* searchController;
 };

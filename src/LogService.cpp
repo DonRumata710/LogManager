@@ -109,9 +109,13 @@ void LogService::openFile(const QString& file, const QStringList& formats)
 {
     QT_SLOT_BEGIN
 
+    emit progressUpdated(QStringLiteral("Opening file %1 ...").arg(file), 0);
+
     auto newLogManager = std::make_shared<LogManager>(file, getFormats(formats));
     logManager = newLogManager;
     emit logManagerCreated();
+
+    emit progressUpdated(QStringLiteral("File %1 opened").arg(file), 100);
 
     QT_SLOT_END
 }
@@ -120,9 +124,13 @@ void LogService::openFolder(const QString& logDirectory, const QStringList& form
 {
     QT_SLOT_BEGIN
 
+    emit progressUpdated(QStringLiteral("Opening folder %1 ...").arg(logDirectory), 0);
+
     auto newLogManager = std::make_shared<LogManager>(std::vector<QString>{logDirectory}, getFormats(formats));
     logManager = newLogManager;
     emit logManagerCreated();
+
+    emit progressUpdated(QStringLiteral("Folder %1 opened").arg(logDirectory), 100);
 
     QT_SLOT_END
 }
@@ -131,6 +139,8 @@ void LogService::search(const QDateTime& time, const QString& searchTerm, bool l
 {
     QT_SLOT_BEGIN
 
+    emit progressUpdated(QStringLiteral("Searching for '%1' ...").arg(searchTerm), 0);
+
     if (!session)
     {
         qCritical() << "Session is not initialized.";
@@ -143,19 +153,33 @@ void LogService::search(const QDateTime& time, const QString& searchTerm, bool l
         return;
     }
 
-    auto iterator = LogEntryIterator<>(session->getIterator<true>(time.toStdSysMilliseconds(), session->getMaxTime()));
+    auto startTime = time.toStdSysMilliseconds();
+    auto endTime = session->getMaxTime();
+    auto totalMs = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
+    auto iterator = LogEntryIterator<>(session->getIterator<true>(startTime, endTime));
+    int lastPercent = 0;
     while(iterator.hasLogs())
     {
         auto entry = iterator.next();
         if (!entry)
             break;
 
+        auto curMs = std::chrono::duration_cast<std::chrono::milliseconds>(entry->time - startTime).count();
+        int percent = totalMs ? static_cast<int>(100LL * curMs / totalMs) : 0;
+        if (percent != lastPercent && percent <= 100) {
+            emit progressUpdated(QStringLiteral("Searching for '%1' ...").arg(searchTerm), percent);
+            lastPercent = percent;
+        }
+
         if (SearchController::checkEntry(entry->line, searchTerm, lastColumn, regexEnabled))
         {
             emit searchFinished(searchTerm, DateTimeFromChronoSystemClock(entry->time));
+            emit progressUpdated(QStringLiteral("Search finished"), 100);
             return;
         }
     }
+
+    emit progressUpdated(QStringLiteral("Search finished"), 100);
 
     QT_SLOT_END
 }
@@ -164,6 +188,8 @@ void LogService::searchWithFilter(const QDateTime& time, const QString& searchTe
 {
     QT_SLOT_BEGIN
 
+    emit progressUpdated(QStringLiteral("Searching for '%1' ...").arg(searchTerm), 0);
+
     if (!session)
     {
         qCritical() << "Session is not initialized.";
@@ -176,19 +202,33 @@ void LogService::searchWithFilter(const QDateTime& time, const QString& searchTe
         return;
     }
 
-    auto iterator = LogEntryIterator<>(session->getIterator<true>(time.toStdSysMilliseconds(), session->getMaxTime()));
+    auto startTimeF = time.toStdSysMilliseconds();
+    auto endTimeF = session->getMaxTime();
+    auto totalMsF = std::chrono::duration_cast<std::chrono::milliseconds>(endTimeF - startTimeF).count();
+    auto iterator = LogEntryIterator<>(session->getIterator<true>(startTimeF, endTimeF));
+    int lastPercentF = 0;
     while(iterator.hasLogs())
     {
         auto entry = iterator.next();
         if (!entry)
             break;
 
+        auto curMsF = std::chrono::duration_cast<std::chrono::milliseconds>(entry->time - startTimeF).count();
+        int percentF = totalMsF ? static_cast<int>(100LL * curMsF / totalMsF) : 0;
+        if (percentF != lastPercentF && percentF <= 100) {
+            emit progressUpdated(QStringLiteral("Searching for '%1' ...").arg(searchTerm), percentF);
+            lastPercentF = percentF;
+        }
+
         if (SearchController::checkEntry(entry->line, searchTerm, lastColumn, regexEnabled) && filter.check(entry.value()))
         {
             emit searchFinished(searchTerm, DateTimeFromChronoSystemClock(entry->time));
+            emit progressUpdated(QStringLiteral("Search finished"), 100);
             return;
         }
     }
+
+    emit progressUpdated(QStringLiteral("Search finished"), 100);
 
     QT_SLOT_END
 }
@@ -197,10 +237,14 @@ void LogService::exportData(const QString& filename, const QDateTime& startTime,
 {
     QT_SLOT_BEGIN
 
+    emit progressUpdated(QStringLiteral("Exporting data to %1 ...").arg(filename), 0);
+
     exportDataToFile(filename, startTime, endTime, [](QFile& file, const LogEntry& entry) {
         file.write(entry.line.toUtf8());
         file.write("\n");
     });
+
+    emit progressUpdated(QStringLiteral("Export finished"), 100);
 
     QT_SLOT_END
 }
@@ -208,6 +252,8 @@ void LogService::exportData(const QString& filename, const QDateTime& startTime,
 void LogService::exportData(const QString& filename, const QDateTime& startTime, const QDateTime& endTime, const QStringList& fields)
 {
     QT_SLOT_BEGIN
+
+    emit progressUpdated(QStringLiteral("Exporting data to %1 ...").arg(filename), 0);
 
     exportDataToFile(filename, startTime, endTime, [&fields](QFile& file, const LogEntry& entry) {
         for (const auto& field : fields)
@@ -227,12 +273,16 @@ void LogService::exportData(const QString& filename, const QDateTime& startTime,
         file.write("\n");
     });
 
+    emit progressUpdated(QStringLiteral("Export finished"), 100);
+
     QT_SLOT_END
 }
 
 void LogService::exportData(const QString& filename, const QDateTime& startTime, const QDateTime& endTime, const QStringList& fields, const LogFilter& filter)
 {
     QT_SLOT_BEGIN
+
+    emit progressUpdated(QStringLiteral("Exporting data to %1 ...").arg(filename), 0);
 
     exportDataToFile(filename, startTime, endTime, [&fields, &filter](QFile& file, const LogEntry& entry) {
         if (!filter.check(entry))
@@ -255,12 +305,16 @@ void LogService::exportData(const QString& filename, const QDateTime& startTime,
         file.write("\n");
     });
 
+    emit progressUpdated(QStringLiteral("Export finished"), 100);
+
     QT_SLOT_END
 }
 
 void LogService::exportData(const QString& filename, QTreeView* view)
 {
     QT_SLOT_BEGIN
+
+    emit progressUpdated(QStringLiteral("Exporting data to %1 ...").arg(filename), 0);
 
     if (!view)
     {
@@ -293,7 +347,9 @@ void LogService::exportData(const QString& filename, QTreeView* view)
         file.write("\n");
     }
 
-    for (int row = 0; row < model->rowCount(); ++row)
+    int totalRows = model->rowCount();
+    int lastPercent = 0;
+    for (int row = 0; row < totalRows; ++row)
     {
         QStringList lineData;
         for (int col = 0; col < model->columnCount(); ++col)
@@ -309,7 +365,16 @@ void LogService::exportData(const QString& filename, QTreeView* view)
             }
         }
         file.write(lineData.join(";").toUtf8() + "\n");
+
+        int percent = totalRows ? static_cast<int>(100LL * (row + 1) / totalRows) : 0;
+        if (percent != lastPercent)
+        {
+            emit progressUpdated(QStringLiteral("Exporting data to %1 ...").arg(filename), percent);
+            lastPercent = percent;
+        }
     }
+
+    emit progressUpdated(QStringLiteral("Export finished"), 100);
 
     QT_SLOT_END
 }
@@ -317,6 +382,8 @@ void LogService::exportData(const QString& filename, QTreeView* view)
 void LogService::handleIteratorRequest()
 {
     QT_SLOT_BEGIN
+
+    emit progressUpdated(QStringLiteral("Creating iterator ..."), 0);
 
     if (!session)
     {
@@ -343,12 +410,16 @@ void LogService::handleIteratorRequest()
     lockedIteratorRequests.lock();
     iteratorRequests->pop_front();
 
+    emit progressUpdated(QStringLiteral("Iterator created"), 100);
+
     QT_SLOT_END
 }
 
 void LogService::handleReverseIteratorRequest()
 {
     QT_SLOT_BEGIN
+
+    emit progressUpdated(QStringLiteral("Creating reverse iterator ..."), 0);
 
     auto lockedIteratorRequests = reverseIteratorRequests.getLocker();
 
@@ -369,12 +440,16 @@ void LogService::handleReverseIteratorRequest()
     lockedIteratorRequests.lock();
     reverseIteratorRequests->pop_front();
 
+    emit progressUpdated(QStringLiteral("Reverse iterator created"), 100);
+
     QT_SLOT_END
 }
 
 void LogService::handleDataRequest()
 {
     QT_SLOT_BEGIN
+
+    emit progressUpdated(QStringLiteral("Loading data ..."), 0);
 
     static auto dataRequestVisitor = [](const auto& iterator) -> std::optional<LogEntry> {
         return iterator->next();
@@ -404,6 +479,7 @@ void LogService::handleDataRequest()
         return iterator->isValueAhead(until.value());
     };
 
+    int lastPercentR = 0;
     while ((request.until ? std::visit(limitVisitor, request.iterator) : true) &&
            result.size() < request.entriesCount)
     {
@@ -412,12 +488,21 @@ void LogService::handleDataRequest()
             break;
 
         result.emplace_back(std::move(entry.value()));
+
+        int percent = request.entriesCount ? static_cast<int>(100LL * result.size() / request.entriesCount) : 0;
+        if (percent != lastPercentR)
+        {
+            emit progressUpdated(QStringLiteral("Loading data ..."), percent);
+            lastPercentR = percent;
+        }
     }
 
     dataLoaded(request.index);
 
     lockedDataRequests.lock();
     lockedDataRequests->pop_front();
+
+    emit progressUpdated(QStringLiteral("Data loaded"), 100);
 
     QT_SLOT_END
 }
@@ -452,7 +537,12 @@ void LogService::exportDataToFile(const QString& filename, const QDateTime& star
         return;
     }
 
-    auto iterator = session->getIterator(startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
+    auto startMs = startTime.toStdSysMilliseconds();
+    auto endMs = endTime.toStdSysMilliseconds();
+    auto totalMs = std::chrono::duration_cast<std::chrono::milliseconds>(endMs - startMs).count();
+
+    auto iterator = session->getIterator(startMs, endMs);
+    int lastPercent = 0;
     while (iterator.hasLogs())
     {
         auto entry = iterator.next();
@@ -460,7 +550,18 @@ void LogService::exportDataToFile(const QString& filename, const QDateTime& star
             break;
 
         writeFunction(file, entry.value());
+
+        auto curMs = std::chrono::duration_cast<std::chrono::milliseconds>(entry->time - startMs).count();
+        int percent = totalMs ? static_cast<int>(100LL * curMs / totalMs) : 0;
+        if (percent != lastPercent && percent <= 100)
+        {
+            emit progressUpdated(QStringLiteral("Exporting data to %1 ...").arg(filename), percent);
+            lastPercent = percent;
+        }
     }
+
+    if (lastPercent < 100)
+        emit progressUpdated(QStringLiteral("Exporting data to %1 ...").arg(filename), 100);
 }
 
 LogService::IteratorRequest::IteratorRequest(int index, const std::chrono::system_clock::time_point& start, const std::chrono::system_clock::time_point& end) :
