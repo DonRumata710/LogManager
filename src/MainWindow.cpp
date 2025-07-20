@@ -12,6 +12,7 @@
 #include <QScrollBar>
 #include <QFileDialog>
 #include <QInputDialog>
+#include <QProgressBar>
 
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -20,6 +21,13 @@ MainWindow::MainWindow(QWidget *parent) :
     formatManager(qobject_cast<Application*>(QApplication::instance())->getFormatManager())
 {
     ui->setupUi(this);
+    progressBar = new QProgressBar(this);
+    progressBar->setVisible(false);
+    progressBar->setMinimum(0);
+    progressBar->setMaximum(100);
+    progressBar->setTextVisible(true);
+    progressBar->setFormat("%p%%");
+    statusBar()->addPermanentWidget(progressBar);
     setWindowTitle(QApplication::instance()->applicationName());
 
     searchController = new SearchController(ui->searchBar, ui->logView, this);
@@ -48,6 +56,23 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(this, &MainWindow::openFile, logService, &LogService::openFile);
     connect(this, &MainWindow::openFolder, logService, &LogService::openFolder);
     connect(logService, &LogService::logManagerCreated, this, &MainWindow::logManagerCreated);
+    connect(logService, &LogService::progressUpdated, this,
+            [this](const QString& msg, int percent) {
+                if (percent >= 100)
+                    statusBar()->showMessage(msg, 2000);
+                else
+                    statusBar()->showMessage(msg);
+                if (percent >= 0) {
+                    progressBar->setRange(0, 100);
+                    progressBar->setValue(percent);
+                } else {
+                    progressBar->setRange(0, 0);
+                }
+                if (percent >= 100)
+                    progressBar->setVisible(false);
+                else
+                    progressBar->setVisible(true);
+            });
 
     connect(this, SIGNAL(exportData(QString,QDateTime,QDateTime)), logService, SLOT(exportData(QString,QDateTime,QDateTime)));
     connect(this, SIGNAL(exportData(QString,QDateTime,QDateTime,QStringList)), logService, SLOT(exportData(QString,QDateTime,QDateTime,QStringList)));

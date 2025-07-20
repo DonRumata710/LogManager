@@ -8,6 +8,7 @@
 #include <QObject>
 #include <QFile>
 #include <QTreeView>
+#include <QString>
 
 #include <map>
 #include <deque>
@@ -69,6 +70,8 @@ signals:
     void logManagerCreated();
     void iteratorCreated(int, bool isStraight);
     void dataLoaded(int);
+
+    void progressUpdated(const QString& message, int percent);
 
     void searchFinished(const QString& searchTerm, const QDateTime& entryTime);
 
