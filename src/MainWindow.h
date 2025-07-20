@@ -39,6 +39,8 @@ private slots:
 
     void logManagerCreated();
 
+    void handleProgress(const QString& message, int percent);
+
 signals:
     void openFile(const QString& file, const QStringList& formats);
     void openFolder(const QString& logDirectory, const QStringList& formats);

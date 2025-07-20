@@ -21,18 +21,19 @@ MainWindow::MainWindow(QWidget *parent) :
     formatManager(qobject_cast<Application*>(QApplication::instance())->getFormatManager())
 {
     ui->setupUi(this);
+
+    setWindowTitle(QApplication::instance()->applicationName());
+
     progressBar = new QProgressBar(this);
     progressBar->setVisible(false);
     progressBar->setMinimum(0);
     progressBar->setMaximum(100);
     progressBar->setTextVisible(true);
-    progressBar->setFormat("%p%%");
     statusBar()->addPermanentWidget(progressBar);
-    setWindowTitle(QApplication::instance()->applicationName());
-
-    searchController = new SearchController(ui->searchBar, ui->logView, this);
 
     ui->searchBar->hide();
+
+    searchController = new SearchController(ui->searchBar, ui->logView, this);
 
     Settings settings;
     qDebug() << "Settings location: " << settings.fileName();
@@ -56,23 +57,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(this, &MainWindow::openFile, logService, &LogService::openFile);
     connect(this, &MainWindow::openFolder, logService, &LogService::openFolder);
     connect(logService, &LogService::logManagerCreated, this, &MainWindow::logManagerCreated);
-    connect(logService, &LogService::progressUpdated, this,
-            [this](const QString& msg, int percent) {
-                if (percent >= 100)
-                    statusBar()->showMessage(msg, 2000);
-                else
-                    statusBar()->showMessage(msg);
-                if (percent >= 0) {
-                    progressBar->setRange(0, 100);
-                    progressBar->setValue(percent);
-                } else {
-                    progressBar->setRange(0, 0);
-                }
-                if (percent >= 100)
-                    progressBar->setVisible(false);
-                else
-                    progressBar->setVisible(true);
-            });
+    connect(logService, &LogService::progressUpdated, this, &MainWindow::handleProgress);
 
     connect(this, SIGNAL(exportData(QString,QDateTime,QDateTime)), logService, SLOT(exportData(QString,QDateTime,QDateTime)));
     connect(this, SIGNAL(exportData(QString,QDateTime,QDateTime,QStringList)), logService, SLOT(exportData(QString,QDateTime,QDateTime,QStringList)));
@@ -373,6 +358,29 @@ void MainWindow::logManagerCreated()
     QT_SLOT_END
 }
 
+void MainWindow::handleProgress(const QString& message, int percent)
+{
+    if (percent >= 100)
+        statusBar()->showMessage(message, 2000);
+    else
+        statusBar()->showMessage(message);
+
+    if (percent >= 0)
+    {
+        progressBar->setRange(0, 100);
+        progressBar->setValue(percent);
+    }
+    else
+    {
+        progressBar->setRange(0, 0);
+    }
+
+    if (percent >= 100)
+        progressBar->setVisible(false);
+    else
+        progressBar->setVisible(true);
+}
+
 void MainWindow::addFormat(const std::string& format)
 {
     QAction* action = formatActions.emplace_back(new QAction(QString::fromStdString(format), this));
@@ -431,6 +439,8 @@ void MainWindow::switchModel(QAbstractItemModel* model)
     ui->logView->header()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
     if (oldModel)
         delete oldModel;
+
+    searchController->updateModel();
 }
 
 LogModel* MainWindow::getLogModel()

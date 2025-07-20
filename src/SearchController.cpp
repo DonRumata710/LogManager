@@ -106,6 +106,7 @@ void SearchController::handleLoadingFinished(const QModelIndex& index)
 
     if (!currentSearchTerm.isEmpty())
     {
+        logView->selectionModel()->setCurrentIndex(index, QItemSelectionModel::SelectionFlag::SelectCurrent | QItemSelectionModel::SelectionFlag::Rows);
         logView->scrollTo(index, QTreeView::ScrollHint::PositionAtCenter);
         currentSearchTerm.clear();
     }

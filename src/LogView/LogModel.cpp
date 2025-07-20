@@ -637,7 +637,6 @@ void LogModel::handleData(int index)
         beginResetModel();
         logs.clear();
 
-        std::chrono::system_clock::time_point requestedTimePoint = requestedTime.toStdSysMilliseconds();
         if (requestType == DataRequestType::ReplaceForward)
         {
             for (int i = 0; i < data.size(); ++i)
@@ -665,6 +664,7 @@ void LogModel::handleData(int index)
             int requestedEntry = -1;
             for (int i = 0; i < logs.size(); ++i)
             {
+                std::chrono::system_clock::time_point requestedTimePoint = requestedTime.toStdSysMilliseconds();
                 if (logs[i].entry.time >= requestedTimePoint)
                 {
                     requestedEntry = logs[i].index;

@@ -46,8 +46,12 @@ LogFilter LogFilterModel::exportFilter() const
     {
         if (i == static_cast<int>(LogModel::PredefinedColumn::Module))
         {
-            modules = filterVariants.at(i);
-            filterVariants.erase(i);
+            auto it = filterVariants.find(i);
+            if (it != filterVariants.end())
+            {
+                modules = it->second;
+                filterVariants.erase(it);
+            }
             continue;
         }
 

@@ -207,6 +207,8 @@ void FormatManager::loadFormats()
             formats[std::filesystem::path(file.toStdString()).stem().string()] = std::move(format);
         }
     }
+
+    qDebug() << "Formats loaded:" << formats.size();
 }
 
 QJsonDocument FormatManager::loadJson(const QString& filePath)
