@@ -2,19 +2,13 @@
     "modules": [],
 
     "logFileRegex": "log\\d*",
-    "extension": ".csv",
+    "extension": ".json",
     "encoding": "UTF-8",
 
-    "comments": [
-        {
-            "start": "//"
-        }
-    ],
-
-    "separator": ";",
+    "lineRegex": "{\"timestamp\": \\\"(?'time'[^\"]+)\\\", \"level\": \\\"(?'level'[^\"]+)\\\", \"message\": \\\"(?'message'[^\"]+)\\\", \"user_id\": (?'user_id'[[:digit:]]+), \"session_id\": \\\"(?'session'sess-[[:digit:]]+)\\\"}",
     "timeFieldIndex": 0,
-    "timeMask": "%F %H:%M:%S",
-    "timeFractionalDigits": 3,
+    "timeMask": "%FT%H:%M:%S",
+    "timeFractionalDigits": 6,
 
     "fields": [
         {
@@ -23,27 +17,22 @@
             "type": "QString"
         },
         {
-            "name": "process ID",
-            "regex": ".*",
-            "type": "QString"
-        },
-        {
-            "name": "thread ID",
-            "regex": ".*",
-            "type": "QString"
-        },
-        {
-            "name": "module",
-            "regex": ".*",
-            "type": "QString"
-        },
-        {
-            "name": "severity",
+            "name": "level",
             "regex": ".*",
             "type": "QString"
         },
         {
             "name": "message",
+            "regex": ".*",
+            "type": "QString"
+        },
+        {
+            "name": "user_id",
+            "regex": ".*",
+            "type": "QString"
+        },
+        {
+            "name": "session_id",
             "regex": ".*",
             "type": "QString"
         }

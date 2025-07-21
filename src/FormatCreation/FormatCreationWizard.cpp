@@ -44,9 +44,14 @@ Format FormatCreationWizard::getFormat()
             newComment.finish = commentMap.value("finish").toString();
     }
 
-    format.separator = field("separator").toString();
+    if (field("separatorUsage").toBool())
+        format.separator = field("separator").toString();
+    if (field("lineRegexUsage").toBool())
+        format.lineRegex = QRegularExpression{ field("lineRegex").toString() };
+
     format.timeFieldIndex = field("timeFieldIndex").toInt();
-    format.timeRegex = field("timeRegex").toString();
+    format.timeMask = field("timeMask").toString();
+    format.timeFractionalDigits = field("timeFractionalDigits").toInt();
 
     auto fields = field("fields").toList();
     for (const auto& field : std::as_const(fields))

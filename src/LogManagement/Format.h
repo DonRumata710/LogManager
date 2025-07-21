@@ -89,7 +89,8 @@ struct Format
     QRegularExpression lineRegex;
 
     int timeFieldIndex = -1;
-    QString timeRegex;
+    QString timeMask;
+    int timeFractionalDigits = 0;
 
     struct Field
     {

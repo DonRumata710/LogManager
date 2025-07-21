@@ -94,18 +94,70 @@ QVariant getValue(const QString& value, const Format::Field& field, const std::s
     case QMetaType::QString:
         return value;
     case QMetaType::QDateTime:
-        return QDateTime::fromString(value, format->timeRegex);
+        return QDateTime::fromString(value, format->timeMask);
     default:
         qCritical() << QString("Unsupported field type for field %1:").arg(field.name) << field.type;
         return QVariant();
     }
 }
 
+std::chrono::nanoseconds parseFractionToNanos(std::string_view fracPart, int desiredDigits)
+{
+    if (desiredDigits < 1 || desiredDigits > 9)
+        throw std::invalid_argument("Unsupported fractional digit count");
+
+    int64_t value = 0;
+    for (char c : fracPart)
+    {
+        if (c < '0' || c > '9')
+            break;
+        value = value * 10 + (c - '0');
+    }
+
+    int actualDigits = static_cast<int>(fracPart.size());
+    while (actualDigits < desiredDigits)
+    {
+        value *= 10;
+        ++actualDigits;
+    }
+    while (actualDigits > desiredDigits)
+    {
+        value /= 10;
+        --actualDigits;
+    }
+
+    int scale = 9 - desiredDigits;
+    for (int i = 0; i < scale; ++i)
+        value *= 10;
+
+    return std::chrono::nanoseconds(value);
+}
+
 std::chrono::system_clock::time_point parseTime(const QString& timeStr, const std::shared_ptr<Format>& format)
 {
-    std::istringstream ss(timeStr.toStdString());
+    if (!format || format->timeMask.isEmpty())
+        throw std::invalid_argument("Invalid format");
+
+    std::string input = timeStr.toStdString();
+
+    size_t dotPos = input.find('.');
+    std::string_view baseStr{ &*input.begin(), (dotPos != std::string_view::npos ? dotPos : input.size()) };
+    std::string_view fracStr = (dotPos != std::string_view::npos ? std::string_view{ input.begin() + dotPos + 1, input.end() } : std::string_view{});
+
     std::chrono::system_clock::time_point tp;
-    ss >> std::chrono::parse(format->timeRegex.toStdString(), tp);
+    {
+        std::istringstream ss(std::string{ baseStr });
+        ss >> std::chrono::parse(format->timeMask.toStdString(), tp);
+        if (!ss)
+            throw std::runtime_error("Failed to parse base time part");
+    }
+
+    if (!fracStr.empty() && format->timeFractionalDigits > 0)
+    {
+        auto nanos = parseFractionToNanos(fracStr, format->timeFractionalDigits);
+        tp += std::chrono::duration_cast<std::chrono::system_clock::duration>(nanos);
+    }
+
     return tp;
 }
 

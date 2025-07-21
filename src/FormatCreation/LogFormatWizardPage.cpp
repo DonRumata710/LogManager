@@ -8,12 +8,16 @@ LogFormatWizardPage::LogFormatWizardPage(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    registerField("separatorUsage", ui->rbSeparator);
     registerField("separator*", ui->leSeparator);
+    registerField("lineRegexUsage", ui->rbRegex);
+    registerField("lineRegex*", ui->leLineRegex);
     registerField("timeFieldIndex*", ui->sbTimeFieldIndex);
-    registerField("timeRegex*", ui->leTimeRegex);
+    registerField("timeMask*", ui->letimeMask);
+    registerField("timeFractionalDigits", ui->sbTimeFieldIndex);
 
     connect(ui->leSeparator, &QLineEdit::textChanged, this, &LogFormatWizardPage::completeChanged);
-    connect(ui->leTimeRegex, &QLineEdit::textChanged, this, &LogFormatWizardPage::completeChanged);
+    connect(ui->letimeMask, &QLineEdit::textChanged, this, &LogFormatWizardPage::completeChanged);
 }
 
 LogFormatWizardPage::~LogFormatWizardPage()
@@ -32,5 +36,5 @@ void LogFormatWizardPage::initializePage()
 
 bool LogFormatWizardPage::isComplete() const
 {
-    return !ui->leSeparator->text().isEmpty() && !ui->leTimeRegex->text().isEmpty();
+    return !ui->leSeparator->text().isEmpty() && !ui->letimeMask->text().isEmpty();
 }

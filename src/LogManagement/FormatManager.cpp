@@ -65,7 +65,8 @@ void FormatManager::addFormat(const std::shared_ptr<Format>& format)
         formatObj.insert("lineRegex", format->lineRegex.pattern());
 
     formatObj.insert("timeFieldIndex", format->timeFieldIndex);
-    formatObj.insert("timeRegex", format->timeRegex);
+    formatObj.insert("timeMask", format->timeMask);
+    formatObj.insert("timeFractionalDigits", format->timeFractionalDigits);
 
     QJsonArray fieldArray;
     for (const auto& field : format->fields)
@@ -179,7 +180,8 @@ void FormatManager::loadFormats()
                 format->lineRegex = QRegularExpression(formatObj.value("lineRegex").toString());
 
             format->timeFieldIndex = formatObj.value("timeFieldIndex").toInt(-1);
-            format->timeRegex = formatObj.value("timeRegex").toString();
+            format->timeMask = formatObj.value("timeMask").toString();
+            format->timeFractionalDigits = formatObj.value("timeFractionalDigits").toInt(0);
 
             auto fieldArray = formatObj.value("fields").toArray();
             for (const auto& field : std::as_const(fieldArray))

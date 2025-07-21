@@ -41,7 +41,8 @@ Each JSON file may contain the following keys:
 - `lineRegex` - regular expression describing the entire log line when no
   separator is provided. Capturing groups correspond to fields in order.
 - `timeFieldIndex` - zero-based index of the timestamp field.
-- `timeRegex` - pattern used to parse the timestamp. Std::chrono::parse format is used.
+- `timeMask` - pattern used to parse the timestamp. Std::chrono::parse format is used.
+- `timeFractionalDigits` - number of digits after the decimal point in the timestamp, used to parse fractional seconds.
 - `fields` - array of field definitions. Each entry contains a `name`, a
   regular expression `regex` and the Qt type for the value.
 
@@ -56,7 +57,8 @@ An example format file looks like this:
   "comments": [{"start": "#"}],
   "separator": ",",
   "timeFieldIndex": 0,
-  "timeRegex": "%T %F",
+  "timeMask": "%T %F",
+  "timeFractionalDigits": 3,
   "fields": [
     {"name": "time", "regex": "^(\\d{4}-\\d{2}-\\d{2}) (\\d{2}:\\d{2}:\\d{2}.\\d{3})", "type": "QString"},
     {"name": "level", "regex": "([A-Z]+)", "type": "QString"},
