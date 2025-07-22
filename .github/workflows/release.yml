@@ -26,16 +26,36 @@ jobs:
           target: 'desktop'
           modules: 'qt5compat'
 
-      - name: Cache dependencies
+      - name: Cache ZLib
+        id: cache-zlib
         uses: actions/cache@v3
-        id: cache-deps
         with:
-          key: ${{ runner.os }}-deps-${{ hashFiles('deps/**') }}
-          restore-keys: ${{ runner.os }}-deps-
-          path: deps
+          key: ${{ runner.os }}-zlib-v1.3.1
+          path: deps/win64/Release/zlib
+
+      - name: Cache QuaZip
+        id: cache-quazip
+        uses: actions/cache@v3
+        with:
+          key: ${{ runner.os }}-quazip-v1.5
+          path: deps/win64/Release/quazip
+
+      - name: Cache Boost
+        id: cache-boost
+        uses: actions/cache@v3
+        with:
+          key: ${{ runner.os }}-boost-1.88.0
+          path: deps/win64/Release/boost
+
+      - name: Cache nlohmann_json
+        id: cache-nlohmann
+        uses: actions/cache@v3
+        with:
+          key: ${{ runner.os }}-nlohmann-3.12.0
+          path: deps/win64/Release/nlohmann_json
 
       - name: Download ZLib
-        if: steps.cache-deps.outputs.cache-hit != 'true'
+        if: steps.cache-zlib.outputs.cache-hit != 'true'
         uses: robinraju/release-downloader@v1
         with:
           repository: 'madler/zlib'
@@ -45,7 +65,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build ZLib
-        if: steps.cache-deps.outputs.cache-hit != 'true'
+        if: steps.cache-zlib.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -59,7 +79,7 @@ jobs:
           cd ../../..
 
       - name: Download QuaZip
-        if: steps.cache-deps.outputs.cache-hit != 'true'
+        if: steps.cache-quazip.outputs.cache-hit != 'true'
         uses: robinraju/release-downloader@v1
         with:
           repository: 'stachenov/quazip'
@@ -69,7 +89,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build QuaZip
-        if: steps.cache-deps.outputs.cache-hit != 'true'
+        if: steps.cache-quazip.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -86,7 +106,7 @@ jobs:
           cd ../../..
 
       - name: Download Boost
-        if: steps.cache-deps.outputs.cache-hit != 'true'
+        if: steps.cache-boost.outputs.cache-hit != 'true'
         uses: robinraju/release-downloader@v1
         with:
           repository: 'boostorg/boost'
@@ -96,7 +116,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Prepare Boost
-        if: steps.cache-deps.outputs.cache-hit != 'true'
+        if: steps.cache-boost.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -111,7 +131,7 @@ jobs:
           cd ../../..
 
       - name: Download nlohmann_json
-        if: steps.cache-deps.outputs.cache-hit != 'true'
+        if: steps.cache-nlohmann.outputs.cache-hit != 'true'
         uses: robinraju/release-downloader@v1
         with:
           repository: 'nlohmann/json'
@@ -121,7 +141,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build nlohmann_json
-        if: steps.cache-deps.outputs.cache-hit != 'true'
+        if: steps.cache-nlohmann.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
