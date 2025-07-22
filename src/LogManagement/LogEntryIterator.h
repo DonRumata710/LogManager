@@ -313,9 +313,9 @@ private:
                 qWarning() << "Failed to parse time in" << heapItem.metadata->second.filename
                            << "at" << heapItem.log->getFilePosition() << ':' << line.value() << ':'
                            << ex.what();
-                line = (heapItem.log.get()->*(straight ? &Log::nextLine : &Log::prevLine))();
                 if constexpr (straight)
                     heapItem.lineStart = heapItem.log->getFilePosition();
+                line = (heapItem.log.get()->*(straight ? &Log::nextLine : &Log::prevLine))();
                 continue;
             }
             for (size_t i = 0, fieldCount = 0; i < format->fields.size(); ++i)
