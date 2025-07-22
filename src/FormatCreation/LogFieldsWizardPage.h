@@ -23,6 +23,8 @@ public:
 signals:
     void fieldsChanged();
 
+    void handleError(const QString& message);
+
 private slots:
     void on_bAdd_clicked();
 

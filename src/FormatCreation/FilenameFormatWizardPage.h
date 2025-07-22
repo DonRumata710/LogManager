@@ -17,6 +17,9 @@ public:
 
     bool isComplete() const;
 
+signals:
+    void handleError(const QString& message);
+
 private:
     Ui::FilenameFormatWizardPage *ui;
 };

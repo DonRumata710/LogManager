@@ -75,6 +75,8 @@ signals:
 
     void searchFinished(const QString& searchTerm, const QDateTime& entryTime);
 
+    void handleError(const QString& message);
+
 public slots:
     void openFile(const QString& file, const QStringList& formats);
     void openFolder(const QString& logDirectory, const QStringList& formats);

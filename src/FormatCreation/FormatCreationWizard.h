@@ -20,6 +20,9 @@ public:
 
     int nextId() const override;
 
+signals:
+    void handleError(const QString& message);
+
 private:
     Ui::FormatCreationWizard *ui;
 };

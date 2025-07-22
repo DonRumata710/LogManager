@@ -72,6 +72,8 @@ signals:
 
     void requestedTimeAvailable(const QModelIndex& index);
 
+    void handleError(const QString& message);
+
 public slots:
     void handleIterator(int, bool);
     void handleData(int);

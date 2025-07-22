@@ -19,6 +19,9 @@ public:
 
     Format::Field getField() const;
 
+signals:
+    void handleError(const QString& message);
+
 private slots:
     void updateOkButtonState();
 

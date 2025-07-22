@@ -15,6 +15,8 @@ LogView::LogView(QWidget* parent) : QTreeView(parent)
 
     connect(verticalScrollBar(), &QScrollBar::valueChanged, this, &LogView::checkFetchNeeded);
     connect(verticalScrollBar(), &QScrollBar::rangeChanged, this, &LogView::checkFetchNeeded);
+
+    connect(static_cast<FilterHeader*>(header()), &FilterHeader::handleError, this, &LogView::handleError);
 }
 
 void LogView::setLogModel(QAbstractItemModel* newModel)

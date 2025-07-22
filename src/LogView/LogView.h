@@ -13,6 +13,9 @@ public:
 
     void setLogModel(QAbstractItemModel* model);
 
+signals:
+    void handleError(const QString& message);
+
 private slots:
     void checkFetchNeeded();
     void handleFirstDataLoaded();

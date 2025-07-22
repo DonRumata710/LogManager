@@ -19,6 +19,9 @@ public:
 
     Format::Comment getComment() const;
 
+signals:
+    void handleError(const QString& message);
+
 private:
     Ui::CommentCreationDialog *ui;
 };

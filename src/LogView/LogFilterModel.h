@@ -24,6 +24,9 @@ public:
 
     bool filterAcceptsRow(int source_row, const QModelIndex& source_parent) const override;
 
+signals:
+    void handleError(const QString& message);
+
 private:
     std::unordered_map<int, QRegularExpression> columnFilters;
     std::unordered_map<int, std::unordered_set<QString>> variants;

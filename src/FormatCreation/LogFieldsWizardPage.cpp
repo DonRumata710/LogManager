@@ -48,6 +48,7 @@ void LogFieldsWizardPage::on_bAdd_clicked()
     QT_SLOT_BEGIN
 
     FieldCreationDialog dialog(this);
+    connect(&dialog, &FieldCreationDialog::handleError, this, &LogFieldsWizardPage::handleError);
     if (dialog.exec() == QDialog::Accepted)
     {
         int row = ui->tableWidget->rowCount();

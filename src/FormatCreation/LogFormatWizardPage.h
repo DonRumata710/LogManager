@@ -17,6 +17,9 @@ public:
     void initializePage() override;
     bool isComplete() const override;
 
+signals:
+    void handleError(const QString& message);
+
 private:
     Ui::LogFormatWizardPage *ui;
 };

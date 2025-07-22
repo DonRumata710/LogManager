@@ -24,6 +24,8 @@ signals:
     void startGlobalSearch(const QDateTime& startTime, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward);
     void startGlobalSearchWithFilter(const QDateTime& startTime, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, const LogFilter& filter);
 
+    void handleError(const QString& message);
+
 public slots:
     void localSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters);
     void commonSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters);

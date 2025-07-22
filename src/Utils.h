@@ -21,10 +21,13 @@ private:
     try {
 
 #define QT_SLOT_END \
-    } catch (const std::exception& e) { \
-        qCritical() << "Exception in slot:" << e.what(); \
-    } catch (...) { \
-        qCritical() << "Unknown exception in slot"; \
+    } \
+    catch (const std::exception& e) { \
+        handleError(QString{ "Exception in slot: " } + e.what()); \
+    } \
+    catch (...) \
+    { \
+        handleError(QString{ "Unknown exception in slot" }); \
     }
 
 

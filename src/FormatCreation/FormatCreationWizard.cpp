@@ -7,6 +7,12 @@ FormatCreationWizard::FormatCreationWizard(QWidget *parent) :
     ui(new Ui::FormatCreationWizard)
 {
     ui->setupUi(this);
+
+    connect(ui->commentsPage, &CommentWizardPage::handleError, this, &FormatCreationWizard::handleError);
+    connect(ui->filenameFormatPage, &FilenameFormatWizardPage::handleError, this, &FormatCreationWizard::handleError);
+    connect(ui->logFormatPage, &LogFormatWizardPage::handleError, this, &FormatCreationWizard::handleError);
+    connect(ui->logFieldsPage, &LogFieldsWizardPage::handleError, this, &FormatCreationWizard::handleError);
+    connect(ui->moduleListPage, &ModuleListWizardPage::handleError, this, &FormatCreationWizard::handleError);
 }
 
 FormatCreationWizard::~FormatCreationWizard()

@@ -24,6 +24,9 @@ public:
     std::unordered_set<QString> getModules() const;
     bool scrollToEnd() const;
 
+signals:
+    void handleError(const QString& message);
+
 private slots:
     void on_bSelect_clicked();
     void on_bDeselect_clicked();

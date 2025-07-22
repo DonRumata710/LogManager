@@ -13,6 +13,7 @@
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QProgressBar>
+#include <QMessageBox>
 
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -34,6 +35,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->searchBar->hide();
 
     searchController = new SearchController(ui->searchBar, ui->logView, this);
+    connect(ui->searchBar, &SearchBar::handleError, this, &MainWindow::handleError);
 
     Settings settings;
     qDebug() << "Settings location: " << settings.fileName();
@@ -58,11 +60,15 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(this, &MainWindow::openFolder, logService, &LogService::openFolder);
     connect(logService, &LogService::logManagerCreated, this, &MainWindow::logManagerCreated);
     connect(logService, &LogService::progressUpdated, this, &MainWindow::handleProgress);
+    connect(logService, &LogService::handleError, this, &MainWindow::handleError);
 
     connect(this, SIGNAL(exportData(QString,QDateTime,QDateTime)), logService, SLOT(exportData(QString,QDateTime,QDateTime)));
     connect(this, SIGNAL(exportData(QString,QDateTime,QDateTime,QStringList)), logService, SLOT(exportData(QString,QDateTime,QDateTime,QStringList)));
     connect(this, SIGNAL(exportData(QString,QTreeView*)), logService, SLOT(exportData(QString,QTreeView*)));
     connect(this, SIGNAL(exportData(QString,QDateTime,QDateTime,QStringList,LogFilter)), logService, SLOT(exportData(QString,QDateTime,QDateTime,QStringList,LogFilter)));
+
+    connect(ui->searchBar, &SearchBar::handleError, this, &MainWindow::handleError);
+    connect(ui->logView, &LogView::handleError, this, &MainWindow::handleError);
 }
 
 MainWindow::~MainWindow()
@@ -147,6 +153,7 @@ void MainWindow::on_actionAdd_format_triggered()
     QT_SLOT_BEGIN
 
     FormatCreationWizard wizard(this);
+    connect(&wizard, &FormatCreationWizard::handleError, this, &MainWindow::handleError);
     if (wizard.exec() != QDialog::Accepted)
         return;
 
@@ -313,6 +320,7 @@ void MainWindow::logManagerCreated()
     }
 
     InitialDataDialog dialog(*logManager.get());
+    connect(&dialog, &InitialDataDialog::handleError, this, &MainWindow::handleError);
     if (dialog.exec() != QDialog::Accepted)
         return;
 
@@ -336,8 +344,10 @@ void MainWindow::logManagerCreated()
     logService->createSession(modules, startDate.toStdSysMilliseconds(), endDate.addMSecs(1).toStdSysMilliseconds());
 
     auto proxyModel = new LogFilterModel(this);
+    connect(proxyModel, &LogFilterModel::handleError, this, &MainWindow::handleError);
 
     auto logModel = new LogModel(logService, proxyModel);
+    connect(logModel, &LogModel::handleError, this, &MainWindow::handleError);
 
     if (scrollToEnd)
     {
@@ -379,6 +389,13 @@ void MainWindow::handleProgress(const QString& message, int percent)
         progressBar->setVisible(false);
     else
         progressBar->setVisible(true);
+}
+
+void MainWindow::handleError(const QString& message)
+{
+    statusBar()->showMessage(message, 5000);
+    progressBar->setVisible(false);
+    QMessageBox::critical(this, tr("Error"), message);
 }
 
 void MainWindow::addFormat(const std::string& format)

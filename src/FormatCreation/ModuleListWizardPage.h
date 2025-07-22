@@ -23,6 +23,8 @@ public:
 signals:
     void modulesChanged();
 
+    void handleError(const QString& message);
+
 private slots:
     void on_bAdd_clicked();
     void on_bRemove_clicked();

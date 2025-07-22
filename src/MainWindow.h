@@ -41,6 +41,8 @@ private slots:
 
     void handleProgress(const QString& message, int percent);
 
+    void handleError(const QString& message);
+
 signals:
     void openFile(const QString& file, const QStringList& formats);
     void openFolder(const QString& logDirectory, const QStringList& formats);

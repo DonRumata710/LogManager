@@ -16,6 +16,8 @@ public:
 signals:
     void filterChanged(int section, const QString &text);
 
+    void handleError(const QString &message);
+
 private slots:
     void showContextMenu(const QPoint &point);
     void updateEditors();

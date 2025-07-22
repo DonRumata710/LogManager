@@ -18,6 +18,8 @@ signals:
     void localSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters);
     void commonSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters);
 
+    void handleError(const QString& message);
+
 private slots:
     void on_toolButton_clicked();
 

@@ -21,6 +21,8 @@ public:
 signals:
     void commentsChanged();
 
+    void handleError(const QString& message);
+
 private slots:
     void on_bAdd_clicked();
 
