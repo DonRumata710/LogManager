@@ -1,0 +1,14 @@
+{
+    "modules": [],
+    "extension": ".json",
+    "encoding": "UTF-8",
+    "lineFormat": "json",
+    "timeFieldIndex": 0,
+    "timeMask": "%FT%H:%M:%S",
+    "fields": [
+        {"name": "time", "type": "QString"},
+        {"name": "level", "type": "QString"},
+        {"name": "message", "type": "QString"},
+        {"name": "details.request.url", "type": "QString"}
+    ]
+}

@@ -88,6 +88,9 @@ struct Format
     QString separator;
     QRegularExpression lineRegex;
 
+    enum class LineFormat { None, Json };
+    LineFormat lineFormat = LineFormat::None;
+
     int timeFieldIndex = -1;
     QString timeMask;
     int timeFractionalDigits = 0;
