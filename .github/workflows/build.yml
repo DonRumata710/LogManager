@@ -139,7 +139,7 @@ jobs:
         with:
           repository: 'nlohmann/json'
           tag: 'v3.12.0'
-          fileName: 'json.tar.xz'
+          zipBall: true
           out-file-path: 'external/libs'
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -150,8 +150,9 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $installPath = Join-Path $Env:GITHUB_WORKSPACE 'deps/win64/Release/nlohmann_json'
           cd external/libs
-          7z x json.tar.xz
-          $dir = Get-ChildItem -Directory | Where-Object { $_.Name -like 'json-*' } | Select-Object -First 1
+          $zip = Get-ChildItem -Filter '*.zip' | Select-Object -First 1
+          7z x $zip.FullName
+          $dir = Get-ChildItem -Directory | Where-Object { $_.Name -like 'nlohmann-json-*' } | Select-Object -First 1
           cd $dir.Name
           cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DJSON_BuildTests=OFF -DCMAKE_INSTALL_PREFIX="$installPath"
           cmake --build build --config Release --parallel
