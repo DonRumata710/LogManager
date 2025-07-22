@@ -52,7 +52,16 @@ void LogStorage::finalize()
                 break;
             }
 
-            parts = splitLine(line.value(), lastLog.second.format);
+            try
+            {
+                parts = splitLine(line.value(), lastLog.second.format);
+            }
+            catch (const std::exception& ex)
+            {
+                qWarning() << "Failed to split line in" << lastLog.second.filename << ":" << ex.what();
+                continue;
+            }
+
             if (parts.size() <= lastLog.second.format->timeFieldIndex)
                 continue;
         }
@@ -61,8 +70,15 @@ void LogStorage::finalize()
         if (parts.empty())
             continue;
 
-        auto time = parseTime(parts[lastLog.second.format->timeFieldIndex], lastLog.second.format);
-        maxTime = std::max(maxTime, time + std::chrono::milliseconds(1));
+        try
+        {
+            auto time = parseTime(parts[lastLog.second.format->timeFieldIndex], lastLog.second.format);
+            maxTime = std::max(maxTime, time + std::chrono::milliseconds(1));
+        }
+        catch (const std::exception& ex)
+        {
+            qWarning() << "Failed to parse time in" << lastLog.second.filename << ":" << ex.what();
+        }
     }
 }
 

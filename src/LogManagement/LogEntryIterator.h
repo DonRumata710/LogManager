@@ -4,6 +4,9 @@
 #include "LogEntry.h"
 #include "LogUtils.h"
 
+#include <QDebug>
+#include <exception>
+
 #include <boost/heap/priority_queue.hpp>
 
 
@@ -249,7 +252,20 @@ private:
 
         while (line.has_value())
         {
-            auto parts = splitLine(line.value(), format);
+            QStringList parts;
+            try
+            {
+                parts = splitLine(line.value(), format);
+            }
+            catch (const std::exception& ex)
+            {
+                qWarning() << "Failed to split line in" << heapItem.metadata->second.filename
+                           << "at" << heapItem.log->getFilePosition() << ":" << line.value() << ':'
+                           << ex.what();
+                line = (heapItem.log.get()->*(straight ? &Log::nextLine : &Log::prevLine))();
+                continue;
+            }
+
             if (!checkFormat(parts, format) || parts.size() <= format->timeFieldIndex)
             {
                 if constexpr (straight)
@@ -288,7 +304,20 @@ private:
                 entry.line.prepend(line.value());
             }
 
-            entry.time = parseTime(parts[format->timeFieldIndex], format);
+            try
+            {
+                entry.time = parseTime(parts[format->timeFieldIndex], format);
+            }
+            catch (const std::exception& ex)
+            {
+                qWarning() << "Failed to parse time in" << heapItem.metadata->second.filename
+                           << "at" << heapItem.log->getFilePosition() << ':' << line.value() << ':'
+                           << ex.what();
+                if constexpr (straight)
+                    heapItem.lineStart = heapItem.log->getFilePosition();
+                line = (heapItem.log.get()->*(straight ? &Log::nextLine : &Log::prevLine))();
+                continue;
+            }
             for (size_t i = 0, fieldCount = 0; i < format->fields.size(); ++i)
             {
                 const auto& field = format->fields[i];

@@ -192,7 +192,10 @@ std::chrono::system_clock::time_point parseTime(const QString& timeStr, const st
         std::istringstream ss(std::string{ baseStr });
         ss >> std::chrono::parse(format->timeMask.toStdString(), tp);
         if (!ss)
-            throw std::runtime_error("Failed to parse base time part");
+        {
+            throw std::runtime_error("Failed to parse time '" + input + "' using mask '" +
+                                     format->timeMask.toStdString() + "'");
+        }
     }
 
     if (!fracStr.empty() && format->timeFractionalDigits > 0)
