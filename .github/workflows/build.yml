@@ -113,6 +113,31 @@ jobs:
           ./b2 install --prefix=$installPath --build-type=complete --layout=versioned address-model=64 variant=release link=static,shared runtime-link=static,shared threading=multi --with-headers
           cd ../../..
 
+      - name: Download nlohmann_json
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        uses: robinraju/release-downloader@v1
+        with:
+          repository: 'nlohmann/json'
+          tag: 'v3.12.0'
+          fileName: 'json.tar.xz'
+          out-file-path: 'external/libs'
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build nlohmann_json
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installPath = Join-Path $Env:GITHUB_WORKSPACE 'deps/win64/Release/nlohmann_json'
+          cd external/libs
+          7z x json.tar.xz
+          $dir = Get-ChildItem -Directory | Where-Object { $_.Name -like 'json-*' } | Select-Object -First 1
+          cd $dir.Name
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DJSON_BuildTests=OFF -DCMAKE_INSTALL_PREFIX="$installPath"
+          cmake --build build --config Release --parallel
+          cmake --install build --config Release
+          cd ../../..
+
       - name: Configure
         run: |
           $depsPath = Join-Path $Env:GITHUB_WORKSPACE "deps"
