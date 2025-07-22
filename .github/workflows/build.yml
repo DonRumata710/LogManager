@@ -29,16 +29,36 @@ jobs:
           target: 'desktop'
           modules: 'qt5compat'
 
-      - name: Cache dependencies
+      - name: Cache ZLib
+        id: cache-zlib
         uses: actions/cache@v3
-        id: cache-deps
         with:
-          key: ${{ runner.os }}-deps-${{ hashFiles('deps/**') }}
-          restore-keys: ${{ runner.os }}-deps-
-          path: deps
+          key: ${{ runner.os }}-zlib-v1.3.1
+          path: deps/win64/Release/zlib
+
+      - name: Cache QuaZip
+        id: cache-quazip
+        uses: actions/cache@v3
+        with:
+          key: ${{ runner.os }}-quazip-v1.5
+          path: deps/win64/Release/quazip
+
+      - name: Cache Boost
+        id: cache-boost
+        uses: actions/cache@v3
+        with:
+          key: ${{ runner.os }}-boost-1.88.0
+          path: deps/win64/Release/boost
+
+      - name: Cache nlohmann_json
+        id: cache-nlohmann
+        uses: actions/cache@v3
+        with:
+          key: ${{ runner.os }}-nlohmann-3.12.0
+          path: deps/win64/Release/nlohmann_json
 
       - name: Download ZLib
-        if: steps.cache-deps.outputs.cache-hit != 'true'
+        if: steps.cache-zlib.outputs.cache-hit != 'true'
         uses: robinraju/release-downloader@v1
         with:
           repository: 'madler/zlib'
@@ -48,13 +68,14 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build ZLib
-        if: steps.cache-deps.outputs.cache-hit != 'true'
+        if: steps.cache-zlib.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $installPath = Join-Path $Env:GITHUB_WORKSPACE 'deps/win64/Release/zlib'
           cd external/libs
           7z x zlib131.zip
+          Remove-Item zlib131.zip
           cd "zlib-1.3.1"
           cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$installPath"
           cmake --build build --config Release --parallel
@@ -62,7 +83,7 @@ jobs:
           cd ../../..
 
       - name: Download QuaZip
-        if: steps.cache-deps.outputs.cache-hit != 'true'
+        if: steps.cache-quazip.outputs.cache-hit != 'true'
         uses: robinraju/release-downloader@v1
         with:
           repository: 'stachenov/quazip'
@@ -72,7 +93,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build QuaZip
-        if: steps.cache-deps.outputs.cache-hit != 'true'
+        if: steps.cache-quazip.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -81,6 +102,7 @@ jobs:
           cd external/libs
           $zip = Get-ChildItem -Filter '*.zip' | Select-Object -First 1
           7z x $zip.FullName
+          Remove-Item $zip.FullName
           $dir = Get-ChildItem -Directory | Where-Object { $_.Name -like 'stachenov-quazip-*' } | Select-Object -First 1
           cd $dir.Name
           cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$installPath" -DCMAKE_PREFIX_PATH="${env:QT_ROOT_DIR};$zlibPath" -DQUAZIP_QT_MAJOR_VERSION=6 -DQUAZIP_BZIP2=OFF
@@ -89,7 +111,7 @@ jobs:
           cd ../../..
 
       - name: Download Boost
-        if: steps.cache-deps.outputs.cache-hit != 'true'
+        if: steps.cache-boost.outputs.cache-hit != 'true'
         uses: robinraju/release-downloader@v1
         with:
           repository: 'boostorg/boost'
@@ -99,18 +121,46 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Prepare Boost
-        if: steps.cache-deps.outputs.cache-hit != 'true'
+        if: steps.cache-boost.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $installPath = Join-Path $Env:GITHUB_WORKSPACE 'deps/win64/Release/boost'
           cd external/libs
           7z x boost-1.88.0-cmake.zip
+          Remove-Item boost-1.88.0-cmake.zip
           $dir = Get-ChildItem -Directory | Where-Object { $_.Name -like 'boost*' } | Select-Object -First 1
           Move-Item $dir.FullName boost
           cd boost
           ./bootstrap.bat --prefix=$installPath
           ./b2 install --prefix=$installPath --build-type=complete --layout=versioned address-model=64 variant=release link=static,shared runtime-link=static,shared threading=multi --with-headers
+          cd ../../..
+
+      - name: Download nlohmann_json
+        if: steps.cache-nlohmann.outputs.cache-hit != 'true'
+        uses: robinraju/release-downloader@v1
+        with:
+          repository: 'nlohmann/json'
+          tag: 'v3.12.0'
+          zipBall: true
+          out-file-path: 'external/libs'
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build nlohmann_json
+        if: steps.cache-nlohmann.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installPath = Join-Path $Env:GITHUB_WORKSPACE 'deps/win64/Release/nlohmann_json'
+          cd external/libs
+          $zip = Get-ChildItem -Filter 'json-*.zip' | Select-Object -First 1
+          7z x $zip.FullName
+          Remove-Item $zip.FullName
+          $dir = Get-ChildItem -Directory | Where-Object { $_.Name -like 'nlohmann-json-*' } | Select-Object -First 1
+          cd $dir.Name
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DJSON_BuildTests=OFF -DCMAKE_INSTALL_PREFIX="$installPath"
+          cmake --build build --config Release --parallel
+          cmake --install build --config Release
           cd ../../..
 
       - name: Configure

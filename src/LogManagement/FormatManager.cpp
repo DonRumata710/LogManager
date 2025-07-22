@@ -63,6 +63,8 @@ void FormatManager::addFormat(const std::shared_ptr<Format>& format)
         formatObj.insert("separator", format->separator);
     if (format->lineRegex.isValid() && !format->lineRegex.pattern().isEmpty())
         formatObj.insert("lineRegex", format->lineRegex.pattern());
+    if (format->lineFormat == Format::LineFormat::Json)
+        formatObj.insert("lineFormat", "json");
 
     formatObj.insert("timeFieldIndex", format->timeFieldIndex);
     formatObj.insert("timeMask", format->timeMask);
@@ -178,6 +180,10 @@ void FormatManager::loadFormats()
                 format->separator = formatObj.value("separator").toString();
             if (formatObj.contains("lineRegex"))
                 format->lineRegex = QRegularExpression(formatObj.value("lineRegex").toString());
+            if (formatObj.contains("lineFormat") && formatObj.value("lineFormat").toString() == "json")
+                format->lineFormat = Format::LineFormat::Json;
+            else
+                format->lineFormat = Format::LineFormat::None;
 
             format->timeFieldIndex = formatObj.value("timeFieldIndex").toInt(-1);
             format->timeMask = formatObj.value("timeMask").toString();

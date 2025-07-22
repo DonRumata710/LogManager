@@ -1,6 +1,7 @@
 #include "LogUtils.h"
 
 #include <QDateTime>
+#include <nlohmann/json.hpp>
 
 
 bool checkFormat(const QStringList& parts, const std::shared_ptr<Format>& format)
@@ -65,6 +66,48 @@ QStringList splitLine(const QString& line, const std::shared_ptr<Format>& format
             else if (match.lastCapturedIndex() >= parts.size() + 1)
                 value = match.captured(parts.size() + 1);
             parts << value.trimmed();
+        }
+        return parts;
+    }
+    else if (format->lineFormat == Format::LineFormat::Json)
+    {
+        nlohmann::json j;
+        try {
+            j = nlohmann::json::parse(line.toStdString());
+        } catch (const std::exception& ex) {
+            throw std::runtime_error(std::string("failed to parse JSON line: ") + ex.what());
+        }
+
+        QStringList parts;
+        for (const auto& field : format->fields)
+        {
+            const nlohmann::json* current = &j;
+            bool found = true;
+
+            const QStringList tokens = field.name.split('.');
+            for (const auto& token : tokens)
+            {
+                const std::string tokenStr = token.toStdString();
+                if (current->contains(tokenStr))
+                    current = &(*current)[tokenStr];
+                else
+                {
+                    found = false;
+                    break;
+                }
+            }
+
+            if (found)
+            {
+                if (current->is_string())
+                    parts << QString::fromStdString(current->get<std::string>()).trimmed();
+                else
+                    parts << QString::fromStdString(current->dump());
+            }
+            else
+            {
+                parts << QString();
+            }
         }
         return parts;
     }
