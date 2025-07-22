@@ -2,7 +2,6 @@
 
 #include <QDateTime>
 #include <nlohmann/json.hpp>
-#include <sstream>
 
 
 bool checkFormat(const QStringList& parts, const std::shared_ptr<Format>& format)
