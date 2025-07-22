@@ -153,7 +153,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $installPath = Join-Path $Env:GITHUB_WORKSPACE 'deps/win64/Release/nlohmann_json'
           cd external/libs
-          $zip = Get-ChildItem -Filter 'nlohmann-json-*.zip' | Select-Object -First 1
+          $zip = Get-ChildItem -Filter 'json-*.zip' | Select-Object -First 1
           7z x $zip.FullName
           Remove-Item $zip.FullName
           $dir = Get-ChildItem -Directory | Where-Object { $_.Name -like 'nlohmann-json-*' } | Select-Object -First 1
