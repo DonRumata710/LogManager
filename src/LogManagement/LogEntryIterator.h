@@ -5,6 +5,7 @@
 #include "LogUtils.h"
 
 #include <QDebug>
+#include <exception>
 
 #include <boost/heap/priority_queue.hpp>
 
@@ -258,7 +259,9 @@ private:
             }
             catch (const std::exception& ex)
             {
-                qWarning() << "Failed to split line:" << line.value() << ":" << ex.what();
+                qWarning() << "Failed to split line in" << heapItem.metadata->second.filename
+                           << "at" << heapItem.log->getFilePosition() << ":" << line.value() << ':'
+                           << ex.what();
                 line = (heapItem.log.get()->*(straight ? &Log::nextLine : &Log::prevLine))();
                 continue;
             }
@@ -307,8 +310,12 @@ private:
             }
             catch (const std::exception& ex)
             {
-                qWarning() << "Failed to parse time in line:" << line.value() << ":" << ex.what();
+                qWarning() << "Failed to parse time in" << heapItem.metadata->second.filename
+                           << "at" << heapItem.log->getFilePosition() << ':' << line.value() << ':'
+                           << ex.what();
                 line = (heapItem.log.get()->*(straight ? &Log::nextLine : &Log::prevLine))();
+                if constexpr (straight)
+                    heapItem.lineStart = heapItem.log->getFilePosition();
                 continue;
             }
             for (size_t i = 0, fieldCount = 0; i < format->fields.size(); ++i)
