@@ -208,7 +208,7 @@ std::unordered_set<QVariant, VariantHash>& LogStorage::getEnumList(const QString
     auto it = enumLists.find(field);
     if (it == enumLists.end())
     {
-        return enumLists.emplace().first->second;
+        return enumLists.emplace(field, std::unordered_set<QVariant, VariantHash>{}).first->second;
     }
     else
     {

@@ -21,7 +21,7 @@ LogModel::LogModel(LogService* logService, QObject *parent) :
     connect(service, &LogService::dataLoaded, this, &LogModel::handleData);
 
     bool flag = false;
-    for (const auto& format : logService->getLogManager()->getFormats())
+    for (const auto& format : logService->getSession()->getFormats())
     {
         QString timeFormatName = format->fields.at(format->timeFieldIndex).name;
 
@@ -226,7 +226,7 @@ const std::unordered_set<QVariant, VariantHash> LogModel::availableValues(int se
     if (!field.isEnum)
         return {};
 
-    return service->getLogManager()->getEnumList(field.name);
+    return service->getSession()->getEnumList(field.name);
 }
 
 QDateTime convertToQDateTime(const std::chrono::system_clock::time_point& timePoint)

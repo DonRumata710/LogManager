@@ -1,9 +1,13 @@
 #pragma once
 
+#include "LogManagement/Format.h"
+#include "LogView/LogFilterModel.h"
+
 #include <QHeaderView>
 #include <QLineEdit>
 
 #include <vector>
+#include <unordered_set>
 
 
 class FilterHeader : public QHeaderView
@@ -32,6 +36,8 @@ private:
     void updatePositions();
     void setupEditors();
     void adjustLastColumn();
+
+    QWidget* createComboBoxEditor(int section, const std::unordered_set<QVariant, VariantHash>& values, LogFilterModel* proxyModel);
 
 private:
     std::vector<QWidget*> editors;

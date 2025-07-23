@@ -50,7 +50,7 @@ void FilterHeader::updateEditors()
 {
     QT_SLOT_BEGIN
 
-    auto proxyLogModel = qobject_cast<QSortFilterProxyModel*>(model());
+    auto proxyLogModel = qobject_cast<LogFilterModel*>(model());
     if (!proxyLogModel)
     {
         qWarning() << "FilterHeader requires a QSortFilterProxyModel as the model.";
@@ -67,10 +67,20 @@ void FilterHeader::updateEditors()
     for (int i = 0; i < model()->columnCount(); ++i)
     {
         auto cb = qobject_cast<MultiSelectComboBox*>(editors[i]);
-        if (!cb)
-            continue;
-
         auto values = logModel->availableValues(i);
+        if (!cb)
+        {
+            if (values.empty())
+                continue;
+
+            cb = qobject_cast<MultiSelectComboBox*>(editors.emplace_back(createComboBoxEditor(i, values, proxyLogModel)));
+            if (!cb)
+            {
+                qCritical() << "Failed to create MultiSelectComboBox for column" << i;
+                continue;
+            }
+        }
+
         for (const auto& val : values)
             cb->addItem(val.toString(), val);
     }
@@ -181,18 +191,7 @@ void FilterHeader::setupEditors()
         }
         else
         {
-            auto comboBox = new MultiSelectComboBox(this);
-            comboBox->setPlaceholderText(tr("Filter"));
-
-            for (const auto& val : values)
-                comboBox->addItem(val.toString(), val);
-
-            connect(comboBox, &MultiSelectComboBox::currentTextChanged, this, [this, i, proxyModel, comboBox](const QString& text) {
-                emit filterChanged(i, text);
-                proxyModel->setVariantList(i, comboBox->currentText());
-            });
-
-            editors.push_back(comboBox);
+            editors.push_back(createComboBoxEditor(i, values, proxyModel));
         }
     }
     updatePositions();
@@ -202,4 +201,20 @@ void FilterHeader::adjustLastColumn()
 {
     if (model() && model()->columnCount() > 0)
         setSectionResizeMode(model()->columnCount() - 1, QHeaderView::ResizeMode::Stretch);
+}
+
+QWidget* FilterHeader::createComboBoxEditor(int i, const std::unordered_set<QVariant, VariantHash>& values, LogFilterModel* proxyModel)
+{
+    auto comboBox = new MultiSelectComboBox(this);
+    comboBox->setPlaceholderText(tr("Filter"));
+
+    for (const auto& val : values)
+        comboBox->addItem(val.toString(), val);
+
+    connect(comboBox, &MultiSelectComboBox::currentTextChanged, this, [this, i, proxyModel, comboBox](const QString& text) {
+        emit filterChanged(i, text);
+        proxyModel->setVariantList(i, comboBox->currentText());
+    });
+
+    return comboBox;
 }

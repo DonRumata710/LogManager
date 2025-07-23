@@ -337,8 +337,6 @@ private:
 
                         if (field.values.empty())
                             logStorage->getEnumList(field.name).emplace(fieldValue);
-                        for (const auto& val : field.values)
-                            logStorage->getEnumList(field.name).emplace(val);
                     }
 
                     entry.values[field.name] = fieldValue;

@@ -33,7 +33,7 @@ const ThreadSafePtr<Session>& LogService::getSession() const
 int LogService::requestIterator(const std::chrono::system_clock::time_point& startTime,
                                 const std::chrono::system_clock::time_point& endTime)
 {
-    if (!logManager || logManager->getMaxTime() < startTime)
+    if (!session || session->getMaxTime() < startTime)
     {
         qCritical() << "Invalid iterator request parameters.";
         return -1;
@@ -518,9 +518,9 @@ std::vector<std::shared_ptr<Format>> LogService::getFormats(const QStringList& f
 
 void LogService::exportDataToFile(const QString& filename, const QDateTime& startTime, const QDateTime& endTime, const std::function<void (QFile&, const LogEntry&)>& writeFunction)
 {
-    if (!logManager)
+    if (!session)
     {
-        qCritical() << "LogManager is not initialized.";
+        qCritical() << "Session is not initialized.";
         return;
     }
 
