@@ -20,6 +20,15 @@ FilterHeader::FilterHeader(Qt::Orientation orientation, QWidget *parent) : QHead
     connect(this, &QWidget::customContextMenuRequested, this, &FilterHeader::showContextMenu);
 }
 
+void FilterHeader::scroll(int dx)
+{
+    for (const auto& editor : editors)
+    {
+        if (editor)
+            editor->move(editor->x() + dx, editor->y());
+    }
+}
+
 void FilterHeader::showContextMenu(const QPoint& point)
 {
     QT_SLOT_BEGIN
@@ -182,8 +191,6 @@ void FilterHeader::setupEditors()
                 emit filterChanged(i, t);
 
                 auto filter = t;
-                if (!t.isEmpty() && *t.rbegin() != '*')
-                    filter += '*';
                 proxyModel->setFilterWildcard(i, filter);
             });
 

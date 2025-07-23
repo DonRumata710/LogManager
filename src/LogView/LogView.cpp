@@ -172,3 +172,15 @@ void LogView::handleFirstLineAddition(const QModelIndex& parent, int first, int 
     }
     QT_SLOT_END
 }
+
+void LogView::scrollContentsBy(int dx, int dy)
+{
+    QTreeView::scrollContentsBy(dx, dy);
+
+    if (dx != 0)
+    {
+        auto* header = qobject_cast<FilterHeader*>(this->header());
+        if (header)
+            header->scroll(dx);
+    }
+}

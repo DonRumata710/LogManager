@@ -26,5 +26,8 @@ private slots:
     void handleFirstLineAddition(const QModelIndex& parent, int first, int last);
 
 private:
+    virtual void scrollContentsBy(int dx, int dy) override;
+
+private:
     std::optional<QModelIndex> lastScrollPosition;
 };

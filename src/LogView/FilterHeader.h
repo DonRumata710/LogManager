@@ -17,6 +17,8 @@ class FilterHeader : public QHeaderView
 public:
     explicit FilterHeader(Qt::Orientation orientation, QWidget *parent = nullptr);
 
+    void scroll(int dx);
+
 signals:
     void filterChanged(int section, const QString &text);
 
