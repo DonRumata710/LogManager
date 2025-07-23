@@ -15,7 +15,7 @@ void LogFilterModel::setFilterWildcard(int column, const QString& pattern)
     if (pattern.isEmpty())
         columnFilters.erase(column);
     else
-        columnFilters[column] = QRegularExpression{ QRegularExpression::wildcardToRegularExpression(pattern) };
+        columnFilters[column] = QRegularExpression{ QRegularExpression::wildcardToRegularExpression(pattern, QRegularExpression::WildcardConversionOption::UnanchoredWildcardConversion) };
     invalidateFilter();
 }
 
