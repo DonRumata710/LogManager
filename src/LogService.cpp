@@ -271,7 +271,7 @@ void LogService::exportData(const QString& filename, const QDateTime& startTime,
         }
 
         file.write("\n");
-    });
+    }, fields);
 
     emit progressUpdated(QStringLiteral("Export finished"), 100);
 
@@ -303,7 +303,7 @@ void LogService::exportData(const QString& filename, const QDateTime& startTime,
         }
 
         file.write("\n");
-    });
+    }, fields);
 
     emit progressUpdated(QStringLiteral("Export finished"), 100);
 
@@ -344,8 +344,9 @@ void LogService::exportData(const QString& filename, QTreeView* view)
         QVariant data = model->headerData(col, Qt::Horizontal, Qt::DisplayRole);
         if (data.isValid())
             file.write(data.toString().toUtf8() + ";");
-        file.write("\n");
     }
+
+    file.write("\n");
 
     int totalRows = model->rowCount();
     int lastPercent = 0;
@@ -516,7 +517,7 @@ std::vector<std::shared_ptr<Format>> LogService::getFormats(const QStringList& f
     return res;
 }
 
-void LogService::exportDataToFile(const QString& filename, const QDateTime& startTime, const QDateTime& endTime, const std::function<void (QFile&, const LogEntry&)>& writeFunction)
+void LogService::exportDataToFile(const QString& filename, const QDateTime& startTime, const QDateTime& endTime, const std::function<void (QFile&, const LogEntry&)>& writeFunction, const std::function<void (QFile& file)>& prefix)
 {
     if (!session)
     {
@@ -536,6 +537,9 @@ void LogService::exportDataToFile(const QString& filename, const QDateTime& star
         qCritical() << "Failed to open file for writing:" << file.errorString();
         return;
     }
+
+    if (prefix)
+        prefix(file);
 
     auto startMs = startTime.toStdSysMilliseconds();
     auto endMs = endTime.toStdSysMilliseconds();
@@ -562,6 +566,19 @@ void LogService::exportDataToFile(const QString& filename, const QDateTime& star
 
     if (lastPercent < 100)
         emit progressUpdated(QStringLiteral("Exporting data to %1 ...").arg(filename), 100);
+}
+
+void LogService::exportDataToFile(const QString& filename, const QDateTime& startTime, const QDateTime& endTime, const std::function<void (QFile&, const LogEntry&)>& writeFunction, const QStringList& fields)
+{
+    exportDataToFile(filename, startTime, endTime, writeFunction,
+                     [&fields](QFile& file) {
+                         for (const auto& field : fields)
+                         {
+                             file.write(field.toUtf8());
+                             file.write(";");
+                         }
+                         file.write("\n");
+    });
 }
 
 LogService::IteratorRequest::IteratorRequest(int index, const std::chrono::system_clock::time_point& start, const std::chrono::system_clock::time_point& end) :

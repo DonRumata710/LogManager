@@ -40,6 +40,7 @@ void LogFilterModel::setVariantList(int column, const QStringList& values)
 LogFilter LogFilterModel::exportFilter() const
 {
     auto filterVariants = variants;
+    auto fieldFilters = columnFilters;
     QStringList fields;
     std::unordered_set<QString> modules;
     for (int i = 0; i < sourceModel()->columnCount(); ++i)
@@ -57,7 +58,25 @@ LogFilter LogFilterModel::exportFilter() const
 
         fields.append(sourceModel()->headerData(i, Qt::Horizontal, Qt::DisplayRole).toString());
     }
-    return LogFilter{ columnFilters, filterVariants, fields, modules };
+
+    for (int i = static_cast<int>(LogModel::PredefinedColumn::Module) + 1; i < sourceModel()->columnCount(); ++i)
+    {
+        auto fieldIt = fieldFilters.find(i);
+        if (fieldIt != fieldFilters.end())
+        {
+            fieldFilters.emplace(i - 1, fieldIt->second);
+            fieldFilters.erase(fieldIt);
+        }
+
+        auto variantIt = filterVariants.find(i);
+        if (variantIt != filterVariants.end())
+        {
+            filterVariants.emplace(i - 1, variantIt->second);
+            filterVariants.erase(variantIt);
+        }
+    }
+
+    return LogFilter{ fieldFilters, filterVariants, fields, modules };
 }
 
 bool LogFilterModel::filterAcceptsRow(int source_row, const QModelIndex& source_parent) const

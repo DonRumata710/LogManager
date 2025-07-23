@@ -133,7 +133,8 @@ private:
 private:
     std::vector<std::shared_ptr<Format>> getFormats(const QStringList& formats);
 
-    void exportDataToFile(const QString& filename, const QDateTime& startTime, const QDateTime& endTime, const std::function<void (QFile& file, const LogEntry&)>& writeFunction);
+    void exportDataToFile(const QString& filename, const QDateTime& startTime, const QDateTime& endTime, const std::function<void (QFile& file, const LogEntry&)>& writeFunction, const std::function<void (QFile& file)>& prefix = std::function<void (QFile& file)>{});
+    void exportDataToFile(const QString& filename, const QDateTime& startTime, const QDateTime& endTime, const std::function<void (QFile& file, const LogEntry&)>& writeFunction, const QStringList& fields);
 
 private:
     ThreadSafePtr<LogManager> logManager;
