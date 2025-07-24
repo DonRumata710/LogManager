@@ -23,7 +23,7 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    setWindowTitle(QApplication::instance()->applicationName());
+    setTitleClosed();
 
     progressBar = new QProgressBar(this);
     progressBar->setVisible(false);
@@ -144,6 +144,7 @@ void MainWindow::on_actionClose_triggered()
     switchModel(nullptr);
     setCloseActionEnabled(false);
     ui->searchBar->hide();
+    setTitleClosed();
 
     QT_SLOT_END
 }
@@ -306,7 +307,7 @@ void MainWindow::on_actionFiltered_export_triggered()
     QT_SLOT_END
 }
 
-void MainWindow::logManagerCreated()
+void MainWindow::logManagerCreated(const QString& source)
 {
     QT_SLOT_BEGIN
 
@@ -364,6 +365,8 @@ void MainWindow::logManagerCreated()
     switchModel(proxyModel);
     setCloseActionEnabled(true);
     ui->searchBar->show();
+
+    setTitleOpened(source);
 
     QT_SLOT_END
 }
@@ -472,4 +475,14 @@ LogModel* MainWindow::getLogModel()
         }
     }
     return logModel;
+}
+
+void MainWindow::setTitleOpened(const QString& source)
+{
+    setWindowTitle(QApplication::instance()->applicationName() + " - " + source);
+}
+
+void MainWindow::setTitleClosed()
+{
+    setWindowTitle(QApplication::instance()->applicationName());
 }

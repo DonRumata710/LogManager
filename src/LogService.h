@@ -67,7 +67,7 @@ public:
     std::vector<LogEntry> getResult(int index);
 
 signals:
-    void logManagerCreated();
+    void logManagerCreated(const QString& source);
     void iteratorCreated(int, bool isStraight);
     void dataLoaded(int);
 

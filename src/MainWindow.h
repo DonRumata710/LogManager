@@ -37,7 +37,7 @@ private slots:
     void on_actionFull_export_triggered();
     void on_actionFiltered_export_triggered();
 
-    void logManagerCreated();
+    void logManagerCreated(const QString& source);
 
     void handleProgress(const QString& message, int percent);
 
@@ -64,6 +64,9 @@ private:
     void switchModel(QAbstractItemModel* model);
 
     LogModel* getLogModel();
+
+    void setTitleOpened(const QString& source);
+    void setTitleClosed();
 
 private:
     Ui::MainWindow *ui;

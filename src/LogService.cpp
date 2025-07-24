@@ -113,7 +113,7 @@ void LogService::openFile(const QString& file, const QStringList& formats)
 
     auto newLogManager = std::make_shared<LogManager>(file, getFormats(formats));
     logManager = newLogManager;
-    emit logManagerCreated();
+    emit logManagerCreated(file);
 
     emit progressUpdated(QStringLiteral("File %1 opened").arg(file), 100);
 
@@ -128,7 +128,7 @@ void LogService::openFolder(const QString& logDirectory, const QStringList& form
 
     auto newLogManager = std::make_shared<LogManager>(std::vector<QString>{logDirectory}, getFormats(formats));
     logManager = newLogManager;
-    emit logManagerCreated();
+    emit logManagerCreated(logDirectory);
 
     emit progressUpdated(QStringLiteral("Folder %1 opened").arg(logDirectory), 100);
 
