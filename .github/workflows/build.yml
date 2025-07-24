@@ -50,12 +50,6 @@ jobs:
           key: ${{ runner.os }}-boost-1.88.0
           path: deps/win64/Release/boost
 
-      - name: Cache nlohmann_json
-        id: cache-nlohmann
-        uses: actions/cache@v3
-        with:
-          key: ${{ runner.os }}-nlohmann-3.12.0
-          path: deps/win64/Release/nlohmann_json
 
       - name: Download ZLib
         if: steps.cache-zlib.outputs.cache-hit != 'true'
@@ -136,32 +130,6 @@ jobs:
           ./b2 install --prefix=$installPath --build-type=complete --layout=versioned address-model=64 variant=release link=static,shared runtime-link=static,shared threading=multi --with-headers
           cd ../../..
 
-      - name: Download nlohmann_json
-        if: steps.cache-nlohmann.outputs.cache-hit != 'true'
-        uses: robinraju/release-downloader@v1
-        with:
-          repository: 'nlohmann/json'
-          tag: 'v3.12.0'
-          zipBall: true
-          out-file-path: 'external/libs'
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build nlohmann_json
-        if: steps.cache-nlohmann.outputs.cache-hit != 'true'
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $installPath = Join-Path $Env:GITHUB_WORKSPACE 'deps/win64/Release/nlohmann_json'
-          cd external/libs
-          $zip = Get-ChildItem -Filter 'json-*.zip' | Select-Object -First 1
-          7z x $zip.FullName
-          Remove-Item $zip.FullName
-          $dir = Get-ChildItem -Directory | Where-Object { $_.Name -like 'nlohmann-json-*' } | Select-Object -First 1
-          cd $dir.Name
-          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DJSON_BuildTests=OFF -DCMAKE_INSTALL_PREFIX="$installPath"
-          cmake --build build --config Release --parallel
-          cmake --install build --config Release
-          cd ../../..
 
       - name: Configure
         run: |
