@@ -1,7 +1,9 @@
 #include "LogUtils.h"
 
 #include <QDateTime>
-#include <nlohmann/json.hpp>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
 
 
 bool checkFormat(const QStringList& parts, const std::shared_ptr<Format>& format)
@@ -71,25 +73,49 @@ QStringList splitLine(const QString& line, const std::shared_ptr<Format>& format
     }
     else if (format->lineFormat == Format::LineFormat::Json)
     {
-        nlohmann::json j;
-        try {
-            j = nlohmann::json::parse(line.toStdString());
-        } catch (const std::exception& ex) {
-            throw std::runtime_error(std::string("failed to parse JSON line: ") + ex.what());
-        }
+        QJsonParseError err;
+        QJsonDocument doc = QJsonDocument::fromJson(line.toUtf8(), &err);
+        if (err.error != QJsonParseError::NoError)
+            throw std::runtime_error("failed to parse JSON line: " + err.errorString().toStdString());
 
         QStringList parts;
         for (const auto& field : format->fields)
         {
-            const nlohmann::json* current = &j;
+            QJsonValue current = doc.object();
             bool found = true;
 
             const QStringList tokens = field.name.split('.');
             for (const auto& token : tokens)
             {
-                const std::string tokenStr = token.toStdString();
-                if (current->contains(tokenStr))
-                    current = &(*current)[tokenStr];
+                if (current.isObject())
+                {
+                    QJsonObject obj = current.toObject();
+                    auto it = obj.find(token);
+                    if (it != obj.end())
+                    {
+                        current = it.value();
+                    }
+                    else
+                    {
+                        found = false;
+                        break;
+                    }
+                }
+                else if (current.isArray())
+                {
+                    bool ok = false;
+                    int index = token.toInt(&ok);
+                    QJsonArray arr = current.toArray();
+                    if (ok && index >= 0 && index < arr.size())
+                    {
+                        current = arr.at(index);
+                    }
+                    else
+                    {
+                        found = false;
+                        break;
+                    }
+                }
                 else
                 {
                     found = false;
@@ -99,10 +125,18 @@ QStringList splitLine(const QString& line, const std::shared_ptr<Format>& format
 
             if (found)
             {
-                if (current->is_string())
-                    parts << QString::fromStdString(current->get<std::string>()).trimmed();
+                if (current.isString())
+                    parts << current.toString().trimmed();
+                else if (current.isBool())
+                    parts << (current.toBool() ? "true" : "false");
+                else if (current.isDouble())
+                    parts << QString::number(current.toDouble());
+                else if (current.isArray())
+                    parts << QString::fromUtf8(QJsonDocument(current.toArray()).toJson(QJsonDocument::Compact));
+                else if (current.isObject())
+                    parts << QString::fromUtf8(QJsonDocument(current.toObject()).toJson(QJsonDocument::Compact));
                 else
-                    parts << QString::fromStdString(current->dump());
+                    parts << QString();
             }
             else
             {

@@ -25,7 +25,6 @@ check_local_hints()
 find_package(Qt6 COMPONENTS Core Gui Widgets REQUIRED)
 find_package(QuaZip-Qt6 COMPONENTS QuaZip)
 find_package(Boost COMPONENTS headers REQUIRED)
-find_package(nlohmann_json REQUIRED)
 
 file(GLOB ts ${CMAKE_CURRENT_SOURCE_DIR}/translations/*)
 if (${ts} NOT STREQUAL "" AND QT6::LINGUIST_TOOLS_FOUND)
@@ -73,7 +72,6 @@ target_link_libraries(${PROJECT_NAME}
         Qt6::Widgets
         QuaZip::QuaZip
         Boost::headers
-        nlohmann_json::nlohmann_json
 )
 
 get_target_property(_qt5_qmake_location Qt::qmake IMPORTED_LOCATION)
