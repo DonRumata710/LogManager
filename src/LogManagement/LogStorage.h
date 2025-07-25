@@ -1,7 +1,8 @@
 #pragma once
 
 #include "Format.h"
-#include "Log.h"
+#include "LogMetadata.h"
+#include "DirectoryScanner.h"
 
 #include <QString>
 
@@ -12,21 +13,10 @@
 class LogStorage
 {
 public:
-    typedef std::function<std::shared_ptr<Log>(const QString&, const std::shared_ptr<Format>&)> FileBuilder;
-
-    struct LogMetadata
-    {
-        std::shared_ptr<Format> format;
-        FileBuilder fileBuilder;
-        QString filename;
-    };
     typedef std::pair<const std::chrono::system_clock::time_point, LogMetadata> LogMetaEntry;
 
 public:
-    LogStorage();
-
-    void addLog(const QString& module, const std::chrono::system_clock::time_point& time, const std::shared_ptr<Format>& format, LogMetadata&& log);
-    void finalize();
+    LogStorage(std::vector<DirectoryScanner::LogFile>&& files);
 
     LogStorage getNarrowedStorage(const std::unordered_set<QString>& modules, const std::chrono::system_clock::time_point& minTime, const std::chrono::system_clock::time_point& maxTime) const;
 
@@ -51,7 +41,10 @@ private:
     typedef std::unordered_map<QString, std::map<std::chrono::system_clock::time_point, LogMetadata, std::greater<std::chrono::system_clock::time_point>>> LogMap;
 
 private:
-    LogStorage(const std::chrono::system_clock::time_point& minTime, const std::chrono::system_clock::time_point& maxTime, const LogMap& logs);
+    LogStorage() = default;
+
+    void addFile(DirectoryScanner::LogFile&& file);
+    void finalize(const std::unordered_map<QString, std::chrono::system_clock::time_point>& endTimes);
 
 private:
     LogMap docs;

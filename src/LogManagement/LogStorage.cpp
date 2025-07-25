@@ -7,79 +7,15 @@
 #include <QDateTime>
 
 
-LogStorage::LogStorage() :
-    maxTime(std::chrono::system_clock::time_point::min())
-{}
-
-void LogStorage::addLog(const QString& module, const std::chrono::system_clock::time_point& time, const std::shared_ptr<Format>& format, LogMetadata&& log)
+LogStorage::LogStorage(std::vector<DirectoryScanner::LogFile>&& files) : maxTime(std::chrono::system_clock::time_point::min())
 {
-    auto& logMap = docs[module];
-    auto it = logMap.find(time);
-    if (it == logMap.end())
+    std::unordered_map<QString, std::chrono::system_clock::time_point> endTimes;
+    for (auto&& file : files)
     {
-        logMap.emplace(time, std::move(log));
-        usedFormats.insert(format);
-        modules.insert(module);
-
-        if (minTime == std::chrono::system_clock::time_point() || time < minTime)
-            minTime = time;
+        addFile(std::move(file));
+        endTimes[file.module] = file.end;
     }
-    else
-    {
-        qWarning() << "Log already exists for module" << module << "at time" << DateTimeFromChronoSystemClock(time);
-    }
-}
-
-void LogStorage::finalize()
-{
-    for (auto& module : docs)
-    {
-        auto& logMap = module.second;
-        if (logMap.empty())
-            throw std::logic_error("LogStorage::finalize: No logs found for module " + module.first.toStdString());
-
-        const auto& lastLog = *logMap.begin();
-        auto log = lastLog.second.fileBuilder(lastLog.second.filename, lastLog.second.format);
-        log->goToEnd();
-
-        QStringList parts;
-        do
-        {
-            auto line = log->prevLine();
-            if (!line)
-            {
-                qCritical() << "Log file is empty or could not be read:" << lastLog.second.filename;
-                break;
-            }
-
-            try
-            {
-                parts = splitLine(line.value(), lastLog.second.format);
-            }
-            catch (const std::exception& ex)
-            {
-                qWarning() << "Failed to split line in" << lastLog.second.filename << ":" << ex.what();
-                continue;
-            }
-
-            if (parts.size() <= lastLog.second.format->timeFieldIndex)
-                continue;
-        }
-        while(!checkFormat(parts, lastLog.second.format));
-
-        if (parts.empty())
-            continue;
-
-        try
-        {
-            auto time = parseTime(parts[lastLog.second.format->timeFieldIndex], lastLog.second.format);
-            maxTime = std::max(maxTime, time + std::chrono::milliseconds(1));
-        }
-        catch (const std::exception& ex)
-        {
-            qWarning() << "Failed to parse time in" << lastLog.second.filename << ":" << ex.what();
-        }
-    }
+    finalize(endTimes);
 }
 
 LogStorage LogStorage::getNarrowedStorage(const std::unordered_set<QString>& modules, const std::chrono::system_clock::time_point& newMinTime, const std::chrono::system_clock::time_point& newMaxTime) const
@@ -111,7 +47,7 @@ LogStorage LogStorage::getNarrowedStorage(const std::unordered_set<QString>& mod
     {
         res.docs[module] = docs.at(module);
 
-        const auto& format = res.docs[module].begin()->second.format;
+        const auto& format = res.docs[module].rbegin()->second.format;
         res.usedFormats.insert(format);
     }
 
@@ -154,7 +90,7 @@ const LogStorage::LogMetaEntry& LogStorage::findLog(const QString& module, const
 
     qDebug() << "Log not found for module" << module << "at time" << QDateTime::fromSecsSinceEpoch(std::chrono::system_clock::to_time_t(time));
 
-    static const std::pair<const std::chrono::system_clock::time_point, LogStorage::LogMetadata> emptyPair;
+    static const std::pair<const std::chrono::system_clock::time_point, LogMetadata> emptyPair;
     return emptyPair;
 }
 
@@ -178,7 +114,7 @@ const LogStorage::LogMetaEntry& LogStorage::findPrevLog(const QString& module, c
 
     qDebug() << "Previous log not found for module" << module << "at time" << QDateTime::fromSecsSinceEpoch(std::chrono::system_clock::to_time_t(time));
 
-    static const std::pair<const std::chrono::system_clock::time_point, LogStorage::LogMetadata> emptyPair;
+    static const std::pair<const std::chrono::system_clock::time_point, LogMetadata> emptyPair;
     return emptyPair;
 }
 
@@ -195,11 +131,12 @@ const LogStorage::LogMetaEntry& LogStorage::findNextLog(const QString& module, c
         if (logIt != it->second.begin())
         {
             --logIt;
+            if (logIt->second.fileBuilder)
             return *logIt;
         }
     }
 
-    static const std::pair<const std::chrono::system_clock::time_point, LogStorage::LogMetadata> emptyPair;
+    static const std::pair<const std::chrono::system_clock::time_point, LogMetadata> emptyPair;
     return emptyPair;
 }
 
@@ -238,4 +175,39 @@ std::chrono::system_clock::time_point LogStorage::getMinTime() const
 std::chrono::system_clock::time_point LogStorage::getMaxTime() const
 {
     return maxTime;
+}
+
+void LogStorage::addFile(DirectoryScanner::LogFile&& file)
+{
+    auto& logMap = docs[file.module];
+    auto it = logMap.lower_bound(file.start);
+    if (it == logMap.end() || it->first != file.start)
+    {
+        usedFormats.insert(file.metadata.format);
+        logMap.emplace_hint(it, file.start, std::move(file.metadata));
+        modules.insert(file.module);
+
+        if (minTime == std::chrono::system_clock::time_point() || file.start < minTime)
+            minTime = file.start;
+        if (maxTime == std::chrono::system_clock::time_point() || file.end > maxTime)
+            maxTime = file.end;
+    }
+    else
+    {
+        qWarning() << "Log already exists for module" << file.module << "at time" << DateTimeFromChronoSystemClock(file.start);
+    }
+}
+
+void LogStorage::finalize(const std::unordered_map<QString, std::chrono::system_clock::time_point>& endTimes)
+{
+    for (auto& module : docs)
+    {
+        auto& logMap = module.second;
+        if (logMap.empty())
+            throw std::logic_error("LogStorage::finalize: No logs found for module " + module.first.toStdString());
+
+        const auto& endTime = endTimes.at(module.first) + std::chrono::milliseconds(1);
+        maxTime = std::max(maxTime, endTime);
+        module.second.emplace(endTime, LogMetadata{});
+    }
 }

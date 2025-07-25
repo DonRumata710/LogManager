@@ -258,3 +258,10 @@ int getEncodingWidth(QStringConverter::Encoding encoding)
         return 1;
     }
 }
+
+int findSlash(const QString& filename)
+{
+    int slashPos1 = filename.lastIndexOf('/');
+    int slashPos2 = filename.lastIndexOf('\\');
+    return std::max(slashPos1, slashPos2);
+}

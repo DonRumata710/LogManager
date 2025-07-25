@@ -4,6 +4,7 @@
 #include "Log.h"
 #include "LogStorage.h"
 #include "Session.h"
+#include "DirectoryScanner.h"
 
 #include <QDateTime>
 #include <QBuffer>
@@ -29,10 +30,20 @@ public:
     Session createSession(const std::unordered_set<QString>& modules, const std::chrono::system_clock::time_point& minTime, const std::chrono::system_clock::time_point& maxTime) const;
 
 private:
-    bool scanArchive(const QString& filename, const std::vector<std::shared_ptr<Format>>& formats);
+    struct FileDesc
+    {
+        std::shared_ptr<Format> format;
+        std::chrono::system_clock::time_point start;
+        std::chrono::system_clock::time_point end;
+    };
 
-    bool addFile(const QString& filename, const QString& stem, const QString& extension, std::function<std::unique_ptr<QIODevice>(const QString&)> createFileFunc, const std::vector<std::shared_ptr<Format>>& formats);
-    std::optional<std::pair<std::shared_ptr<Format>, std::chrono::system_clock::time_point>> scanLogFile(const QString& filename, std::function<std::unique_ptr<QIODevice>(const QString&)> createFileFunc, const std::vector<std::shared_ptr<Format>>& formats);
+private:
+    bool scanPlainFile(DirectoryScanner& scanner, const QString& filename, const QString& stem, const QString& extension, const std::vector<std::shared_ptr<Format>>& formats);
+    bool scanArchive(DirectoryScanner& scanner, const QString& filename, const std::vector<std::shared_ptr<Format>>& formats);
+
+    bool addFile(DirectoryScanner& scanner, const QString& filename, const QString& stem, const QString& extension, std::function<std::unique_ptr<QIODevice>(const QString&)> createFileFunc, const std::vector<std::shared_ptr<Format>>& formats);
+    std::optional<FileDesc> scanLogFile(const QString& filename, std::function<std::unique_ptr<QIODevice>(const QString&)> createFileFunc, const std::vector<std::shared_ptr<Format>>& formats);
+    std::chrono::system_clock::time_point getEndTime(const QString& filename, Log& log, const std::shared_ptr<Format>& format);
 
     Log createLog(const QString& filename, std::function<std::unique_ptr<QIODevice>(const QString&)> createFileFunc, std::shared_ptr<Format> format);
 

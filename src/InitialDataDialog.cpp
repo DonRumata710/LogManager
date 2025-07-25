@@ -5,6 +5,8 @@
 
 #include <QPushButton>
 
+#include <set>
+
 
 InitialDataDialog::InitialDataDialog(const LogManager& manager, QWidget* parent) :
     QDialog(parent),
@@ -29,7 +31,8 @@ InitialDataDialog::InitialDataDialog(const LogManager& manager, QWidget* parent)
         ui->endTimeEdit->setMinimumDateTime(dateTime);
     });
 
-    for (const auto& module : manager.getModules())
+    std::set<QString> modules{ manager.getModules().begin(), manager.getModules().end() };
+    for (const auto& module : modules)
     {
         QListWidgetItem* item = new QListWidgetItem(module, ui->modulesListWidget);
         item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
