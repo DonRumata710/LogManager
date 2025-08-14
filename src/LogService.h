@@ -2,6 +2,7 @@
 
 #include "LogManagement/LogManager.h"
 #include "LogManagement/Session.h"
+#include "LogManagement/FilteredLogIterator.h"
 #include "ThreadSafePtr.h"
 #include "LogFilter.h"
 
@@ -119,7 +120,9 @@ private:
         int index;
         std::variant<
             std::shared_ptr<LogEntryIterator<true>>,
-            std::shared_ptr<LogEntryIterator<false>>
+            std::shared_ptr<LogEntryIterator<false>>,
+            std::shared_ptr<FilteredLogIterator<true>>,
+            std::shared_ptr<FilteredLogIterator<false>>
             > iterator;
         int entriesCount;
         std::optional<std::chrono::system_clock::time_point> until;

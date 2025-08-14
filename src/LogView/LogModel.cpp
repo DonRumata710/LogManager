@@ -4,6 +4,7 @@
 #include "Settings.h"
 #include "Utils.h"
 #include "ScopeGuard.h"
+#include "../LogManagement/FilteredLogIterator.h"
 
 #include <QFontDatabase>
 
@@ -157,28 +158,13 @@ bool LogModel::canFetchUpMore() const
 
 void LogModel::fetchUpMore()
 {
-    if (!dataRequests.empty())
-        return;
+    fetchUpMoreImpl(reverseIterator);
+}
 
-    if (!canFetchUpMore())
-        return;
-
-    auto it = entryCache.lower_bound({ reverseIterator->getCurrentTime() });
-    if (it != entryCache.begin())
-    {
-        --it;
-        if (it != entryCache.begin() && it->heap.empty())
-            --it;
-    }
-    else
-    {
-        it = entryCache.end();
-    }
-
-    if (it == entryCache.end())
-        dataRequests[service->requestLogEntries(reverseIterator, blockSize)] = DataRequestType::Prepend;
-    else
-        dataRequests[service->requestLogEntries(reverseIterator, blockSize, it->time)] = DataRequestType::Prepend;
+void LogModel::fetchUpMore(const LogFilter& filter)
+{
+    auto filtered = std::make_shared<FilteredLogIterator<false>>(reverseIterator, filter);
+    fetchUpMoreImpl(filtered);
 }
 
 bool LogModel::canFetchDownMore() const
@@ -186,22 +172,64 @@ bool LogModel::canFetchDownMore() const
     return iterator && iterator->hasLogs();
 }
 
+bool LogModel::isFulled() const
+{
+    return logs.size() >= static_cast<size_t>(blockSize * blockCount);
+}
+
 void LogModel::fetchDownMore()
+{
+    fetchDownMoreImpl(iterator);
+}
+
+void LogModel::fetchDownMore(const LogFilter& filter)
+{
+    auto filtered = std::make_shared<FilteredLogIterator<true>>(iterator, filter);
+    fetchDownMoreImpl(filtered);
+}
+
+void LogModel::fetchUpMoreImpl(const std::shared_ptr<LogEntryIterator<false>>& it)
 {
     if (!dataRequests.empty())
         return;
 
-    if (!canFetchDownMore())
+    if (!it || !it->hasLogs())
         return;
 
-    auto it = entryCache.upper_bound({ iterator->getCurrentTime() });
-    while (it != entryCache.end() && it->heap.empty())
-        ++it;
-
-    if (it == entryCache.end())
-        dataRequests[service->requestLogEntries(iterator, blockSize)] = DataRequestType::Append;
+    auto cacheIt = entryCache.lower_bound({ it->getCurrentTime() });
+    if (cacheIt != entryCache.begin())
+    {
+        --cacheIt;
+        if (cacheIt != entryCache.begin() && cacheIt->heap.empty())
+            --cacheIt;
+    }
     else
-        dataRequests[service->requestLogEntries(iterator, blockSize, it->time)] = DataRequestType::Append;
+    {
+        cacheIt = entryCache.end();
+    }
+
+    if (cacheIt == entryCache.end())
+        dataRequests[service->requestLogEntries(it, blockSize)] = DataRequestType::Prepend;
+    else
+        dataRequests[service->requestLogEntries(it, blockSize, cacheIt->time)] = DataRequestType::Prepend;
+}
+
+void LogModel::fetchDownMoreImpl(const std::shared_ptr<LogEntryIterator<true>>& it)
+{
+    if (!dataRequests.empty())
+        return;
+
+    if (!it || !it->hasLogs())
+        return;
+
+    auto cacheIt = entryCache.upper_bound({ it->getCurrentTime() });
+    while (cacheIt != entryCache.end() && cacheIt->heap.empty())
+        ++cacheIt;
+
+    if (cacheIt == entryCache.end())
+        dataRequests[service->requestLogEntries(it, blockSize)] = DataRequestType::Append;
+    else
+        dataRequests[service->requestLogEntries(it, blockSize, cacheIt->time)] = DataRequestType::Append;
 }
 
 const std::vector<Format::Field>& LogModel::getFields() const
@@ -444,6 +472,11 @@ Qt::ItemFlags LogModel::flags(const QModelIndex& index) const
         return Qt::NoItemFlags;
 
     return QAbstractItemModel::flags(index) | Qt::ItemIsSelectable | Qt::ItemIsEditable;
+}
+
+LogService* LogModel::getService() const
+{
+    return service;
 }
 
 void LogModel::handleIterator(int index, bool isStraight)

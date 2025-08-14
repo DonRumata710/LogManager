@@ -3,6 +3,9 @@
 #include <QAbstractItemModel>
 #include <QTreeView>
 
+class LogModel;
+class LogFilterModel;
+
 
 class LogView : public QTreeView
 {
@@ -30,4 +33,6 @@ private:
 
 private:
     std::optional<QModelIndex> lastScrollPosition;
+    LogModel* currentLogModel = nullptr;
+    LogFilterModel* currentProxyModel = nullptr;
 };

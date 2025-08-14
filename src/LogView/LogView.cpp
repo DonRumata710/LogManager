@@ -2,10 +2,12 @@
 
 #include "FilterHeader.h"
 #include "LogModel.h"
+#include "LogFilterModel.h"
 #include "../Utils.h"
 
 #include <QScrollBar>
 #include <QAbstractProxyModel>
+#include <algorithm>
 
 
 LogView::LogView(QWidget* parent) : QTreeView(parent)
@@ -21,12 +23,49 @@ LogView::LogView(QWidget* parent) : QTreeView(parent)
 
 void LogView::setLogModel(QAbstractItemModel* newModel)
 {
+    if (currentLogModel)
+        disconnect(currentLogModel, nullptr, this, nullptr);
+    if (currentProxyModel)
+        disconnect(currentProxyModel, nullptr, this, nullptr);
+
     setModel(newModel);
 
-    auto* logModel = qobject_cast<LogModel*>(newModel);
-    auto* proxyModel = qobject_cast<QAbstractProxyModel*>(newModel);
-    if (!logModel && proxyModel)
-        logModel = qobject_cast<LogModel*>(proxyModel->sourceModel());
+    currentProxyModel = qobject_cast<LogFilterModel*>(newModel);
+    currentLogModel = qobject_cast<LogModel*>(newModel);
+    if (!currentLogModel && currentProxyModel)
+        currentLogModel = qobject_cast<LogModel*>(currentProxyModel->sourceModel());
+
+    if (!currentLogModel)
+    {
+        qWarning() << "Unexpected model type in log view";
+        return;
+    }
+
+    if (currentProxyModel)
+    {
+        connect(currentProxyModel, &LogFilterModel::sourceModelChanged, this, [this](QAbstractItemModel*) {
+            setLogModel(model());
+        });
+    }
+
+    connect(currentLogModel, &LogModel::modelReset, this, &LogView::handleReset);
+    connect(currentLogModel, &LogModel::modelReset, this, &LogView::handleFirstDataLoaded);
+
+    connect(currentLogModel, &LogModel::rowsAboutToBeInserted, this, &LogView::handleFirstLineChangeStart);
+    connect(currentLogModel, &LogModel::rowsAboutToBeRemoved, this, &LogView::handleFirstLineChangeStart);
+    connect(currentLogModel, &LogModel::rowsInserted, this, &LogView::handleFirstLineAddition);
+    connect(currentLogModel, &LogModel::rowsRemoved, this, &LogView::handleFirstLineRemoving);
+}
+
+void LogView::checkFetchNeeded()
+{
+    QT_SLOT_BEGIN
+    QScrollBar* sb = verticalScrollBar();
+
+    auto* proxyModel = qobject_cast<QAbstractProxyModel*>(model());
+    auto* logModel = proxyModel
+                     ? qobject_cast<LogModel*>(proxyModel->sourceModel())
+                     : qobject_cast<LogModel*>(model());
 
     if (!logModel)
     {
@@ -34,33 +73,27 @@ void LogView::setLogModel(QAbstractItemModel* newModel)
         return;
     }
 
-    connect(logModel, &LogModel::modelReset, this, &LogView::handleReset);
-    connect(logModel, &LogModel::modelReset, this, &LogView::handleFirstDataLoaded);
+    auto* filterModel = qobject_cast<LogFilterModel*>(model());
 
-    connect(logModel, &LogModel::rowsAboutToBeInserted, this, &LogView::handleFirstLineChangeStart);
-    connect(logModel, &LogModel::rowsAboutToBeRemoved, this, &LogView::handleFirstLineChangeStart);
-    connect(logModel, &LogModel::rowsInserted, this, &LogView::handleFirstLineAddition);
-    connect(logModel, &LogModel::rowsRemoved, this, &LogView::handleFirstLineRemoving);
-}
+    // If the proxy model shows no rows while the source model still has data,
+    // the filter hides everything — don't fetch more.
+    if (model()->rowCount() == 0 && logModel->rowCount() > 0)
+        return;
 
-void LogView::checkFetchNeeded()
-{
-    QT_SLOT_BEGIN
+    int visibleRows = viewport()->height() / std::max(1, rowHeight(0));
+    if (model()->rowCount() < visibleRows &&
+        logModel->rowCount() > model()->rowCount())
+        return;
 
-    QScrollBar* sb = verticalScrollBar();
     int min = sb->minimum();
     int max = sb->maximum();
     int value = sb->value();
     int range = max - min;
 
-    auto* logModel = qobject_cast<LogModel*>(model());
-    auto* proxyModel = qobject_cast<QAbstractProxyModel*>(model());
-    if (proxyModel)
-        logModel = qobject_cast<LogModel*>(proxyModel->sourceModel());
-
-    if (!logModel || logModel->rowCount() == 0)
+    if (range == 0 && logModel->rowCount() > 0 && filterModel &&
+        !filterModel->exportFilter().isEmpty() && logModel->isFulled())
     {
-        qWarning() << "Unexpected model type in log view";
+        filterModel->ensureFilteredModel();
         return;
     }
 

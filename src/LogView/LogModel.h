@@ -9,6 +9,8 @@
 #include <deque>
 #include <set>
 
+class LogFilter;
+
 
 class LogModel : public QAbstractItemModel
 {
@@ -34,10 +36,12 @@ public:
     void goToTime(const std::chrono::system_clock::time_point& time);
 
     bool canFetchUpMore() const;
-    void fetchUpMore();
+    virtual void fetchUpMore();
 
     bool canFetchDownMore() const;
-    void fetchDownMore();
+    virtual void fetchDownMore();
+
+    bool isFulled() const;
 
     const std::vector<Format::Field>& getFields() const;
     const std::unordered_set<QVariant, VariantHash> availableValues(int section) const;
@@ -66,6 +70,8 @@ public:
 
     Qt::ItemFlags flags(const QModelIndex& index) const override;
 
+    LogService* getService() const;
+
 signals:
     void startPageSwap();
     void endPageSwap(int rows);
@@ -77,6 +83,14 @@ signals:
 public slots:
     void handleIterator(int, bool);
     void handleData(int);
+
+protected:
+    void fetchUpMore(const LogFilter& filter);
+    void fetchDownMore(const LogFilter& filter);
+
+private:
+    void fetchUpMoreImpl(const std::shared_ptr<LogEntryIterator<false>>& it);
+    void fetchDownMoreImpl(const std::shared_ptr<LogEntryIterator<true>>& it);
 
 private:
     struct LogItem
