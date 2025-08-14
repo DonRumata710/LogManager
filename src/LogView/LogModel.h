@@ -89,8 +89,51 @@ protected:
     void fetchDownMore(const LogFilter& filter);
 
 private:
-    void fetchUpMoreImpl(const std::shared_ptr<LogEntryIterator<false>>& it);
-    void fetchDownMoreImpl(const std::shared_ptr<LogEntryIterator<true>>& it);
+    template<typename Iterator>
+    void fetchUpMoreImpl(const std::shared_ptr<Iterator>& it)
+    {
+        if (!dataRequests.empty())
+            return;
+
+        if (!it || !it->hasLogs())
+            return;
+
+        auto cacheIt = entryCache.lower_bound({ it->getCurrentTime() });
+        if (cacheIt != entryCache.begin())
+        {
+            --cacheIt;
+            if (cacheIt != entryCache.begin() && cacheIt->heap.empty())
+                --cacheIt;
+        }
+        else
+        {
+            cacheIt = entryCache.end();
+        }
+
+        if (cacheIt == entryCache.end())
+            dataRequests[service->requestLogEntries(it, blockSize)] = DataRequestType::Prepend;
+        else
+            dataRequests[service->requestLogEntries(it, blockSize, cacheIt->time)] = DataRequestType::Prepend;
+    }
+
+    template<typename Iterator>
+    void fetchDownMoreImpl(const std::shared_ptr<Iterator>& it)
+    {
+        if (!dataRequests.empty())
+            return;
+
+        if (!it || !it->hasLogs())
+            return;
+
+        auto cacheIt = entryCache.upper_bound({ it->getCurrentTime() });
+        while (cacheIt != entryCache.end() && cacheIt->heap.empty())
+            ++cacheIt;
+
+        if (cacheIt == entryCache.end())
+            dataRequests[service->requestLogEntries(it, blockSize)] = DataRequestType::Append;
+        else
+            dataRequests[service->requestLogEntries(it, blockSize, cacheIt->time)] = DataRequestType::Append;
+    }
 
 private:
     struct LogItem

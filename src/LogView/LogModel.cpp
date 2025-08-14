@@ -163,8 +163,8 @@ void LogModel::fetchUpMore()
 
 void LogModel::fetchUpMore(const LogFilter& filter)
 {
-    auto filtered = std::make_shared<FilteredLogIterator<false>>(reverseIterator, filter);
-    fetchUpMoreImpl(filtered);
+    auto filteredIterator = std::make_shared<FilteredLogIterator<false>>(reverseIterator, filter);
+    fetchUpMoreImpl(filteredIterator);
 }
 
 bool LogModel::canFetchDownMore() const
@@ -184,52 +184,8 @@ void LogModel::fetchDownMore()
 
 void LogModel::fetchDownMore(const LogFilter& filter)
 {
-    auto filtered = std::make_shared<FilteredLogIterator<true>>(iterator, filter);
-    fetchDownMoreImpl(filtered);
-}
-
-void LogModel::fetchUpMoreImpl(const std::shared_ptr<LogEntryIterator<false>>& it)
-{
-    if (!dataRequests.empty())
-        return;
-
-    if (!it || !it->hasLogs())
-        return;
-
-    auto cacheIt = entryCache.lower_bound({ it->getCurrentTime() });
-    if (cacheIt != entryCache.begin())
-    {
-        --cacheIt;
-        if (cacheIt != entryCache.begin() && cacheIt->heap.empty())
-            --cacheIt;
-    }
-    else
-    {
-        cacheIt = entryCache.end();
-    }
-
-    if (cacheIt == entryCache.end())
-        dataRequests[service->requestLogEntries(it, blockSize)] = DataRequestType::Prepend;
-    else
-        dataRequests[service->requestLogEntries(it, blockSize, cacheIt->time)] = DataRequestType::Prepend;
-}
-
-void LogModel::fetchDownMoreImpl(const std::shared_ptr<LogEntryIterator<true>>& it)
-{
-    if (!dataRequests.empty())
-        return;
-
-    if (!it || !it->hasLogs())
-        return;
-
-    auto cacheIt = entryCache.upper_bound({ it->getCurrentTime() });
-    while (cacheIt != entryCache.end() && cacheIt->heap.empty())
-        ++cacheIt;
-
-    if (cacheIt == entryCache.end())
-        dataRequests[service->requestLogEntries(it, blockSize)] = DataRequestType::Append;
-    else
-        dataRequests[service->requestLogEntries(it, blockSize, cacheIt->time)] = DataRequestType::Append;
+    auto filteredIterator = std::make_shared<FilteredLogIterator<>>(iterator, filter);
+    fetchDownMoreImpl(filteredIterator);
 }
 
 const std::vector<Format::Field>& LogModel::getFields() const

@@ -2,11 +2,10 @@
 
 #include <chrono>
 
-FilteredLogModel::FilteredLogModel(LogService* logService, const LogFilter& filter, QObject* parent)
-    : LogModel(logService, parent),
-      filter(filter)
-{
-}
+FilteredLogModel::FilteredLogModel(LogService* logService, const LogFilter& filter, QObject* parent) :
+    LogModel(logService, parent),
+    filter(filter)
+{}
 
 void FilteredLogModel::fetchUpMore()
 {

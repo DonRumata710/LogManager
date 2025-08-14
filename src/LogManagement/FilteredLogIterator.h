@@ -3,16 +3,14 @@
 #include "LogEntryIterator.h"
 #include "../LogFilter.h"
 
-// Iterator wrapper that yields only entries matching a given LogFilter
 
 template<bool straight = true>
 class FilteredLogIterator
 {
 public:
-    FilteredLogIterator(const std::shared_ptr<LogEntryIterator<straight>>& baseIterator,
-                        const LogFilter& logFilter)
-        : iterator(baseIterator),
-          filter(logFilter)
+    FilteredLogIterator(const std::shared_ptr<LogEntryIterator<straight>>& baseIterator, const LogFilter& logFilter) :
+        iterator(baseIterator),
+        filter(logFilter)
     {
         if (iterator)
             advance();

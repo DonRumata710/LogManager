@@ -3,9 +3,11 @@
 #include "LogModel.h"
 #include "../LogFilter.h"
 
+
 class FilteredLogModel : public LogModel
 {
     Q_OBJECT
+
 public:
     explicit FilteredLogModel(LogService* logService, const LogFilter& filter, QObject* parent = nullptr);
 

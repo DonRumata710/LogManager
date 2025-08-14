@@ -60,12 +60,11 @@ void LogView::setLogModel(QAbstractItemModel* newModel)
 void LogView::checkFetchNeeded()
 {
     QT_SLOT_BEGIN
+
     QScrollBar* sb = verticalScrollBar();
 
     auto* proxyModel = qobject_cast<QAbstractProxyModel*>(model());
-    auto* logModel = proxyModel
-                     ? qobject_cast<LogModel*>(proxyModel->sourceModel())
-                     : qobject_cast<LogModel*>(model());
+    auto* logModel = proxyModel ? qobject_cast<LogModel*>(proxyModel->sourceModel()) : qobject_cast<LogModel*>(model());
 
     if (!logModel)
     {
@@ -73,25 +72,16 @@ void LogView::checkFetchNeeded()
         return;
     }
 
-    auto* filterModel = qobject_cast<LogFilterModel*>(model());
-
-    // If the proxy model shows no rows while the source model still has data,
-    // the filter hides everything — don't fetch more.
-    if (model()->rowCount() == 0 && logModel->rowCount() > 0)
-        return;
-
-    int visibleRows = viewport()->height() / std::max(1, rowHeight(0));
-    if (model()->rowCount() < visibleRows &&
-        logModel->rowCount() > model()->rowCount())
-        return;
-
     int min = sb->minimum();
     int max = sb->maximum();
     int value = sb->value();
     int range = max - min;
 
-    if (range == 0 && logModel->rowCount() > 0 && filterModel &&
-        !filterModel->exportFilter().isEmpty() && logModel->isFulled())
+    int visibleRows = logModel->rowCount() > 0 ? viewport()->height() / std::max(1, rowHeight(indexAt(QPoint{ 0, 0 }))) : 0;
+    int expectedRows = visibleRows > 0 ? visibleRows * 2 : 100;
+
+    auto* filterModel = qobject_cast<LogFilterModel*>(model());
+    if (model()->rowCount() < expectedRows && filterModel && !filterModel->exportFilter().isEmpty() && logModel->isFulled())
     {
         filterModel->ensureFilteredModel();
         return;
