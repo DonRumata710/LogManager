@@ -2,10 +2,12 @@
 
 #include "FilterHeader.h"
 #include "LogModel.h"
+#include "LogFilterModel.h"
 #include "../Utils.h"
 
 #include <QScrollBar>
 #include <QAbstractProxyModel>
+#include <algorithm>
 
 
 LogView::LogView(QWidget* parent) : QTreeView(parent)
@@ -21,26 +23,38 @@ LogView::LogView(QWidget* parent) : QTreeView(parent)
 
 void LogView::setLogModel(QAbstractItemModel* newModel)
 {
+    if (currentLogModel)
+        disconnect(currentLogModel, nullptr, this, nullptr);
+    if (currentProxyModel)
+        disconnect(currentProxyModel, nullptr, this, nullptr);
+
     setModel(newModel);
 
-    auto* logModel = qobject_cast<LogModel*>(newModel);
-    auto* proxyModel = qobject_cast<QAbstractProxyModel*>(newModel);
-    if (!logModel && proxyModel)
-        logModel = qobject_cast<LogModel*>(proxyModel->sourceModel());
+    currentProxyModel = qobject_cast<LogFilterModel*>(newModel);
+    currentLogModel = qobject_cast<LogModel*>(newModel);
+    if (!currentLogModel && currentProxyModel)
+        currentLogModel = qobject_cast<LogModel*>(currentProxyModel->sourceModel());
 
-    if (!logModel)
+    if (!currentLogModel)
     {
         qWarning() << "Unexpected model type in log view";
         return;
     }
 
-    connect(logModel, &LogModel::modelReset, this, &LogView::handleReset);
-    connect(logModel, &LogModel::modelReset, this, &LogView::handleFirstDataLoaded);
+    if (currentProxyModel)
+    {
+        connect(currentProxyModel, &LogFilterModel::sourceModelChanged, this, [this](QAbstractItemModel*) {
+            setLogModel(model());
+        });
+    }
 
-    connect(logModel, &LogModel::rowsAboutToBeInserted, this, &LogView::handleFirstLineChangeStart);
-    connect(logModel, &LogModel::rowsAboutToBeRemoved, this, &LogView::handleFirstLineChangeStart);
-    connect(logModel, &LogModel::rowsInserted, this, &LogView::handleFirstLineAddition);
-    connect(logModel, &LogModel::rowsRemoved, this, &LogView::handleFirstLineRemoving);
+    connect(currentLogModel, &LogModel::modelReset, this, &LogView::handleReset);
+    connect(currentLogModel, &LogModel::modelReset, this, &LogView::handleFirstDataLoaded);
+
+    connect(currentLogModel, &LogModel::rowsAboutToBeInserted, this, &LogView::handleFirstLineChangeStart);
+    connect(currentLogModel, &LogModel::rowsAboutToBeRemoved, this, &LogView::handleFirstLineChangeStart);
+    connect(currentLogModel, &LogModel::rowsInserted, this, &LogView::handleFirstLineAddition);
+    connect(currentLogModel, &LogModel::rowsRemoved, this, &LogView::handleFirstLineRemoving);
 }
 
 void LogView::checkFetchNeeded()
@@ -48,19 +62,28 @@ void LogView::checkFetchNeeded()
     QT_SLOT_BEGIN
 
     QScrollBar* sb = verticalScrollBar();
+
+    auto* proxyModel = qobject_cast<QAbstractProxyModel*>(model());
+    auto* logModel = proxyModel ? qobject_cast<LogModel*>(proxyModel->sourceModel()) : qobject_cast<LogModel*>(model());
+
+    if (!logModel)
+    {
+        qWarning() << "Unexpected model type in log view";
+        return;
+    }
+
     int min = sb->minimum();
     int max = sb->maximum();
     int value = sb->value();
     int range = max - min;
 
-    auto* logModel = qobject_cast<LogModel*>(model());
-    auto* proxyModel = qobject_cast<QAbstractProxyModel*>(model());
-    if (proxyModel)
-        logModel = qobject_cast<LogModel*>(proxyModel->sourceModel());
+    int visibleRows = logModel->rowCount() > 0 ? viewport()->height() / std::max(1, rowHeight(indexAt(QPoint{ 0, 0 }))) : 0;
+    int expectedRows = visibleRows > 0 ? visibleRows * 2 : 100;
 
-    if (!logModel || logModel->rowCount() == 0)
+    auto* filterModel = qobject_cast<LogFilterModel*>(model());
+    if (model()->rowCount() < expectedRows && filterModel && !filterModel->exportFilter().isEmpty() && logModel->isFulled())
     {
-        qWarning() << "Unexpected model type in log view";
+        filterModel->ensureFilteredModel();
         return;
     }
 

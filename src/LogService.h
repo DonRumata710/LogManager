@@ -2,6 +2,7 @@
 
 #include "LogManagement/LogManager.h"
 #include "LogManagement/Session.h"
+#include "LogManagement/FilteredLogIterator.h"
 #include "ThreadSafePtr.h"
 #include "LogFilter.h"
 
@@ -52,6 +53,19 @@ public:
     }
 
     template<typename Iterator>
+    int requestLogEntries(const std::shared_ptr<Iterator>& iterator, int entryCount, const LogFilter& filter)
+    {
+        if (!logManager || !iterator || entryCount <= 0 || !iterator->hasLogs())
+            throw std::runtime_error("Invalid log entry request parameters.");
+
+        int index = nextRequestIndex++;
+        dataRequests->emplace_back(index, std::make_shared<FilteredLogIterator<Iterator::IsStraight>>(iterator, filter), entryCount);
+        QMetaObject::invokeMethod(this, "handleDataRequest", Qt::QueuedConnection);
+
+        return index;
+    }
+
+    template<typename Iterator>
     int requestLogEntries(const std::shared_ptr<Iterator>& iterator, int entryCount, const std::chrono::system_clock::time_point& until)
     {
         if (!logManager || !iterator || entryCount <= 0 || !iterator->hasLogs())
@@ -59,6 +73,19 @@ public:
 
         int index = nextRequestIndex++;
         dataRequests->emplace_back(index, iterator, entryCount, until);
+        QMetaObject::invokeMethod(this, "handleDataRequest", Qt::QueuedConnection);
+
+        return index;
+    }
+
+    template<typename Iterator>
+    int requestLogEntries(const std::shared_ptr<Iterator>& iterator, int entryCount, const std::chrono::system_clock::time_point& until, const LogFilter& filter)
+    {
+        if (!logManager || !iterator || entryCount <= 0 || !iterator->hasLogs())
+            throw std::runtime_error("Invalid log entry request parameters.");
+
+        int index = nextRequestIndex++;
+        dataRequests->emplace_back(index, std::make_shared<FilteredLogIterator<Iterator::IsStraight>>(iterator, filter), entryCount, until);
         QMetaObject::invokeMethod(this, "handleDataRequest", Qt::QueuedConnection);
 
         return index;
@@ -119,7 +146,9 @@ private:
         int index;
         std::variant<
             std::shared_ptr<LogEntryIterator<true>>,
-            std::shared_ptr<LogEntryIterator<false>>
+            std::shared_ptr<LogEntryIterator<false>>,
+            std::shared_ptr<FilteredLogIterator<true>>,
+            std::shared_ptr<FilteredLogIterator<false>>
             > iterator;
         int entriesCount;
         std::optional<std::chrono::system_clock::time_point> until;

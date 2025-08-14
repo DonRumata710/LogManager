@@ -28,6 +28,8 @@ template<bool straight = true>
 class LogEntryIterator
 {
 public:
+    static const bool IsStraight = straight;
+
     struct HeapItem
     {
         const LogStorage::LogMetaEntry* metadata;
