@@ -12,14 +12,17 @@
 #include <QString>
 
 #include <map>
-#include <deque>
 #include <vector>
 #include <memory>
+#include <variant>
+#include <optional>
 
 
 class LogService : public QObject
 {
     Q_OBJECT
+
+    struct DataRequest;
 
 public:
     explicit LogService(QObject *parent = nullptr);
@@ -46,9 +49,7 @@ public:
             throw std::runtime_error("Invalid log entry request parameters.");
 
         int index = nextRequestIndex++;
-        dataRequests->emplace_back(index, iterator, entryCount);
-        QMetaObject::invokeMethod(this, "handleDataRequest", Qt::QueuedConnection);
-
+        emit logEntriesRequested(DataRequest(index, iterator, entryCount));
         return index;
     }
 
@@ -59,9 +60,7 @@ public:
             throw std::runtime_error("Invalid log entry request parameters.");
 
         int index = nextRequestIndex++;
-        dataRequests->emplace_back(index, std::make_shared<FilteredLogIterator<Iterator::IsStraight>>(iterator, filter), entryCount);
-        QMetaObject::invokeMethod(this, "handleDataRequest", Qt::QueuedConnection);
-
+        emit logEntriesRequested(DataRequest(index, std::make_shared<FilteredLogIterator<Iterator::IsStraight>>(iterator, filter), entryCount));
         return index;
     }
 
@@ -72,9 +71,7 @@ public:
             throw std::runtime_error("Invalid log entry request parameters.");
 
         int index = nextRequestIndex++;
-        dataRequests->emplace_back(index, iterator, entryCount, until);
-        QMetaObject::invokeMethod(this, "handleDataRequest", Qt::QueuedConnection);
-
+        emit logEntriesRequested(DataRequest(index, iterator, entryCount, until));
         return index;
     }
 
@@ -85,9 +82,7 @@ public:
             throw std::runtime_error("Invalid log entry request parameters.");
 
         int index = nextRequestIndex++;
-        dataRequests->emplace_back(index, std::make_shared<FilteredLogIterator<Iterator::IsStraight>>(iterator, filter), entryCount, until);
-        QMetaObject::invokeMethod(this, "handleDataRequest", Qt::QueuedConnection);
-
+        emit logEntriesRequested(DataRequest(index, std::make_shared<FilteredLogIterator<Iterator::IsStraight>>(iterator, filter), entryCount, until));
         return index;
     }
 
@@ -104,6 +99,10 @@ signals:
 
     void handleError(const QString& message);
 
+    void iteratorRequested(int index, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime);
+    void reverseIteratorRequested(int index, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime);
+    void logEntriesRequested(const DataRequest& request);
+
 public slots:
     void openFile(const QString& file, const QStringList& formats);
     void openFolder(const QString& logDirectory, const QStringList& formats);
@@ -118,29 +117,11 @@ public slots:
     void exportData(const QString& filename, QTreeView* view);
 
 private slots:
-    void handleIteratorRequest();
-    void handleReverseIteratorRequest();
-    void handleDataRequest();
+    void handleIteratorRequest(int index, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime);
+    void handleReverseIteratorRequest(int index, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime);
+    void handleDataRequest(const DataRequest& request);
 
 private:
-    struct IteratorRequest
-    {
-        int index;
-        std::chrono::system_clock::time_point startTime;
-        std::chrono::system_clock::time_point endTime;
-
-        IteratorRequest(int index, const std::chrono::system_clock::time_point& start, const std::chrono::system_clock::time_point& end);
-    };
-
-    struct ReverseIteratorRequest
-    {
-        int index;
-        std::chrono::system_clock::time_point startTime;
-        std::chrono::system_clock::time_point endTime;
-
-        ReverseIteratorRequest(int index, const std::chrono::system_clock::time_point& start, const std::chrono::system_clock::time_point& end);
-    };
-
     struct DataRequest
     {
         int index;
@@ -152,14 +133,13 @@ private:
             > iterator;
         int entriesCount;
         std::optional<std::chrono::system_clock::time_point> until;
-        bool active = true;
 
         template<typename Iterator>
-        DataRequest(int idx, const std::shared_ptr<Iterator>& it, int count, const std::optional<std::chrono::system_clock::time_point>& until = std::nullopt) : index(idx), entriesCount(count), iterator(it), until(until)
+        DataRequest(int idx, const std::shared_ptr<Iterator>& it, int count, const std::optional<std::chrono::system_clock::time_point>& until = std::nullopt)
+            : index(idx), iterator(it), entriesCount(count), until(until)
         {}
     };
 
-private:
     std::vector<std::shared_ptr<Format>> getFormats(const QStringList& formats);
 
     void exportDataToFile(const QString& filename, const QDateTime& startTime, const QDateTime& endTime, const std::function<void (QFile& file, const LogEntry&)>& writeFunction, const std::function<void (QFile& file)>& prefix = std::function<void (QFile& file)>{});
@@ -170,12 +150,11 @@ private:
     ThreadSafePtr<Session> session;
 
     int nextRequestIndex = 0;
-    ThreadSafePtr<std::deque<IteratorRequest>> iteratorRequests;
     ThreadSafePtr<std::map<int, std::shared_ptr<LogEntryIterator<true>>>> iterators;
-
-    ThreadSafePtr<std::deque<ReverseIteratorRequest>> reverseIteratorRequests;
     ThreadSafePtr<std::map<int, std::shared_ptr<LogEntryIterator<false>>>> reverseIterators;
 
-    ThreadSafePtr<std::deque<DataRequest>> dataRequests;
     ThreadSafePtr<std::map<int, std::vector<LogEntry>>> dataRequestResults;
 };
+
+Q_DECLARE_METATYPE(LogService::DataRequest)
+
