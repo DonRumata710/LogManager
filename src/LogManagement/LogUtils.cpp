@@ -221,10 +221,10 @@ std::chrono::system_clock::time_point parseTime(const QString& timeStr, const st
     std::string_view baseStr{ &*input.begin(), (dotPos != std::string_view::npos ? dotPos : input.size()) };
     std::string_view fracStr = (dotPos != std::string_view::npos ? std::string_view{ input.begin() + dotPos + 1, input.end() } : std::string_view{});
 
-    std::chrono::system_clock::time_point tp;
+    std::chrono::local_time<std::chrono::nanoseconds> ltp;
     {
         std::istringstream ss(std::string{ baseStr });
-        ss >> std::chrono::parse(format->timeMask.toStdString(), tp);
+        ss >> std::chrono::parse(format->timeMask.toStdString(), ltp);
         if (!ss)
         {
             throw std::runtime_error("Failed to parse time '" + input + "' using mask '" +
@@ -235,10 +235,12 @@ std::chrono::system_clock::time_point parseTime(const QString& timeStr, const st
     if (!fracStr.empty() && format->timeFractionalDigits > 0)
     {
         auto nanos = parseFractionToNanos(fracStr, format->timeFractionalDigits);
-        tp += std::chrono::duration_cast<std::chrono::system_clock::duration>(nanos);
+        ltp += std::chrono::duration_cast<std::chrono::system_clock::duration>(nanos);
     }
 
-    return tp;
+    const auto* tz = std::chrono::current_zone();
+    auto tp = tz->to_sys(ltp);
+    return std::chrono::time_point_cast<std::chrono::system_clock::duration>(tp);
 }
 
 int getEncodingWidth(QStringConverter::Encoding encoding)

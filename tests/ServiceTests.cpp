@@ -7,9 +7,11 @@
 #include "services/SearchService.h"
 #include "services/ExportService.h"
 
+
 class ServiceTests : public QObject
 {
     Q_OBJECT
+
 private slots:
     void initTestCase();
     void cleanupTestCase();
@@ -27,6 +29,7 @@ private:
     QDateTime firstTime;
     QDateTime secondTime;
 };
+
 
 void ServiceTests::initTestCase()
 {
@@ -67,7 +70,7 @@ void ServiceTests::initTestCase()
     app->getFormatManager().addFormat(format);
 
     sessionService->openFile(logFile, QStringList() << "TestFormat");
-    sessionService->createSession({}, firstTime.toStdSysMilliseconds(), secondTime.toStdSysMilliseconds());
+    sessionService->createSession(sessionService->getLogManager()->getModules(), firstTime.toStdSysMilliseconds(), secondTime.toStdSysMilliseconds());
 }
 
 void ServiceTests::cleanupTestCase()
@@ -96,8 +99,13 @@ void ServiceTests::testSessionService()
 void ServiceTests::testSearchService()
 {
     QSignalSpy spy(searchService, &SearchService::searchFinished);
+    QVERIFY2(spy.isValid(), "QSignalSpy: failed to connect to SearchService::searchFinished");
     searchService->search(firstTime, "searchterm", false, false, false);
-    QVERIFY(spy.wait(1000));
+
+    if (spy.isEmpty())
+        QVERIFY(spy.wait(1000));
+    QVERIFY(!spy.isEmpty());
+
     QList<QVariant> args = spy.takeFirst();
     QCOMPARE(args.at(0).toString(), QString("searchterm"));
 }

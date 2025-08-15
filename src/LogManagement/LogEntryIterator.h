@@ -100,7 +100,7 @@ public:
 
                 while (auto entry = getEntry(heapItem))
                 {
-                    if (entry->time >= startTime && entry->time < endTime)
+                    if (entry->time >= startTime && entry->time <= endTime)
                     {
                         prepareEntry(entry.value());
                         heapItem.entry = std::move(*entry);
@@ -156,7 +156,7 @@ public:
 
                     while (auto entry = getEntry(heapItem))
                     {
-                        if (entry->time >= startTime && entry->time < endTime)
+                        if (entry->time >= startTime && entry->time <= endTime)
                         {
                             prepareEntry(entry.value());
                             heapItem.entry = std::move(*entry);

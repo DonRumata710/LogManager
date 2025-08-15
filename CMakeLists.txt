@@ -83,6 +83,7 @@ enable_testing()
 file(GLOB TEST_SOURCES tests/*.cpp)
 foreach(test_src ${TEST_SOURCES})
     get_filename_component(test_name ${test_src} NAME_WE)
+
     add_executable(${test_name} ${test_src} ${NON_MAIN_SOURCES} ${HEADERS})
 
     target_compile_definitions(${test_name}
@@ -94,6 +95,7 @@ foreach(test_src ${TEST_SOURCES})
     target_include_directories(${test_name} PRIVATE ${PROJECT_SOURCE_DIR}/src)
     target_include_directories(${test_name} PRIVATE ${PROJECT_SOURCE_DIR}/src/FormatCreation)
     target_link_libraries(${test_name} Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test QuaZip::QuaZip Boost::headers)
+
     add_test(NAME ${test_name} COMMAND ${test_name})
 endforeach()
 
