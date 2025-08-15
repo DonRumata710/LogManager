@@ -22,7 +22,24 @@ class LogService : public QObject
 {
     Q_OBJECT
 
-    struct DataRequest;
+public:
+    struct DataRequest
+    {
+        int index;
+        std::variant<
+            std::shared_ptr<LogEntryIterator<true>>,
+            std::shared_ptr<LogEntryIterator<false>>,
+            std::shared_ptr<FilteredLogIterator<true>>,
+            std::shared_ptr<FilteredLogIterator<false>>
+            > iterator;
+        int entriesCount;
+        std::optional<std::chrono::system_clock::time_point> until;
+
+        template<typename Iterator>
+        DataRequest(int idx, const std::shared_ptr<Iterator>& it, int count, const std::optional<std::chrono::system_clock::time_point>& until = std::nullopt)
+            : index(idx), iterator(it), entriesCount(count), until(until)
+        {}
+    };
 
 public:
     explicit LogService(QObject *parent = nullptr);
@@ -122,24 +139,6 @@ private slots:
     void handleDataRequest(const DataRequest& request);
 
 private:
-    struct DataRequest
-    {
-        int index;
-        std::variant<
-            std::shared_ptr<LogEntryIterator<true>>,
-            std::shared_ptr<LogEntryIterator<false>>,
-            std::shared_ptr<FilteredLogIterator<true>>,
-            std::shared_ptr<FilteredLogIterator<false>>
-            > iterator;
-        int entriesCount;
-        std::optional<std::chrono::system_clock::time_point> until;
-
-        template<typename Iterator>
-        DataRequest(int idx, const std::shared_ptr<Iterator>& it, int count, const std::optional<std::chrono::system_clock::time_point>& until = std::nullopt)
-            : index(idx), iterator(it), entriesCount(count), until(until)
-        {}
-    };
-
     std::vector<std::shared_ptr<Format>> getFormats(const QStringList& formats);
 
     void exportDataToFile(const QString& filename, const QDateTime& startTime, const QDateTime& endTime, const std::function<void (QFile& file, const LogEntry&)>& writeFunction, const std::function<void (QFile& file)>& prefix = std::function<void (QFile& file)>{});

@@ -533,15 +533,3 @@ void LogService::exportDataToFile(const QString& filename, const QDateTime& star
                          file.write("\n");
     });
 }
-
-LogService::IteratorRequest::IteratorRequest(int index, const std::chrono::system_clock::time_point& start, const std::chrono::system_clock::time_point& end) :
-    index(index),
-    startTime(start),
-    endTime(end)
-{}
-
-LogService::ReverseIteratorRequest::ReverseIteratorRequest(int index, const std::chrono::system_clock::time_point& start, const std::chrono::system_clock::time_point& end) :
-    index(index),
-    startTime(start),
-    endTime(end)
-{}
