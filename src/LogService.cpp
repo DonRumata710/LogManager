@@ -3,17 +3,20 @@
 #include "Utils.h"
 #include "Application.h"
 #include "SearchController.h"
+#include <QMetaType>
 
 
 LogService::LogService(QObject *parent) :
     QObject{parent},
-    iteratorRequests(ThreadSafePtr<std::deque<IteratorRequest>>::DefaultConstructor{}),
     iterators(ThreadSafePtr<std::map<int, std::shared_ptr<LogEntryIterator<>>>>::DefaultConstructor{}),
-    reverseIteratorRequests(ThreadSafePtr<std::deque<ReverseIteratorRequest>>::DefaultConstructor{}),
     reverseIterators(ThreadSafePtr<std::map<int, std::shared_ptr<LogEntryIterator<false>>>>::DefaultConstructor{}),
-    dataRequests(ThreadSafePtr<std::deque<DataRequest>>::DefaultConstructor{}),
     dataRequestResults(ThreadSafePtr<std::map<int, std::vector<LogEntry>>>::DefaultConstructor{})
-{}
+{
+    qRegisterMetaType<LogService::DataRequest>("LogService::DataRequest");
+    connect(this, &LogService::iteratorRequested, this, &LogService::handleIteratorRequest, Qt::QueuedConnection);
+    connect(this, &LogService::reverseIteratorRequested, this, &LogService::handleReverseIteratorRequest, Qt::QueuedConnection);
+    connect(this, &LogService::logEntriesRequested, this, &LogService::handleDataRequest, Qt::QueuedConnection);
+}
 
 const ThreadSafePtr<LogManager>& LogService::getLogManager() const
 {
@@ -40,8 +43,7 @@ int LogService::requestIterator(const std::chrono::system_clock::time_point& sta
     }
 
     int index = nextRequestIndex++;
-    iteratorRequests->emplace_back(index, startTime, endTime);
-    QMetaObject::invokeMethod(this, "handleIteratorRequest", Qt::QueuedConnection);
+    emit iteratorRequested(index, startTime, endTime);
 
     return index;
 }
@@ -70,8 +72,7 @@ int LogService::requestReverseIterator(const std::chrono::system_clock::time_poi
     }
 
     int index = nextRequestIndex++;
-    reverseIteratorRequests->emplace_back(index, startTime, endTime);
-    QMetaObject::invokeMethod(this, "handleReverseIteratorRequest", Qt::QueuedConnection);
+    emit reverseIteratorRequested(index, startTime, endTime);
 
     return index;
 }
@@ -380,7 +381,7 @@ void LogService::exportData(const QString& filename, QTreeView* view)
     QT_SLOT_END
 }
 
-void LogService::handleIteratorRequest()
+void LogService::handleIteratorRequest(int index, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime)
 {
     QT_SLOT_BEGIN
 
@@ -392,61 +393,31 @@ void LogService::handleIteratorRequest()
         return;
     }
 
-    auto lockedIteratorRequests = iteratorRequests.getLocker();
+    iterators->emplace(index, std::make_shared<LogEntryIterator<>>(session->getIterator<true>(startTime, endTime)));
 
-    auto it = lockedIteratorRequests->begin();
-    if (it == lockedIteratorRequests->end())
-    {
-        qWarning() << "No iterator requests available.";
-        return;
-    }
-
-    auto& request = *it;
-    lockedIteratorRequests.unlock();
-
-    iterators->emplace(request.index, std::make_shared<LogEntryIterator<>>(session->getIterator<true>(request.startTime, request.endTime)));
-
-    iteratorCreated(request.index, true);
-
-    lockedIteratorRequests.lock();
-    iteratorRequests->pop_front();
+    iteratorCreated(index, true);
 
     emit progressUpdated(QStringLiteral("Iterator created"), 100);
 
     QT_SLOT_END
 }
 
-void LogService::handleReverseIteratorRequest()
+void LogService::handleReverseIteratorRequest(int index, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime)
 {
     QT_SLOT_BEGIN
 
     emit progressUpdated(QStringLiteral("Creating reverse iterator ..."), 0);
 
-    auto lockedIteratorRequests = reverseIteratorRequests.getLocker();
+    reverseIterators->emplace(index, std::make_shared<LogEntryIterator<false>>(session->getIterator<false>(startTime, endTime)));
 
-    auto it = lockedIteratorRequests->begin();
-    if (it == lockedIteratorRequests->end())
-    {
-        qWarning() << "No iterator requests available.";
-        return;
-    }
-
-    auto& request = *it;
-    lockedIteratorRequests.unlock();
-
-    reverseIterators->emplace(request.index, std::make_shared<LogEntryIterator<false>>(session->getIterator<false>(request.startTime, request.endTime)));
-
-    iteratorCreated(request.index, false);
-
-    lockedIteratorRequests.lock();
-    reverseIteratorRequests->pop_front();
+    iteratorCreated(index, false);
 
     emit progressUpdated(QStringLiteral("Reverse iterator created"), 100);
 
     QT_SLOT_END
 }
 
-void LogService::handleDataRequest()
+void LogService::handleDataRequest(const DataRequest& request)
 {
     QT_SLOT_BEGIN
 
@@ -455,21 +426,6 @@ void LogService::handleDataRequest()
     static auto dataRequestVisitor = [](const auto& iterator) -> std::optional<LogEntry> {
         return iterator->next();
     };
-
-    auto lockedDataRequests = dataRequests.getLocker();
-
-    while (lockedDataRequests->begin() != lockedDataRequests->end() && !lockedDataRequests->begin()->active)
-        lockedDataRequests->pop_front();
-
-    if (lockedDataRequests->begin() == lockedDataRequests->end())
-    {
-        qWarning() << "No active data requests available.";
-        return;
-    }
-
-    auto& request = *lockedDataRequests->begin();
-
-    lockedDataRequests.unlock();
 
     std::vector<LogEntry>& result = dataRequestResults->emplace(request.index, std::vector<LogEntry>{}).first->second;
     result.clear();
@@ -499,9 +455,6 @@ void LogService::handleDataRequest()
     }
 
     dataLoaded(request.index);
-
-    lockedDataRequests.lock();
-    lockedDataRequests->pop_front();
 
     emit progressUpdated(QStringLiteral("Data loaded"), 100);
 
@@ -580,15 +533,3 @@ void LogService::exportDataToFile(const QString& filename, const QDateTime& star
                          file.write("\n");
     });
 }
-
-LogService::IteratorRequest::IteratorRequest(int index, const std::chrono::system_clock::time_point& start, const std::chrono::system_clock::time_point& end) :
-    index(index),
-    startTime(start),
-    endTime(end)
-{}
-
-LogService::ReverseIteratorRequest::ReverseIteratorRequest(int index, const std::chrono::system_clock::time_point& start, const std::chrono::system_clock::time_point& end) :
-    index(index),
-    startTime(start),
-    endTime(end)
-{}
