@@ -9,135 +9,148 @@
 #include "LogView/LogViewUtils.h"
 #include "Settings.h"
 
-class LogModelTest : public QObject {
-  Q_OBJECT
+class LogModelTest : public QObject
+{
+    Q_OBJECT
 
 private slots:
-  void initTestCase();
-  void cleanupTestCase();
+    void initTestCase();
+    void cleanupTestCase();
 
-  void testInitialLoad();
-  void testAvailableModules();
-  void testHeaderData();
-  void testLoadMultipleBlocks();
+    void testInitialLoad();
+    void testAvailableModules();
+    void testHeaderData();
+    void testLoadMultipleBlocks();
 
 private:
-  Application *app = nullptr;
-  LogService *logService = nullptr;
-  QTemporaryDir *tempDir = nullptr;
-  QString logFile;
-  QDateTime firstTime;
-  QDateTime lastTime;
+    Application *app = nullptr;
+    LogService *logService = nullptr;
+    QTemporaryDir *tempDir = nullptr;
+    QString logFile;
+    QDateTime firstTime;
+    QDateTime lastTime;
+    QString entryTemplate = "msg%1";
+    int entryCount = 10;
 };
 
-void LogModelTest::initTestCase() {
-  app = qobject_cast<Application *>(qApp);
-  QVERIFY(app);
-  logService = app->getLogService();
 
-  tempDir = new QTemporaryDir();
-  logFile = tempDir->filePath("test.log.csv");
+void LogModelTest::initTestCase()
+{
+    app = qobject_cast<Application *>(qApp);
+    QVERIFY(app);
+    logService = app->getLogService();
 
-  Settings settings;
-  settings.setValue(LogViewSettings + "/blockSize", 2);
+    tempDir = new QTemporaryDir();
+    logFile = tempDir->filePath("test.csv");
 
-  QFile file(logFile);
-  QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Text));
-  QTextStream out(&file);
+    Settings settings;
+    settings.setValue(LogViewSettings + "/blockSize", 2);
 
-  QDateTime baseTime =
-      QDateTime::fromString("2023-01-01 00:00:00", "yyyy-MM-dd HH:mm:ss");
-  for (int i = 0; i < 5; ++i) {
-    QString msg;
-    if (i == 0)
-      msg = "hello";
-    else if (i == 1)
-      msg = "searchterm";
-    else if (i == 4)
-      msg = "tail";
-    else
-      msg = QStringLiteral("msg%1").arg(i);
+    QFile file(logFile);
+    QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Text));
+    QTextStream out(&file);
 
-    out << baseTime.addSecs(i).toString("yyyy-MM-dd HH:mm:ss.zzz")
-        << ";1;1;mod;info;" << msg << "\n";
-  }
-  file.close();
+    QDateTime baseTime = QDateTime::fromString("2023-01-01 00:00:00", "yyyy-MM-dd HH:mm:ss");
+    firstTime = baseTime;
+    for (int i = 0; i < entryCount; ++i)
+    {
+        QString msg = entryTemplate.arg(i);
+        QDateTime entryTime = baseTime.addSecs(i);
+        out << entryTime.toString("yyyy-MM-dd HH:mm:ss.zzz")
+            << ";1;1;mod;info;" << msg << "\n";
+        lastTime = entryTime;
+    }
+    file.close();
 
-  firstTime = baseTime;
-  lastTime = baseTime.addSecs(4);
+    std::shared_ptr<Format> format = std::make_shared<Format>();
+    format->name = "TestFormat";
+    format->extension = ".csv";
+    format->separator = ";";
+    format->timeFieldIndex = 0;
+    format->timeMask = "%F %H:%M:%S";
+    format->timeFractionalDigits = 3;
+    for (int i = 0; i < 6; ++i)
+    {
+        Format::Field f;
+        f.name = QString::number(i);
+        f.regex = QRegularExpression(".*");
+        f.type = QMetaType::QString;
+        format->fields.push_back(f);
+    }
+    app->getFormatManager().addFormat(format);
 
-  std::shared_ptr<Format> format = std::make_shared<Format>();
-  format->name = "TestFormat";
-  format->extension = ".csv";
-  format->separator = ";";
-  format->timeFieldIndex = 0;
-  format->timeMask = "%F %H:%M:%S";
-  format->timeFractionalDigits = 3;
-  for (int i = 0; i < 6; ++i) {
-    Format::Field f;
-    f.name = QString::number(i);
-    f.regex = QRegularExpression(".*");
-    f.type = QMetaType::QString;
-    format->fields.push_back(f);
-  }
-  app->getFormatManager().addFormat(format);
-
-  logService->openFile(logFile, QStringList() << "TestFormat");
-  logService->createSession(logService->getLogManager()->getModules(),
-                            firstTime.toStdSysMilliseconds(),
-                            lastTime.toStdSysMilliseconds());
+    logService->openFile(logFile, QStringList() << "TestFormat");
+    logService->createSession(logService->getLogManager()->getModules(),
+                              firstTime.toStdSysMilliseconds(),
+                              lastTime.toStdSysMilliseconds());
 }
 
-void LogModelTest::cleanupTestCase() { delete tempDir; }
-
-void LogModelTest::testInitialLoad() {
-  LogModel model(logService);
-  QSignalSpy resetSpy(&model, &QAbstractItemModel::modelReset);
-  model.goToTime(firstTime);
-  QVERIFY(resetSpy.wait(1000));
-
-  QCOMPARE(model.rowCount(), 2);
-
-  QModelIndex moduleIndex =
-      model.index(0, static_cast<int>(LogModel::PredefinedColumn::Module));
-  QCOMPARE(model.data(moduleIndex).toString(), QString("test"));
-
-  QModelIndex messageIndex = model.index(0, 6);
-  QCOMPARE(model.data(messageIndex).toString(), QString("hello"));
+void LogModelTest::cleanupTestCase()
+{
+    delete tempDir;
 }
 
-void LogModelTest::testAvailableModules() {
-  LogModel model(logService);
-  auto modules = model.availableValues(
-      static_cast<int>(LogModel::PredefinedColumn::Module));
-  QVERIFY(modules.find(QString("test")) != modules.end());
+void LogModelTest::testInitialLoad()
+{
+    LogModel model(logService);
+    QSignalSpy resetSpy(&model, &QAbstractItemModel::modelReset);
+    model.goToTime(firstTime);
+
+    resetSpy.wait(10 * 1000);
+    QVERIFY(!resetSpy.empty());
+
+    QCOMPARE(model.rowCount(), 2);
+
+    QModelIndex moduleIndex = model.index(0, static_cast<int>(LogModel::PredefinedColumn::Module));
+    QCOMPARE(model.data(moduleIndex).toString(), QString("test"));
+
+    for (int i = 0; i < model.rowCount(); ++i)
+    {
+        QModelIndex messageIndex = model.index(i, 6);
+        QString expectedMessage = entryTemplate.arg(i);
+        QCOMPARE(model.data(messageIndex).toString(), expectedMessage);
+    }
 }
 
-void LogModelTest::testHeaderData() {
-  LogModel model(logService);
-  QCOMPARE(model
-               .headerData(static_cast<int>(LogModel::PredefinedColumn::Module),
-                           Qt::Horizontal)
-               .toString(),
-           QStringLiteral("module"));
+void LogModelTest::testAvailableModules()
+{
+    LogModel model(logService);
+    auto modules = model.availableValues(
+        static_cast<int>(LogModel::PredefinedColumn::Module));
+    QVERIFY(modules.find(QString("test")) != modules.end());
 }
 
-void LogModelTest::testLoadMultipleBlocks() {
-  LogModel model(logService);
-  QSignalSpy resetSpy(&model, &QAbstractItemModel::modelReset);
-  model.goToTime(lastTime);
-  QVERIFY(resetSpy.wait(1000));
-
-  QCOMPARE(model.rowCount(), 2);
-
-  QModelIndex messageIndex = model.index(model.rowCount() - 1, 6);
-  QCOMPARE(model.data(messageIndex).toString(), QString("tail"));
+void LogModelTest::testHeaderData()
+{
+    LogModel model(logService);
+    QCOMPARE(model.headerData(static_cast<int>(LogModel::PredefinedColumn::Module), Qt::Horizontal).toString(), QStringLiteral("module"));
 }
 
-int main(int argc, char **argv) {
-  Application app(argc, argv);
-  LogModelTest tc;
-  return QTest::qExec(&tc, argc, argv);
+void LogModelTest::testLoadMultipleBlocks()
+{
+    LogModel model(logService);
+    QSignalSpy resetSpy(&model, &QAbstractItemModel::modelReset);
+    model.goToTime(std::chrono::system_clock::time_point::max());
+
+    resetSpy.wait(100 * 1000);
+    QVERIFY(!resetSpy.empty());
+
+    QCOMPARE(model.rowCount(), 2);
+
+    int entryIndex = entryCount - model.rowCount();
+    for (int i = 0; i < model.rowCount(); ++i)
+    {
+        QModelIndex messageIndex = model.index(i, 6);
+        QString expectedMessage = entryTemplate.arg(entryIndex + i);
+        QCOMPARE(model.data(messageIndex).toString(), expectedMessage);
+    }
+}
+
+int main(int argc, char **argv)
+{
+    Application app(argc, argv);
+    LogModelTest tc;
+    return QTest::qExec(&tc, argc, argv);
 }
 
 #include "LogModelTest.moc"

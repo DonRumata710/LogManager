@@ -22,7 +22,12 @@ std::vector<DirectoryScanner::LogFile> DirectoryScanner::scan() const
         for (auto& file : files)
         {
             if (!module.first.isEmpty())
-                file.module += "/" + module.first;
+            {
+                if (file.module.isEmpty())
+                    file.module = module.first;
+                else
+                    file.module += "/" + module.first;
+            }
             result.push_back(std::move(file));
             qDebug() << "Found file:" << file.module << file.metadata.filename << "from" << file.start.time_since_epoch().count() << "to" << file.end.time_since_epoch().count();
         }
