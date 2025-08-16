@@ -78,6 +78,7 @@ void LogModelTest::initTestCase()
     logService->createSession(logService->getLogManager()->getModules(),
                               firstTime.toStdSysMilliseconds(),
                               lastTime.toStdSysMilliseconds());
+}
 
 void LogModelTest::testInitialLoad()
 {
