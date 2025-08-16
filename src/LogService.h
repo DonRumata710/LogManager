@@ -4,6 +4,8 @@
 #include "services/SearchService.h"
 #include "services/ExportService.h"
 
+#include <QByteArray>
+
 class LogService : public QObject
 {
     Q_OBJECT
@@ -64,6 +66,10 @@ public slots:
     void openFile(const QString& file, const QStringList& formats)
     {
         sessionService.openFile(file, formats);
+    }
+    void openBuffer(const QByteArray& data, const QString& filename, const QStringList& formats)
+    {
+        sessionService.openBuffer(data, filename, formats);
     }
     void openFolder(const QString& logDirectory, const QStringList& formats)
     {

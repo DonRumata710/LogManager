@@ -10,6 +10,7 @@
 #include <QFile>
 #include <QString>
 #include <QTreeView>
+#include <QByteArray>
 
 #include <map>
 #include <vector>
@@ -50,6 +51,7 @@ public:
 
     void openFile(const QString& file, const QStringList& formats);
     void openFolder(const QString& logDirectory, const QStringList& formats);
+    void openBuffer(const QByteArray& data, const QString& filename, const QStringList& formats);
 
     int requestIterator(const std::chrono::system_clock::time_point& startTime,
                         const std::chrono::system_clock::time_point& endTime);

@@ -137,7 +137,7 @@ void LogModel::goToTime(const std::chrono::system_clock::time_point& time)
         dataRequests[service->requestLogEntries(iterator, blockSize)] = DataRequestType::ReplaceForward;
         entryCache.emplace(std::move(newCache));
     }
-    else if (time > getEndTime().toStdSysMilliseconds())
+    else if (time >= getEndTime().toStdSysMilliseconds())
     {
         MergeHeapCache newCache{ getEndTime().toStdSysMilliseconds() };
         iterator = createIterator<true>(newCache, startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());

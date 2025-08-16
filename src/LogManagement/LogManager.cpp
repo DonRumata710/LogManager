@@ -6,6 +6,7 @@
 
 #include <QFile>
 #include <QDebug>
+#include <QBuffer>
 
 #include <filesystem>
 
@@ -63,6 +64,26 @@ LogManager::LogManager(const QString& filename, const std::vector<std::shared_pt
         if (!result)
             throw std::runtime_error("no suitable format found for file: " + path.string());
     }
+
+    logStorage = std::make_shared<LogStorage>(scanner.scan());
+}
+
+LogManager::LogManager(const QByteArray& data, const QString& filename, const std::vector<std::shared_ptr<Format>>& formats)
+{
+    DirectoryScanner scanner;
+    std::filesystem::path path = filename.toStdString();
+    auto extension = QString::fromStdString(path.extension().string());
+    auto stem = QString::fromStdString(path.stem().string());
+
+    auto fileCreationFunc = [data](const QString&) {
+        std::unique_ptr<QBuffer> buffer = std::make_unique<QBuffer>();
+        buffer->setData(data);
+        return buffer;
+    };
+
+    auto result = addFile(scanner, filename, stem, extension, fileCreationFunc, formats);
+    if (!result)
+        throw std::runtime_error("no suitable format found for buffer");
 
     logStorage = std::make_shared<LogStorage>(scanner.scan());
 }
