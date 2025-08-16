@@ -1,5 +1,5 @@
 #include <QSignalSpy>
-#include <QTemporaryDir>
+#include <QBuffer>
 #include <QTextStream>
 #include <QtTest/QtTest>
 
@@ -15,7 +15,6 @@ class LogModelTest : public QObject
 
 private slots:
     void initTestCase();
-    void cleanupTestCase();
 
     void testInitialLoad();
     void testAvailableModules();
@@ -25,8 +24,6 @@ private slots:
 private:
     Application *app = nullptr;
     LogService *logService = nullptr;
-    QTemporaryDir *tempDir = nullptr;
-    QString logFile;
     QDateTime firstTime;
     QDateTime lastTime;
     QString entryTemplate = "msg%1";
@@ -40,15 +37,13 @@ void LogModelTest::initTestCase()
     QVERIFY(app);
     logService = app->getLogService();
 
-    tempDir = new QTemporaryDir();
-    logFile = tempDir->filePath("test.csv");
-
     Settings settings;
     settings.setValue(LogViewSettings + "/blockSize", 2);
 
-    QFile file(logFile);
-    QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Text));
-    QTextStream out(&file);
+    QByteArray data;
+    QBuffer buffer(&data);
+    QVERIFY(buffer.open(QIODevice::WriteOnly));
+    QTextStream out(&buffer);
 
     QDateTime baseTime = QDateTime::fromString("2023-01-01 00:00:00", "yyyy-MM-dd HH:mm:ss");
     firstTime = baseTime;
@@ -60,7 +55,7 @@ void LogModelTest::initTestCase()
             << ";1;1;mod;info;" << msg << "\n";
         lastTime = entryTime;
     }
-    file.close();
+    buffer.close();
 
     std::shared_ptr<Format> format = std::make_shared<Format>();
     format->name = "TestFormat";
@@ -79,15 +74,10 @@ void LogModelTest::initTestCase()
     }
     app->getFormatManager().addFormat(format);
 
-    logService->openFile(logFile, QStringList() << "TestFormat");
+    logService->openBuffer(data, "test.csv", QStringList() << "TestFormat");
     logService->createSession(logService->getLogManager()->getModules(),
                               firstTime.toStdSysMilliseconds(),
                               lastTime.toStdSysMilliseconds());
-}
-
-void LogModelTest::cleanupTestCase()
-{
-    delete tempDir;
 }
 
 void LogModelTest::testInitialLoad()

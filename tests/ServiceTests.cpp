@@ -1,6 +1,8 @@
 #include <QtTest/QtTest>
 #include <QTemporaryDir>
+#include <QBuffer>
 #include <QTextStream>
+#include <QByteArray>
 
 #include "Application.h"
 #include "services/SessionService.h"
@@ -25,7 +27,6 @@ private:
     SearchService* searchService;
     ExportService* exportService;
     QTemporaryDir* tempDir;
-    QString logFile;
     QDateTime firstTime;
     QDateTime secondTime;
 };
@@ -40,14 +41,13 @@ void ServiceTests::initTestCase()
     exportService = new ExportService(sessionService);
 
     tempDir = new QTemporaryDir();
-    logFile = tempDir->filePath("test.log.csv");
-
-    QFile file(logFile);
-    QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Text));
-    QTextStream out(&file);
+    QByteArray data;
+    QBuffer buffer(&data);
+    QVERIFY(buffer.open(QIODevice::WriteOnly));
+    QTextStream out(&buffer);
     out << "2023-01-01 00:00:00.000;1;1;mod;info;hello\n";
     out << "2023-01-01 00:01:00.000;1;1;mod;info;searchterm\n";
-    file.close();
+    buffer.close();
 
     firstTime = QDateTime::fromString("2023-01-01 00:00:00", "yyyy-MM-dd HH:mm:ss");
     secondTime = QDateTime::fromString("2023-01-01 00:01:00", "yyyy-MM-dd HH:mm:ss");
@@ -69,7 +69,7 @@ void ServiceTests::initTestCase()
     }
     app->getFormatManager().addFormat(format);
 
-    sessionService->openFile(logFile, QStringList() << "TestFormat");
+    sessionService->openBuffer(data, "test.log.csv", QStringList() << "TestFormat");
     sessionService->createSession(sessionService->getLogManager()->getModules(), firstTime.toStdSysMilliseconds(), secondTime.toStdSysMilliseconds());
 }
 

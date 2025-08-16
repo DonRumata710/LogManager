@@ -51,6 +51,21 @@ void SessionService::openFile(const QString& file, const QStringList& formats)
     QT_SLOT_END
 }
 
+void SessionService::openBuffer(const QByteArray& data, const QString& filename, const QStringList& formats)
+{
+    QT_SLOT_BEGIN
+
+    emit progressUpdated(QStringLiteral("Opening buffer %1 ...").arg(filename), 0);
+
+    auto newLogManager = std::make_shared<LogManager>(data, filename, getFormats(formats));
+    logManager = newLogManager;
+    emit logManagerCreated(filename);
+
+    emit progressUpdated(QStringLiteral("Buffer %1 opened").arg(filename), 100);
+
+    QT_SLOT_END
+}
+
 void SessionService::openFolder(const QString& logDirectory, const QStringList& formats)
 {
     QT_SLOT_BEGIN

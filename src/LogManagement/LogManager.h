@@ -8,6 +8,7 @@
 
 #include <QDateTime>
 #include <QBuffer>
+#include <QByteArray>
 
 #include <unordered_set>
 #include <memory>
@@ -18,6 +19,7 @@ class LogManager
 public:
     LogManager(const std::vector<QString>& folders, const std::vector<std::shared_ptr<Format>>& formats);
     LogManager(const QString& filename, const std::vector<std::shared_ptr<Format>>& formats);
+    LogManager(const QByteArray& data, const QString& filename, const std::vector<std::shared_ptr<Format>>& formats);
 
     const std::unordered_set<std::shared_ptr<Format>>& getFormats() const;
     const std::unordered_set<QString>& getModules() const;
