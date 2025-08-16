@@ -21,41 +21,84 @@ public:
 
     void createSession(const std::unordered_set<QString>& modules,
                        const std::chrono::system_clock::time_point& minTime,
-                       const std::chrono::system_clock::time_point& maxTime) { sessionService.createSession(modules, minTime, maxTime); }
+                       const std::chrono::system_clock::time_point& maxTime);
 
     int requestIterator(const std::chrono::system_clock::time_point& startTime,
-                        const std::chrono::system_clock::time_point& endTime) { return sessionService.requestIterator(startTime, endTime); }
-    std::shared_ptr<LogEntryIterator<>> getIterator(int index) { return sessionService.getIterator(index); }
+                        const std::chrono::system_clock::time_point& endTime);
+    std::shared_ptr<LogEntryIterator<>> getIterator(int index);
 
     int requestReverseIterator(const std::chrono::system_clock::time_point& startTime,
-                               const std::chrono::system_clock::time_point& endTime) { return sessionService.requestReverseIterator(startTime, endTime); }
-    std::shared_ptr<LogEntryIterator<false>> getReverseIterator(int index) { return sessionService.getReverseIterator(index); }
+                               const std::chrono::system_clock::time_point& endTime);
+    std::shared_ptr<LogEntryIterator<false>> getReverseIterator(int index);
 
     template<typename Iterator>
-    int requestLogEntries(const std::shared_ptr<Iterator>& iterator, int entryCount) { return sessionService.requestLogEntries(iterator, entryCount); }
+    int requestLogEntries(const std::shared_ptr<Iterator>& iterator, int entryCount)
+    {
+        return sessionService.requestLogEntries(iterator, entryCount);
+    }
 
     template<typename Iterator>
-    int requestLogEntries(const std::shared_ptr<Iterator>& iterator, int entryCount, const LogFilter& filter) { return sessionService.requestLogEntries(iterator, entryCount, filter); }
+    int requestLogEntries(const std::shared_ptr<Iterator>& iterator, int entryCount, const LogFilter& filter)
+    {
+        return sessionService.requestLogEntries(iterator, entryCount, filter);
+    }
 
     template<typename Iterator>
-    int requestLogEntries(const std::shared_ptr<Iterator>& iterator, int entryCount, const std::chrono::system_clock::time_point& until) { return sessionService.requestLogEntries(iterator, entryCount, until); }
+    int requestLogEntries(const std::shared_ptr<Iterator>& iterator, int entryCount, const std::chrono::system_clock::time_point& until)
+    {
+        return sessionService.requestLogEntries(iterator, entryCount, until);
+    }
 
     template<typename Iterator>
-    int requestLogEntries(const std::shared_ptr<Iterator>& iterator, int entryCount, const std::chrono::system_clock::time_point& until, const LogFilter& filter) { return sessionService.requestLogEntries(iterator, entryCount, until, filter); }
+    int requestLogEntries(const std::shared_ptr<Iterator>& iterator, int entryCount, const std::chrono::system_clock::time_point& until, const LogFilter& filter)
+    {
+        return sessionService.requestLogEntries(iterator, entryCount, until, filter);
+    }
 
-    std::vector<LogEntry> getResult(int index) { return sessionService.getResult(index); }
+    std::vector<LogEntry> getResult(int index)
+    {
+        return sessionService.getResult(index);
+    }
 
 public slots:
-    void openFile(const QString& file, const QStringList& formats) { sessionService.openFile(file, formats); }
-    void openFolder(const QString& logDirectory, const QStringList& formats) { sessionService.openFolder(logDirectory, formats); }
+    void openFile(const QString& file, const QStringList& formats)
+    {
+        sessionService.openFile(file, formats);
+    }
+    void openFolder(const QString& logDirectory, const QStringList& formats)
+    {
+        sessionService.openFolder(logDirectory, formats);
+    }
 
-    void search(const QDateTime& time, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward) { searchService.search(time, searchTerm, lastColumn, regexEnabled, backward); }
-    void searchWithFilter(const QDateTime& time, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, const LogFilter& filter) { searchService.searchWithFilter(time, searchTerm, lastColumn, regexEnabled, backward, filter); }
+    void search(const QDateTime& time, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward)
+    {
+        searchService.search(time, searchTerm, lastColumn, regexEnabled, backward);
+    }
 
-    void exportData(const QString& filename, const QDateTime& startTime, const QDateTime& endTime) { exportService.exportData(filename, startTime, endTime); }
-    void exportData(const QString& filename, const QDateTime& startTime, const QDateTime& endTime, const QStringList& fields) { exportService.exportData(filename, startTime, endTime, fields); }
-    void exportData(const QString& filename, const QDateTime& startTime, const QDateTime& endTime, const QStringList& fields, const LogFilter& filter) { exportService.exportData(filename, startTime, endTime, fields, filter); }
-    void exportData(const QString& filename, QTreeView* view) { exportService.exportData(filename, view); }
+    void searchWithFilter(const QDateTime& time, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, const LogFilter& filter)
+    {
+        searchService.searchWithFilter(time, searchTerm, lastColumn, regexEnabled, backward, filter);
+    }
+
+    void exportData(const QString& filename, const QDateTime& startTime, const QDateTime& endTime)
+    {
+        exportService.exportData(filename, startTime, endTime);
+    }
+
+    void exportData(const QString& filename, const QDateTime& startTime, const QDateTime& endTime, const QStringList& fields)
+    {
+        exportService.exportData(filename, startTime, endTime, fields);
+    }
+
+    void exportData(const QString& filename, const QDateTime& startTime, const QDateTime& endTime, const QStringList& fields, const LogFilter& filter)
+    {
+        exportService.exportData(filename, startTime, endTime, fields, filter);
+    }
+
+    void exportData(const QString& filename, QTreeView* view)
+    {
+        exportService.exportData(filename, view);
+    }
 
 signals:
     void logManagerCreated(const QString& source);

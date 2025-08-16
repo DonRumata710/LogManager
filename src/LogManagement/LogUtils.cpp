@@ -5,11 +5,6 @@
 #include <QJsonObject>
 #include <QJsonArray>
 
-#include <chrono>
-#include <ctime>
-#include <iomanip>
-#include <sstream>
-
 
 bool checkFormat(const QStringList& parts, const std::shared_ptr<Format>& format)
 {
@@ -228,17 +223,13 @@ std::chrono::system_clock::time_point parseTime(const QString& timeStr, const st
 
     std::chrono::system_clock::time_point tp;
     {
-        std::tm tm{};
         std::istringstream ss(std::string{ baseStr });
-        ss >> std::get_time(&tm, format->timeMask.toStdString().c_str());
+        ss >> std::chrono::parse(format->timeMask.toStdString(), tp);
         if (!ss)
         {
             throw std::runtime_error("Failed to parse time '" + input + "' using mask '" +
                                      format->timeMask.toStdString() + "'");
         }
-
-        std::time_t time = timegm(&tm);
-        tp = std::chrono::system_clock::from_time_t(time);
     }
 
     if (!fracStr.empty() && format->timeFractionalDigits > 0)
