@@ -22,7 +22,7 @@ set(CMAKE_AUTORCC ON)
 
 check_local_hints()
 
-find_package(Qt6 COMPONENTS Core Gui Widgets REQUIRED)
+find_package(Qt6 COMPONENTS Core Gui Widgets Test REQUIRED)
 find_package(QuaZip-Qt6 COMPONENTS QuaZip)
 find_package(Boost COMPONENTS headers REQUIRED)
 
@@ -36,6 +36,8 @@ file(GLOB_RECURSE SOURCES src/*.cpp)
 file(GLOB_RECURSE HEADERS src/*.h)
 file(GLOB_RECURSE UI_FILES ui/*.ui src/*.ui)
 file(GLOB_RECURSE RESOURCES res/*)
+set(NON_MAIN_SOURCES ${SOURCES})
+list(FILTER NON_MAIN_SOURCES EXCLUDE REGEX "src/main.cpp")
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/qtres)
     file(GLOB_RECURSE RESOURCE_FILE qtres/*.qrc)
@@ -55,13 +57,16 @@ endif()
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${RESOURCE_FILE} ${QT_RESOURCES} ${UI_FILES} ${TS_FILES} ${RESOURCES})
 
-target_compile_definitions(${PROJECT_NAME} PRIVATE APPLICATION_NAME="${PROJECT_NAME}"
-    APPLICATION_VERSION="${PROJECT_VERSION}"
+target_compile_definitions(${PROJECT_NAME}
+    PRIVATE
+        APPLICATION_NAME="${PROJECT_NAME}"
+        APPLICATION_VERSION="${PROJECT_VERSION}"
 )
 
 target_include_directories(${PROJECT_NAME}
     PRIVATE
         ${PROJECT_SOURCE_DIR}/src
+        ${PROJECT_SOURCE_DIR}/src/FormatCreation
         ${CMAKE_BINARY_DIR}/${PROJECT_NAME}_autogen
 )
 
@@ -73,6 +78,24 @@ target_link_libraries(${PROJECT_NAME}
         QuaZip::QuaZip
         Boost::headers
 )
+
+enable_testing()
+file(GLOB TEST_SOURCES tests/*.cpp)
+foreach(test_src ${TEST_SOURCES})
+    get_filename_component(test_name ${test_src} NAME_WE)
+    add_executable(${test_name} ${test_src} ${NON_MAIN_SOURCES} ${HEADERS})
+
+    target_compile_definitions(${test_name}
+        PRIVATE
+            APPLICATION_NAME="${PROJECT_NAME}"
+            APPLICATION_VERSION="${PROJECT_VERSION}"
+    )
+
+    target_include_directories(${test_name} PRIVATE ${PROJECT_SOURCE_DIR}/src)
+    target_include_directories(${test_name} PRIVATE ${PROJECT_SOURCE_DIR}/src/FormatCreation)
+    target_link_libraries(${test_name} Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test QuaZip::QuaZip Boost::headers)
+    add_test(NAME ${test_name} COMMAND ${test_name})
+endforeach()
 
 get_target_property(_qt5_qmake_location Qt::qmake IMPORTED_LOCATION)
 

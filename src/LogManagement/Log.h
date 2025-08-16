@@ -3,6 +3,7 @@
 #include "Format.h"
 
 #include <QIODevice>
+#include <QStringDecoder>
 
 #include <optional>
 #include <memory>
