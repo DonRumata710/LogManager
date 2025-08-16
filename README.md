@@ -43,7 +43,7 @@ Each JSON file may contain the following keys:
   separator is provided. Capturing groups correspond to fields in order.
  - `lineFormat` - set to `"json"` when each log line is a JSON object. Field names may use dot notation to access nested properties.
 - `timeFieldIndex` - zero-based index of the timestamp field.
-- `timeMask` - pattern used to parse the timestamp. Std::chrono::parse format is used.
+- `timeMask` - pattern used to parse the timestamp. `std::get_time`/`strftime`-style format is used.
 - `timeFractionalDigits` - number of digits after the decimal point in the timestamp, used to parse fractional seconds.
  - `fields` - array of field definitions. Each entry contains a `name`, a
    regular expression `regex` and the Qt type for the value. When using `lineFormat` `"json"`,

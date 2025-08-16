@@ -2,6 +2,7 @@
 
 #include "Application.h"
 #include "LogService.h"
+#include "services/SearchService.h"
 #include "LogView/LogModel.h"
 #include "LogView/LogFilterModel.h"
 #include "Utils.h"
@@ -30,9 +31,10 @@ SearchController::SearchController(SearchBar* searchBar, QAbstractItemView* logV
         return;
     }
 
-    connect(this, &SearchController::startGlobalSearch, logService, &LogService::search);
-    connect(this, &SearchController::startGlobalSearchWithFilter, logService, &::LogService::searchWithFilter);
-    connect(logService, &LogService::searchFinished, this, &SearchController::handleSearchResult);
+    auto searchService = logService->getSearchService();
+    connect(this, &SearchController::startGlobalSearch, searchService, &SearchService::search);
+    connect(this, &SearchController::startGlobalSearchWithFilter, searchService, &SearchService::searchWithFilter);
+    connect(searchService, &SearchService::searchFinished, this, &SearchController::handleSearchResult);
 }
 
 void SearchController::updateModel()
