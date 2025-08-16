@@ -30,6 +30,7 @@ private:
     int entryCount = 10;
 };
 
+
 void LogModelTest::initTestCase()
 {
     app = qobject_cast<Application *>(qApp);
@@ -73,11 +74,10 @@ void LogModelTest::initTestCase()
     }
     app->getFormatManager().addFormat(format);
 
-    logService->openBuffer(data, "test.log.csv", QStringList() << "TestFormat");
+    logService->openBuffer(data, "test.csv", QStringList() << "TestFormat");
     logService->createSession(logService->getLogManager()->getModules(),
                               firstTime.toStdSysMilliseconds(),
                               lastTime.toStdSysMilliseconds());
-}
 
 void LogModelTest::testInitialLoad()
 {
