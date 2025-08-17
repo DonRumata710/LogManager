@@ -140,6 +140,9 @@ jobs:
       - name: Build
         run: cmake --build build --config Release --parallel
 
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure -C Release
+
       - name: Create artifacts
         run: cmake --build build --target release_packet
 
