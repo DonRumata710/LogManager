@@ -138,7 +138,10 @@ jobs:
         run: cmake --build build --config Release --parallel
 
       - name: Run tests
-        run: ctest --test-dir build --output-on-failure -C Release
+        shell: pwsh
+        run: |
+          $env:PATH = "${env:QT_ROOT_DIR}\bin;${env:GITHUB_WORKSPACE}\deps\win64\Release\zlib\bin;${env:GITHUB_WORKSPACE}\deps\win64\Release\quazip\bin;$env:PATH"
+          ctest --test-dir build --output-on-failure -C Release
 
       - name: Create artifacts
         run: cmake --build build --target release_packet
