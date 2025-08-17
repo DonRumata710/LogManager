@@ -225,7 +225,7 @@ public:
             cache.heap.reserve(mergeHeap.size());
             for (const auto& item : mergeHeap)
                 cache.heap.emplace_back(item.getCache());
-            cache.time = mergeHeap.top().entry.time;
+            cache.time = getCurrentTime();
         }
         return cache;
     }

@@ -9,6 +9,7 @@
 #include "LogView/LogViewUtils.h"
 #include "Settings.h"
 
+
 class LogModelTest : public QObject
 {
     Q_OBJECT
@@ -39,6 +40,7 @@ void LogModelTest::initTestCase()
 
     Settings settings;
     settings.setValue(LogViewSettings + "/blockSize", 2);
+    settings.setValue(LogViewSettings + "/blockCount", 2);
 
     QByteArray data;
     QBuffer buffer(&data);
@@ -120,14 +122,47 @@ void LogModelTest::testLoadMultipleBlocks()
 {
     LogModel model(logService);
     QSignalSpy resetSpy(&model, &QAbstractItemModel::modelReset);
+
     model.goToTime(std::chrono::system_clock::time_point::max());
 
-    resetSpy.wait(100 * 1000);
+    resetSpy.wait(10 * 1000);
     QVERIFY(!resetSpy.empty());
 
     QCOMPARE(model.rowCount(), 2);
 
     int entryIndex = entryCount - model.rowCount();
+    for (int i = 0; i < model.rowCount(); ++i)
+    {
+        QModelIndex messageIndex = model.index(i, 6);
+        QString expectedMessage = entryTemplate.arg(entryIndex + i);
+        QCOMPARE(model.data(messageIndex).toString(), expectedMessage);
+    }
+
+    model.fetchUpMore();
+
+    resetSpy.wait(10 * 1000);
+    QVERIFY(!resetSpy.empty());
+
+    QCOMPARE(model.rowCount(), 4);
+    QVERIFY(model.isFulled());
+
+    entryIndex = entryCount - model.rowCount();
+    for (int i = 0; i < model.rowCount(); ++i)
+    {
+        QModelIndex messageIndex = model.index(i, 6);
+        QString expectedMessage = entryTemplate.arg(entryIndex + i);
+        QCOMPARE(model.data(messageIndex).toString(), expectedMessage);
+    }
+
+    model.fetchUpMore();
+
+    resetSpy.wait(10 * 1000);
+    QVERIFY(!resetSpy.empty());
+
+    QCOMPARE(model.rowCount(), 4);
+    QVERIFY(model.isFulled());
+
+    entryIndex = entryCount - model.rowCount() - 2;
     for (int i = 0; i < model.rowCount(); ++i)
     {
         QModelIndex messageIndex = model.index(i, 6);
