@@ -21,6 +21,7 @@ private slots:
     void testAvailableModules();
     void testHeaderData();
     void testLoadMultipleBlocks();
+    void testFetchDownMore();
 
 private:
     Application *app = nullptr;
@@ -29,6 +30,7 @@ private:
     QDateTime lastTime;
     QString entryTemplate = "msg%1";
     int entryCount = 10;
+    int blockSize = 3;
 };
 
 
@@ -39,7 +41,7 @@ void LogModelTest::initTestCase()
     logService = app->getLogService();
 
     Settings settings;
-    settings.setValue(LogViewSettings + "/blockSize", 2);
+    settings.setValue(LogViewSettings + "/blockSize", blockSize);
     settings.setValue(LogViewSettings + "/blockCount", 2);
 
     QByteArray data;
@@ -91,7 +93,7 @@ void LogModelTest::testInitialLoad()
     resetSpy.wait(10 * 1000);
     QVERIFY(!resetSpy.empty());
 
-    QCOMPARE(model.rowCount(), 2);
+    QCOMPARE(model.rowCount(), blockSize);
 
     QModelIndex moduleIndex = model.index(0, static_cast<int>(LogModel::PredefinedColumn::Module));
     QCOMPARE(model.data(moduleIndex).toString(), QString("test"));
@@ -128,7 +130,7 @@ void LogModelTest::testLoadMultipleBlocks()
     resetSpy.wait(10 * 1000);
     QVERIFY(!resetSpy.empty());
 
-    QCOMPARE(model.rowCount(), 2);
+    QCOMPARE(model.rowCount(), blockSize);
 
     int entryIndex = entryCount - model.rowCount();
     for (int i = 0; i < model.rowCount(); ++i)
@@ -143,7 +145,7 @@ void LogModelTest::testLoadMultipleBlocks()
     resetSpy.wait(10 * 1000);
     QVERIFY(!resetSpy.empty());
 
-    QCOMPARE(model.rowCount(), 4);
+    QCOMPARE(model.rowCount(), blockSize * 2);
     QVERIFY(model.isFulled());
 
     entryIndex = entryCount - model.rowCount();
@@ -159,10 +161,63 @@ void LogModelTest::testLoadMultipleBlocks()
     resetSpy.wait(10 * 1000);
     QVERIFY(!resetSpy.empty());
 
-    QCOMPARE(model.rowCount(), 4);
+    QCOMPARE(model.rowCount(), blockSize * 2);
     QVERIFY(model.isFulled());
 
-    entryIndex = entryCount - model.rowCount() - 2;
+    entryIndex = entryCount - model.rowCount() - blockSize;
+    for (int i = 0; i < model.rowCount(); ++i)
+    {
+        QModelIndex messageIndex = model.index(i, 6);
+        QString expectedMessage = entryTemplate.arg(entryIndex + i);
+        QCOMPARE(model.data(messageIndex).toString(), expectedMessage);
+    }
+}
+
+void LogModelTest::testFetchDownMore()
+{
+    LogModel model(logService);
+    QSignalSpy resetSpy(&model, &QAbstractItemModel::modelReset);
+
+    model.goToTime(firstTime);
+
+    resetSpy.wait(10 * 1000);
+    QVERIFY(!resetSpy.empty());
+
+    QCOMPARE(model.rowCount(), blockSize);
+
+    int entryIndex = 0;
+    for (int i = 0; i < model.rowCount(); ++i)
+    {
+        QModelIndex messageIndex = model.index(i, 6);
+        QString expectedMessage = entryTemplate.arg(entryIndex + i);
+        QCOMPARE(model.data(messageIndex).toString(), expectedMessage);
+    }
+
+    model.fetchDownMore();
+
+    resetSpy.wait(10 * 1000);
+    QVERIFY(!resetSpy.empty());
+
+    QCOMPARE(model.rowCount(), blockSize * 2);
+    QVERIFY(model.isFulled());
+
+    entryIndex = 0;
+    for (int i = 0; i < model.rowCount(); ++i)
+    {
+        QModelIndex messageIndex = model.index(i, 6);
+        QString expectedMessage = entryTemplate.arg(entryIndex + i);
+        QCOMPARE(model.data(messageIndex).toString(), expectedMessage);
+    }
+
+    model.fetchDownMore();
+
+    resetSpy.wait(10 * 1000);
+    QVERIFY(!resetSpy.empty());
+
+    QCOMPARE(model.rowCount(), blockSize * 2);
+    QVERIFY(model.isFulled());
+
+    entryIndex = blockSize;
     for (int i = 0; i < model.rowCount(); ++i)
     {
         QModelIndex messageIndex = model.index(i, 6);
