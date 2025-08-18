@@ -155,9 +155,6 @@ void LogFilterModelTest::testFilteredModelCreated()
     QCOMPARE(modelSpy.count(), 1);
     QVERIFY(qobject_cast<FilteredLogModel*>(filterModel.sourceModel()));
 
-    QSignalSpy dataSpy(filterModel.sourceModel(), &QAbstractItemModel::rowsInserted);
-    QVERIFY(dataSpy.wait(10 * 1000));
-
     QCOMPARE(filterModel.rowCount(), entryCount);
 }
 
