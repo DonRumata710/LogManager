@@ -7,6 +7,8 @@
 #include "../LogManagement/FilteredLogIterator.h"
 
 #include <QFontDatabase>
+#include <QBrush>
+#include <QColor>
 
 
 LogModel::LogModel(LogService* logService, QObject *parent) :
@@ -367,6 +369,13 @@ QVariant LogModel::data(const QModelIndex& index, int role) const
 
     switch(role)
     {
+    case Qt::BackgroundRole:
+    {
+        const auto& log = index.internalPointer() ? logs[getParentIndex(index)] : logs[index.row()];
+        if (bookmarks.find(log.entry.time) != bookmarks.end())
+            return QBrush(QColor(Qt::yellow));
+        break;
+    }
     case Qt::FontRole:
         return QFontDatabase::systemFont(QFontDatabase::FixedFont);
 
@@ -433,6 +442,67 @@ Qt::ItemFlags LogModel::flags(const QModelIndex& index) const
 LogService* LogModel::getService() const
 {
     return service;
+}
+
+void LogModel::toggleBookmark(const QModelIndex& index)
+{
+    if (!index.isValid())
+        return;
+
+    size_t row = index.internalPointer() ? getParentIndex(index)
+                                         : static_cast<size_t>(index.row());
+    if (row >= logs.size())
+        return;
+
+    auto& item = logs[row];
+    auto it = bookmarks.find(item.entry.time);
+    if (it != bookmarks.end())
+        bookmarks.erase(it);
+    else
+        bookmarks.emplace(item.entry.time, item.entry);
+
+    auto top = this->index(row, 0);
+    auto bottom = this->index(row, columnCount() - 1);
+    emit dataChanged(top, bottom, { Qt::BackgroundRole });
+
+    if (!item.entry.additionalLines.isEmpty())
+    {
+        auto childTop = this->index(0, 0, top);
+        auto childBottom = this->index(0, columnCount() - 1, top);
+        emit dataChanged(childTop, childBottom, { Qt::BackgroundRole });
+    }
+}
+
+bool LogModel::isBookmarked(const QModelIndex& index) const
+{
+    if (!index.isValid())
+        return false;
+
+    size_t row = index.internalPointer() ? getParentIndex(index)
+                                         : static_cast<size_t>(index.row());
+    if (row >= logs.size())
+        return false;
+
+    return bookmarks.find(logs[row].entry.time) != bookmarks.end();
+}
+
+void LogModel::clearBookmarks()
+{
+    if (bookmarks.empty())
+        return;
+
+    bookmarks.clear();
+    if (!logs.empty())
+    {
+        auto top = index(0, 0);
+        auto bottom = index(logs.size() - 1, columnCount() - 1);
+        emit dataChanged(top, bottom, { Qt::BackgroundRole });
+    }
+}
+
+bool LogModel::hasBookmarks() const
+{
+    return !bookmarks.empty();
 }
 
 void LogModel::handleIterator(int index, bool isStraight)
