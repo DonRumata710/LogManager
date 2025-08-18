@@ -8,6 +8,8 @@
 #include <memory>
 #include <deque>
 #include <set>
+#include <unordered_set>
+#include <unordered_map>
 
 class LogFilter;
 
@@ -71,6 +73,11 @@ public:
     Qt::ItemFlags flags(const QModelIndex& index) const override;
 
     LogService* getService() const;
+
+    void toggleBookmark(const QModelIndex& index);
+    bool isBookmarked(const QModelIndex& index) const;
+    void clearBookmarks();
+    bool hasBookmarks() const;
 
 signals:
     void startPageSwap();
@@ -204,6 +211,15 @@ private:
     std::vector<Format::Field> fields;
     std::unordered_set<QString> modules;
     std::deque<LogItem> logs;
+
+    struct TimePointHash
+    {
+        size_t operator()(const std::chrono::system_clock::time_point& tp) const noexcept
+        {
+            return std::hash<long long>()(tp.time_since_epoch().count());
+        }
+    };
+    std::unordered_map<std::chrono::system_clock::time_point, LogEntry, TimePointHash> bookmarks;
 
     MergeHeapCacheContainer entryCache;
 

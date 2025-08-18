@@ -3,6 +3,8 @@
 #include <QAbstractItemModel>
 #include <QTreeView>
 
+class QContextMenuEvent;
+
 class LogModel;
 class LogFilterModel;
 
@@ -30,6 +32,7 @@ private slots:
 
 private:
     virtual void scrollContentsBy(int dx, int dy) override;
+    void contextMenuEvent(QContextMenuEvent* event) override;
 
 private:
     std::optional<QModelIndex> lastScrollPosition;

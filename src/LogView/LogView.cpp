@@ -7,6 +7,9 @@
 
 #include <QScrollBar>
 #include <QAbstractProxyModel>
+#include <QMenu>
+#include <QAction>
+#include <QContextMenuEvent>
 #include <algorithm>
 
 
@@ -206,4 +209,42 @@ void LogView::scrollContentsBy(int dx, int dy)
         if (header)
             header->scroll(dx);
     }
+}
+
+void LogView::contextMenuEvent(QContextMenuEvent* event)
+{
+    auto selection = selectionModel()->selectedRows();
+    if (selection.isEmpty())
+        return;
+
+    auto* proxyModel = qobject_cast<QAbstractProxyModel*>(model());
+    LogModel* logModel = proxyModel ? qobject_cast<LogModel*>(proxyModel->sourceModel())
+                                    : qobject_cast<LogModel*>(model());
+    if (!logModel)
+        return;
+
+    QModelIndex srcIndex = selection.first();
+    if (proxyModel)
+        srcIndex = proxyModel->mapToSource(srcIndex);
+
+    bool bookmarked = logModel->isBookmarked(srcIndex);
+
+    QMenu menu(this);
+    QAction* act = menu.addAction(bookmarked ? tr("Remove Bookmark") : tr("Add Bookmark"));
+    connect(act, &QAction::triggered, this, [this, proxyModel, logModel]() {
+        auto rows = selectionModel()->selectedRows();
+        for (QModelIndex idx : rows)
+        {
+            if (proxyModel)
+                idx = proxyModel->mapToSource(idx);
+            logModel->toggleBookmark(idx);
+        }
+    });
+
+    menu.addSeparator();
+    QAction* clearAct = menu.addAction(tr("Remove All Bookmarks"));
+    clearAct->setEnabled(logModel->hasBookmarks());
+    connect(clearAct, &QAction::triggered, logModel, &LogModel::clearBookmarks);
+
+    menu.exec(event->globalPos());
 }
