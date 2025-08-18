@@ -37,6 +37,8 @@ public:
     void goToTime(const QDateTime& time);
     void goToTime(const std::chrono::system_clock::time_point& time);
 
+    std::chrono::system_clock::time_point getCurrentTime() const;
+
     bool canFetchUpMore() const;
     virtual void fetchUpMore();
 

@@ -153,6 +153,11 @@ void LogModel::goToTime(const std::chrono::system_clock::time_point& time)
     }
 }
 
+std::chrono::system_clock::time_point LogModel::getCurrentTime() const
+{
+    return reverseIterator ? reverseIterator->getCurrentTime() : std::chrono::system_clock::time_point::min();
+}
+
 bool LogModel::canFetchUpMore() const
 {
     return reverseIterator && reverseIterator->hasLogs();
@@ -558,6 +563,11 @@ void LogModel::handleData(int index)
 
     DataRequestType requestType = handleDataRequest(index);
     auto data = service->getResult(index);
+    if (data.empty())
+    {
+        qDebug() << "LogModel::handleData: no data received for index" << index;
+        return;
+    }
 
     switch(requestType)
     {

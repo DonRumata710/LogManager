@@ -10,7 +10,7 @@ LogFilter::LogFilter(const std::unordered_map<int, QRegularExpression>& columnFi
 
 bool LogFilter::isEmpty() const
 {
-    return columnFilters.empty() && variants.empty();
+    return columnFilters.empty() && variants.empty() && modules.empty();
 }
 
 bool LogFilter::check(const LogEntry& entry) const

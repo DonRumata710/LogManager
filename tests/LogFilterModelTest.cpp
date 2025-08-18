@@ -27,12 +27,15 @@ private slots:
     void testFilteredModelCreated();
 
 private:
+    QString getModule(int);
+
+private:
     Application *app = nullptr;
     LogService *logService = nullptr;
     LogModel *model = nullptr;
     QDateTime firstTime;
     QString entryTemplate = "msg%1";
-    int entryCount = 5;
+    int entryCount = 10;
 };
 
 void LogFilterModelTest::initTestCase()
@@ -43,7 +46,7 @@ void LogFilterModelTest::initTestCase()
 
     Settings settings;
     settings.setValue(LogViewSettings + "/blockSize", entryCount);
-    settings.setValue(LogViewSettings + "/blockCount", 1);
+    settings.setValue(LogViewSettings + "/blockCount", 2);
 
     QByteArray data;
     QBuffer buffer(&data);
@@ -53,10 +56,10 @@ void LogFilterModelTest::initTestCase()
     QDateTime baseTime = QDateTime::fromString("2023-01-01 00:00:00", "yyyy-MM-dd HH:mm:ss");
     firstTime = baseTime;
     QDateTime lastTime;
-    for (int i = 0; i < entryCount; ++i)
+    for (int i = 0; i < entryCount * 10; ++i)
     {
         QString msg = entryTemplate.arg(i);
-        QString module = (i % 2 == 0) ? "modA" : "modB";
+        QString module = getModule(i);
         QDateTime entryTime = baseTime.addSecs(i);
         out << entryTime.toString("yyyy-MM-dd HH:mm:ss.zzz")
             << ';' << module << ";1;1;info;" << msg << "\n";
@@ -91,6 +94,9 @@ void LogFilterModelTest::initTestCase()
     model->goToTime(firstTime);
     QVERIFY(resetSpy.wait(10 * 1000));
     QCOMPARE(model->rowCount(), entryCount);
+
+    QSignalSpy dataSpy(model, &QAbstractItemModel::rowsInserted);
+    QVERIFY(dataSpy.wait(10 * 1000));
 }
 
 void LogFilterModelTest::testFilterWildcard()
@@ -115,7 +121,7 @@ void LogFilterModelTest::testVariantList()
     source.setHeaderData(2, Qt::Horizontal, QStringLiteral("field1"));
     for (int i = 0; i < entryCount; ++i)
     {
-        QString module = (i % 2 == 0) ? "modA" : "modB";
+        QString module = getModule(i);
         source.setData(source.index(i, 2), module);
     }
 
@@ -123,7 +129,7 @@ void LogFilterModelTest::testVariantList()
     filterModel.setSourceModel(&source);
     filterModel.setVariantList(2, QStringList() << "modA");
 
-    int expected = (entryCount + 1) / 2;
+    int expected = (entryCount + 9) / 10;
     QCOMPARE(filterModel.rowCount(), expected);
     for (int i = 0; i < filterModel.rowCount(); ++i)
     {
@@ -142,12 +148,35 @@ void LogFilterModelTest::testFilteredModelCreated()
 {
     LogFilterModel filterModel;
     filterModel.setSourceModel(model);
-    QSignalSpy spy(&filterModel, &LogFilterModel::sourceModelChanged);
+    QSignalSpy modelSpy(&filterModel, &LogFilterModel::sourceModelChanged);
 
     filterModel.setVariantList(2, QStringList() << "modA");
 
-    QCOMPARE(spy.count(), 1);
+    QCOMPARE(modelSpy.count(), 1);
     QVERIFY(qobject_cast<FilteredLogModel*>(filterModel.sourceModel()));
+
+    QSignalSpy dataSpy(filterModel.sourceModel(), &QAbstractItemModel::rowsInserted);
+    QVERIFY(dataSpy.wait(10 * 1000));
+
+    QCOMPARE(filterModel.rowCount(), entryCount);
+}
+
+QString LogFilterModelTest::getModule(int i)
+{
+    switch (i % 10)
+    {
+    case 0: return "modA";
+    case 1: return "modB";
+    case 2: return "modC";
+    case 3: return "modD";
+    case 4: return "modE";
+    case 5: return "modF";
+    case 6: return "modG";
+    case 7: return "modH";
+    case 8: return "modI";
+    case 9: return "modJ";
+    default: return QString();
+    }
 }
 
 int main(int argc, char **argv)

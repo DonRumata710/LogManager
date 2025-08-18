@@ -202,19 +202,23 @@ void LogFilterModel::updateSourceModel()
     }
 
     constexpr double recreateThreshold = 10.0;
-    if (filteredModel && totalRate < recreateThreshold)
+    if (totalRate >= recreateThreshold)
     {
-        filteredModel->setFilter(filter);
-    }
-    else
-    {
-        filteredModel = std::make_unique<FilteredLogModel>(baseModel->getService(), filter);
-        filteredModel->goToTime(std::chrono::system_clock::time_point::min());
+        if (filteredModel)
+        {
+            filteredModel->setFilter(filter);
+        }
+        else
+        {
+            filteredModel = std::make_unique<FilteredLogModel>(baseModel->getService(), filter);
+            filteredModel->goToTime(baseModel->getCurrentTime());
+        }
+
+        QSortFilterProxyModel::setSourceModel(filteredModel.get());
+        clearFilters();
+        invalidateFilter();
     }
 
-    QSortFilterProxyModel::setSourceModel(filteredModel.get());
-    clearFilters();
-    invalidateFilter();
     emit sourceModelChanged(filteredModel.get());
 }
 
