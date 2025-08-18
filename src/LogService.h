@@ -3,6 +3,8 @@
 #include "services/SessionService.h"
 #include "services/SearchService.h"
 #include "services/ExportService.h"
+#include "services/TimelineService.h"
+#include "Statistics/LogHistogram.h"
 
 #include <QByteArray>
 
@@ -17,6 +19,7 @@ public:
     SessionService* getSessionService();
     SearchService* getSearchService();
     ExportService* getExportService();
+    TimelineService* getTimelineService();
 
     const ThreadSafePtr<LogManager>& getLogManager() const { return sessionService.getLogManager(); }
     const ThreadSafePtr<Session>& getSession() const { return sessionService.getSession(); }
@@ -63,6 +66,10 @@ public:
     }
 
 public slots:
+    void showTimeline(QWidget* parent)
+    {
+        timelineService.showTimeline(parent);
+    }
     void openFile(const QString& file, const QStringList& formats)
     {
         sessionService.openFile(file, formats);
@@ -113,9 +120,11 @@ signals:
     void progressUpdated(const QString& message, int percent);
     void searchFinished(const QString& searchTerm, const QDateTime& entryTime);
     void handleError(const QString& message);
+    void timelineReady(QWidget* parent, std::vector<Statistics::Bucket> data);
 
 private:
     SessionService sessionService;
     SearchService searchService;
     ExportService exportService;
+    TimelineService timelineService;
 };

@@ -26,6 +26,7 @@ private slots:
     void on_actionOpen_folder_triggered();
     void on_actionOpen_file_triggered();
     void on_actionClose_triggered();
+    void on_actionTimeline_triggered();
     void on_actionAdd_format_triggered();
     void on_actionRemove_format_triggered();
     void on_actionRefresh_format_triggered();
@@ -52,6 +53,8 @@ signals:
     void exportData(const QString& filename, const QDateTime& startTime, const QDateTime& endTime, const QStringList& fields, const LogFilter& filter);
 
     void exportData(const QString& filename, QTreeView* view);
+
+    void openTimeline(QWidget* parent);
 
 private:
     void addFormat(const std::string& format);

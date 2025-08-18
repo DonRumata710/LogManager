@@ -5,7 +5,8 @@ LogService::LogService(QObject *parent) :
     QObject(parent),
     sessionService(this),
     searchService(&sessionService, this),
-    exportService(&sessionService, this)
+    exportService(&sessionService, this),
+    timelineService(&sessionService, this)
 {
     connect(&sessionService, &SessionService::logManagerCreated, this, &LogService::logManagerCreated);
     connect(&sessionService, &SessionService::iteratorCreated, this, &LogService::iteratorCreated);
@@ -19,6 +20,8 @@ LogService::LogService(QObject *parent) :
 
     connect(&exportService, &ExportService::progressUpdated, this, &LogService::progressUpdated);
     connect(&exportService, &ExportService::handleError, this, &LogService::handleError);
+
+    connect(&timelineService, &TimelineService::timelineReady, this, &LogService::timelineReady);
 }
 
 SessionService* LogService::getSessionService()
@@ -34,6 +37,11 @@ SearchService* LogService::getSearchService()
 ExportService* LogService::getExportService()
 {
     return &exportService;
+}
+
+TimelineService* LogService::getTimelineService()
+{
+    return &timelineService;
 }
 
 void LogService::createSession(const std::unordered_set<QString>& modules, const std::chrono::system_clock::time_point& minTime, const std::chrono::system_clock::time_point& maxTime)

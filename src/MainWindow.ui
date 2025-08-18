@@ -38,6 +38,7 @@
     </property>
     <addaction name="actionOpen_file"/>
     <addaction name="actionOpen_folder"/>
+    <addaction name="actionTimeline"/>
     <addaction name="separator"/>
     <addaction name="actionClose"/>
    </widget>
@@ -109,7 +110,15 @@
     <string>Deselect all</string>
    </property>
   </action>
-  <action name="actionExport_as_is">
+  <action name="actionTimeline">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Timeline...</string>
+   </property>
+  </action>
+ <action name="actionExport_as_is">
    <property name="text">
     <string>Export current view</string>
    </property>

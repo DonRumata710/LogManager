@@ -8,7 +8,8 @@
 #include "LogView/LogModel.h"
 #include "LogView/LogFilterModel.h"
 #include "FormatCreation/FormatCreationWizard.h"
-
+#include "TimelineDialog.h"
+#include <utility>
 #include <QScrollBar>
 #include <QFileDialog>
 #include <QInputDialog>
@@ -61,6 +62,12 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(logService, &LogService::logManagerCreated, this, &MainWindow::logManagerCreated);
     connect(logService, &LogService::progressUpdated, this, &MainWindow::handleProgress);
     connect(logService, &LogService::handleError, this, &MainWindow::handleError);
+
+    connect(this, &MainWindow::openTimeline, logService, &LogService::showTimeline);
+    connect(logService, &LogService::timelineReady, this, [this](QWidget* parent, std::vector<Statistics::Bucket> data) {
+        TimelineDialog dialog(std::move(data), parent);
+        dialog.exec();
+    });
 
     connect(this, SIGNAL(exportData(QString,QDateTime,QDateTime)), logService, SLOT(exportData(QString,QDateTime,QDateTime)));
     connect(this, SIGNAL(exportData(QString,QDateTime,QDateTime,QStringList)), logService, SLOT(exportData(QString,QDateTime,QDateTime,QStringList)));
@@ -145,6 +152,15 @@ void MainWindow::on_actionClose_triggered()
     setCloseActionEnabled(false);
     ui->searchBar->hide();
     setTitleClosed();
+
+    QT_SLOT_END
+}
+
+void MainWindow::on_actionTimeline_triggered()
+{
+    QT_SLOT_BEGIN
+
+    openTimeline(this);
 
     QT_SLOT_END
 }
@@ -434,6 +450,7 @@ void MainWindow::setLogActionsEnabled(bool enabled)
 void MainWindow::setCloseActionEnabled(bool enabled)
 {
     ui->actionClose->setEnabled(enabled);
+    ui->actionTimeline->setEnabled(enabled);
 }
 
 void MainWindow::updateFormatActions(bool enabled)
