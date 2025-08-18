@@ -9,6 +9,10 @@
 #include "LogView/LogViewUtils.h"
 #include "Settings.h"
 
+static std::chrono::system_clock::time_point toTimePoint(const QDateTime &dt)
+{
+    return std::chrono::system_clock::time_point{ std::chrono::milliseconds{ dt.toMSecsSinceEpoch() } };
+}
 
 class LogModelTest : public QObject
 {
@@ -80,8 +84,8 @@ void LogModelTest::initTestCase()
 
     logService->openBuffer(data, "test.csv", QStringList() << "TestFormat");
     logService->createSession(logService->getLogManager()->getModules(),
-                              firstTime.toStdSysMilliseconds(),
-                              lastTime.toStdSysMilliseconds());
+                              toTimePoint(firstTime),
+                              toTimePoint(lastTime));
 }
 
 void LogModelTest::testInitialLoad()
