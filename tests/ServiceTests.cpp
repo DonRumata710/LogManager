@@ -10,6 +10,11 @@
 #include "services/ExportService.h"
 
 
+static std::chrono::system_clock::time_point toTimePoint(const QDateTime &dt)
+{
+    return std::chrono::system_clock::time_point{ std::chrono::milliseconds{ dt.toMSecsSinceEpoch() } };
+}
+
 class ServiceTests : public QObject
 {
     Q_OBJECT
@@ -70,7 +75,7 @@ void ServiceTests::initTestCase()
     app->getFormatManager().addFormat(format);
 
     sessionService->openBuffer(data, "test.log.csv", QStringList() << "TestFormat");
-    sessionService->createSession(sessionService->getLogManager()->getModules(), firstTime.toStdSysMilliseconds(), secondTime.toStdSysMilliseconds());
+    sessionService->createSession(sessionService->getLogManager()->getModules(), toTimePoint(firstTime), toTimePoint(secondTime));
 }
 
 void ServiceTests::cleanupTestCase()
@@ -83,7 +88,7 @@ void ServiceTests::cleanupTestCase()
 
 void ServiceTests::testSessionService()
 {
-    int idx = sessionService->requestIterator(firstTime.toStdSysMilliseconds(), secondTime.toStdSysMilliseconds());
+    int idx = sessionService->requestIterator(toTimePoint(firstTime), toTimePoint(secondTime));
     QSignalSpy spy(sessionService, &SessionService::iteratorCreated);
     QVERIFY(spy.wait(1000));
     auto iterator = sessionService->getIterator(idx);
