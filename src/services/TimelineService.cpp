@@ -20,7 +20,7 @@ void TimelineService::showTimeline(QWidget* parent)
 
     auto start = sessionPtr->getMinTime();
     auto end = sessionPtr->getMaxTime();
-    auto data = Statistics::LogHistogram::calculate(*sessionPtr, start, end, std::chrono::minutes(1));
+    auto data = Statistics::LogHistogram::calculate(*sessionPtr.get(), start, end, std::chrono::minutes(1));
 
     emit timelineReady(parent, std::move(data));
 }
