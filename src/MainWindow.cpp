@@ -445,18 +445,8 @@ void MainWindow::updateFormatActions(bool enabled)
 
 void MainWindow::switchModel(QAbstractItemModel* model)
 {
-    if (model)
-    {
-        auto resizeFunc = [view = ui->logView]() {
-            view->header()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
-        };
-
-        connect(model, &QAbstractItemModel::modelReset, resizeFunc);
-    }
-
     auto oldModel = ui->logView->model();
     ui->logView->setLogModel(model);
-    ui->logView->header()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
     if (oldModel)
         delete oldModel;
 

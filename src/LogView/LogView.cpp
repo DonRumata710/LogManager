@@ -148,6 +148,8 @@ void LogView::handleFirstLineChangeStart()
     if (proxyModel)
         lastScrollPosition = proxyModel->mapToSource(lastScrollPosition.value());
 
+    header()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
+
     QT_SLOT_END
 }
 
