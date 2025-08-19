@@ -2,8 +2,8 @@
 
 #include <chrono>
 
-FilteredLogModel::FilteredLogModel(LogService* logService, const LogFilter& filter, QObject* parent) :
-    LogModel(logService, parent),
+FilteredLogModel::FilteredLogModel(SessionService* sessionService, const LogFilter& filter, QObject* parent) :
+    LogModel(sessionService, parent),
     filter(filter)
 {}
 

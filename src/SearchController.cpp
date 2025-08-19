@@ -1,7 +1,6 @@
 #include "SearchController.h"
 
 #include "Application.h"
-#include "LogService.h"
 #include "services/SearchService.h"
 #include "LogView/LogModel.h"
 #include "LogView/LogFilterModel.h"
@@ -24,14 +23,12 @@ SearchController::SearchController(SearchBar* searchBar, QAbstractItemView* logV
         return;
     }
 
-    auto logService = app->getLogService();
-    if (!logService)
+    auto searchService = app->getSearchService();
+    if (!searchService)
     {
-        qWarning() << "LogService is not available, SearchController cannot be initialized.";
+        qWarning() << "SearchService is not available, SearchController cannot be initialized.";
         return;
     }
-
-    auto searchService = logService->getSearchService();
     connect(this, &SearchController::startGlobalSearch, searchService, &SearchService::search);
     connect(this, &SearchController::startGlobalSearchWithFilter, searchService, &SearchService::searchWithFilter);
     connect(searchService, &SearchService::searchFinished, this, &SearchController::handleSearchResult);
