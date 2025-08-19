@@ -155,7 +155,9 @@ void LogFilterModelTest::testFilteredModelCreated()
     QCOMPARE(modelSpy.count(), 1);
     QVERIFY(qobject_cast<FilteredLogModel*>(filterModel.sourceModel()));
 
-    QCOMPARE(filterModel.rowCount(), entryCount);
+    modelSpy.wait(10 * 1000);
+
+    QCOMPARE(filterModel.rowCount(), entryCount * 2);
 }
 
 QString LogFilterModelTest::getModule(int i)

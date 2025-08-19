@@ -562,6 +562,9 @@ void LogModel::handleData(int index)
     QT_SLOT_BEGIN
 
     DataRequestType requestType = handleDataRequest(index);
+    if (requestType == DataRequestType::None)
+        return;
+
     auto data = service->getResult(index);
     if (data.empty())
     {
