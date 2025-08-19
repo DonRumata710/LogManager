@@ -10,8 +10,13 @@ Application::Application(int& argc, char** argv) :
     serviceThread = new QThread(this);
     serviceThread->start();
 
-    logService = new LogService();
-    logService->moveToThread(serviceThread);
+    sessionService = new SessionService();
+    searchService = new SearchService(sessionService);
+    exportService = new ExportService(sessionService);
+
+    sessionService->moveToThread(serviceThread);
+    searchService->moveToThread(serviceThread);
+    exportService->moveToThread(serviceThread);
 
     setApplicationName(APPLICATION_NAME);
     setApplicationVersion(APPLICATION_VERSION);
@@ -30,7 +35,9 @@ Application::~Application()
         delete serviceThread;
     }
 
-    delete logService;
+    delete exportService;
+    delete searchService;
+    delete sessionService;
 }
 
 FormatManager& Application::getFormatManager()
@@ -38,7 +45,17 @@ FormatManager& Application::getFormatManager()
     return formatManager;
 }
 
-LogService* Application::getLogService()
+SessionService* Application::getSessionService()
 {
-    return logService;
+    return sessionService;
+}
+
+SearchService* Application::getSearchService()
+{
+    return searchService;
+}
+
+ExportService* Application::getExportService()
+{
+    return exportService;
 }

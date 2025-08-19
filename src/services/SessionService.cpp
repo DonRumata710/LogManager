@@ -26,6 +26,15 @@ const ThreadSafePtr<Session>& SessionService::getSession() const
     return session;
 }
 
+std::unordered_set<QVariant, VariantHash> SessionService::getEnumList(const QString& field) const
+{
+    auto sessionPtr = getSession();
+    if (!sessionPtr)
+        return {};
+    auto sessionLocker = sessionPtr.getLocker();
+    return sessionLocker->getEnumList(field);
+}
+
 void SessionService::createSession(const std::unordered_set<QString>& modules,
                                    const std::chrono::system_clock::time_point& minTime,
                                    const std::chrono::system_clock::time_point& maxTime)

@@ -20,6 +20,8 @@ public:
 
     bool check(const LogEntry& entry) const;
 
+    void apply(const LogFilter& other);
+
 private:
     std::unordered_map<int, QRegularExpression> columnFilters;
     std::unordered_map<int, std::unordered_set<QString>> variants;

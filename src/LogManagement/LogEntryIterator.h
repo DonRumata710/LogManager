@@ -247,10 +247,22 @@ private:
         const auto& format = heapItem.metadata->second.format;
 
         std::optional<QString> line;
-        if (!heapItem.line.isEmpty())
-            line = heapItem.line;
-        if constexpr (!straight)
+        if constexpr (straight)
+        {
+            if (!heapItem.line.isEmpty())
+            {
+                line = heapItem.line;
+                heapItem.line.clear();
+            }
+            else
+            {
+                line = heapItem.log->nextLine();
+            }
+        }
+        else
+        {
             line = heapItem.log->prevLine();
+        }
 
         while (line.has_value())
         {
@@ -338,7 +350,7 @@ private:
                         }
 
                         if (field.values.empty())
-                            logStorage->getEnumList(field.name).emplace(fieldValue);
+                            logStorage->addEnumValue(field.name, fieldValue);
                     }
 
                     entry.values[field.name] = fieldValue;
@@ -368,10 +380,13 @@ private:
             line = (heapItem.log.get()->*(straight ? &Log::nextLine : &Log::prevLine))();
         }
 
-        switchToNextLog(heapItem);
-
         if (!entry.line.isEmpty())
             return entry;
+
+        switchToNextLog(heapItem);
+
+        if (!heapItem.line.isEmpty())
+            return getEntry(heapItem);
         return std::nullopt;
     }
 

@@ -8,6 +8,7 @@
 
 #include <unordered_map>
 #include <chrono>
+#include <mutex>
 
 
 class LogStorage
@@ -27,8 +28,8 @@ public:
     const LogMetaEntry& findPrevLog(const QString& module, const std::chrono::system_clock::time_point& time) const;
     const LogMetaEntry& findNextLog(const QString& module, const std::chrono::system_clock::time_point& time) const;
 
-    std::unordered_set<QVariant, VariantHash>& getEnumList(const QString& field);
-    const std::unordered_set<QVariant, VariantHash>& getEnumList(const QString& field) const;
+    void addEnumValue(const QString& field, const QVariant& value);
+    std::unordered_set<QVariant, VariantHash> getEnumList(const QString& field) const;
 
     void setTimeRange(const std::chrono::system_clock::time_point& minTime, const std::chrono::system_clock::time_point& maxTime);
 
@@ -53,4 +54,5 @@ private:
     std::chrono::system_clock::time_point minTime;
     std::chrono::system_clock::time_point maxTime;
     std::unordered_map<QString, std::unordered_set<QVariant, VariantHash>> enumLists;
+    mutable std::mutex enumListsMutex;
 };
