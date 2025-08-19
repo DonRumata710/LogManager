@@ -5,7 +5,7 @@
 #include <QtTest/QtTest>
 
 #include "Application.h"
-#include "LogService.h"
+#include "services/SessionService.h"
 #include "LogView/LogFilterModel.h"
 #include "LogView/LogModel.h"
 #include "LogView/FilteredLogModel.h"
@@ -31,7 +31,7 @@ private:
 
 private:
     Application *app = nullptr;
-    LogService *logService = nullptr;
+    SessionService *sessionService = nullptr;
     LogModel *model = nullptr;
     QDateTime firstTime;
     QString entryTemplate = "msg%1";
@@ -42,7 +42,7 @@ void LogFilterModelTest::initTestCase()
 {
     app = qobject_cast<Application *>(qApp);
     QVERIFY(app);
-    logService = app->getLogService();
+    sessionService = app->getSessionService();
 
     Settings settings;
     settings.setValue(LogViewSettings + "/blockSize", entryCount);
@@ -84,12 +84,12 @@ void LogFilterModelTest::initTestCase()
     }
     app->getFormatManager().addFormat(format);
 
-    logService->openBuffer(data, "test.csv", QStringList() << "TestFormat");
-    logService->createSession(logService->getLogManager()->getModules(),
-                              toTimePoint(firstTime),
-                              toTimePoint(lastTime));
+    sessionService->openBuffer(data, "test.csv", QStringList() << "TestFormat");
+    sessionService->createSession(sessionService->getLogManager()->getModules(),
+                                  toTimePoint(firstTime),
+                                  toTimePoint(lastTime));
 
-    model = new LogModel(logService, this);
+    model = new LogModel(sessionService, this);
     QSignalSpy resetSpy(model, &QAbstractItemModel::modelReset);
     model->goToTime(firstTime);
     QVERIFY(resetSpy.wait(10 * 1000));

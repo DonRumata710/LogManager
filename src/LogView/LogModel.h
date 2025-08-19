@@ -1,6 +1,6 @@
 #pragma once
 
-#include "LogService.h"
+#include "services/SessionService.h"
 
 #include <QAbstractTableModel>
 #include <QRegularExpression>
@@ -32,7 +32,7 @@ public:
     };
 
 public:
-    explicit LogModel(LogService* logService, QObject *parent = nullptr);
+    explicit LogModel(SessionService* sessionService, QObject *parent = nullptr);
 
     void goToTime(const QDateTime& time);
     void goToTime(const std::chrono::system_clock::time_point& time);
@@ -74,7 +74,7 @@ public:
 
     Qt::ItemFlags flags(const QModelIndex& index) const override;
 
-    LogService* getService() const;
+    SessionService* getService() const;
 
     void toggleBookmark(const QModelIndex& index);
     bool isBookmarked(const QModelIndex& index) const;
@@ -199,7 +199,7 @@ private:
     static int loadBlockCount();
 
 private:
-    LogService* service;
+    SessionService* service;
 
     QDateTime startTime;
     QDateTime endTime;

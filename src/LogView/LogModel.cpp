@@ -11,20 +11,20 @@
 #include <QColor>
 
 
-LogModel::LogModel(LogService* logService, QObject *parent) :
+LogModel::LogModel(SessionService* sessionService, QObject *parent) :
     QAbstractItemModel(parent),
-    service(logService),
-    startTime(DateTimeFromChronoSystemClock(logService->getSession()->getMinTime())),
-    endTime(DateTimeFromChronoSystemClock(logService->getSession()->getMaxTime())),
-    modules(logService->getSession()->getModules()),
+    service(sessionService),
+    startTime(DateTimeFromChronoSystemClock(sessionService->getSession()->getMinTime())),
+    endTime(DateTimeFromChronoSystemClock(sessionService->getSession()->getMaxTime())),
+    modules(sessionService->getSession()->getModules()),
     blockSize(loadBlockSize()),
     blockCount(loadBlockCount())
 {
-    connect(service, &LogService::iteratorCreated, this, &LogModel::handleIterator);
-    connect(service, &LogService::dataLoaded, this, &LogModel::handleData);
+    connect(service, &SessionService::iteratorCreated, this, &LogModel::handleIterator);
+    connect(service, &SessionService::dataLoaded, this, &LogModel::handleData);
 
     bool flag = false;
-    for (const auto& format : logService->getSession()->getFormats())
+    for (const auto& format : sessionService->getSession()->getFormats())
     {
         QString timeFormatName = format->fields.at(format->timeFieldIndex).name;
 
@@ -444,7 +444,7 @@ Qt::ItemFlags LogModel::flags(const QModelIndex& index) const
     return QAbstractItemModel::flags(index) | Qt::ItemIsSelectable | Qt::ItemIsEditable;
 }
 
-LogService* LogModel::getService() const
+SessionService* LogModel::getService() const
 {
     return service;
 }
