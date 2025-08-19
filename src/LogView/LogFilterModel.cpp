@@ -206,7 +206,7 @@ void LogFilterModel::updateSourceModel()
     {
         if (filteredModel)
         {
-            filteredModel->setFilter(filter);
+            filteredModel->applyFilter(filter);
         }
         else
         {

@@ -37,3 +37,21 @@ bool LogFilter::check(const LogEntry& entry) const
 
     return true;
 }
+
+void LogFilter::apply(const LogFilter& other)
+{
+    for (const auto& filter : other.columnFilters)
+    {
+        if (!filter.second.pattern().isEmpty() && filter.second.isValid())
+            columnFilters[filter.first] = filter.second;
+    }
+
+    for (const auto& variant : other.variants)
+    {
+        if (!variant.second.empty())
+            variants[variant.first] = variant.second;
+    }
+
+    if (!other.modules.empty())
+        modules = other.modules;
+}

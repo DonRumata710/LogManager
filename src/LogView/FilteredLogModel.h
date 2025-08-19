@@ -15,7 +15,7 @@ public:
     void fetchDownMore() override;
 
     const LogFilter& getFilter() const;
-    void setFilter(const LogFilter& newFilter);
+    void applyFilter(const LogFilter& newFilter);
 
 private:
     LogFilter filter;
