@@ -4,11 +4,15 @@
 #include <QtTest/QtTest>
 
 #include "Application.h"
-#include "LogService.h"
+#include "services/SessionService.h"
 #include "LogView/LogModel.h"
 #include "LogView/LogViewUtils.h"
 #include "Settings.h"
 
+static std::chrono::system_clock::time_point toTimePoint(const QDateTime &dt)
+{
+    return std::chrono::system_clock::time_point{ std::chrono::milliseconds{ dt.toMSecsSinceEpoch() } };
+}
 
 class LogModelTest : public QObject
 {
@@ -25,7 +29,7 @@ private slots:
 
 private:
     Application *app = nullptr;
-    LogService *logService = nullptr;
+    SessionService *sessionService = nullptr;
     QDateTime firstTime;
     QDateTime lastTime;
     QString entryTemplate = "msg%1";
@@ -38,7 +42,7 @@ void LogModelTest::initTestCase()
 {
     app = qobject_cast<Application *>(qApp);
     QVERIFY(app);
-    logService = app->getLogService();
+    sessionService = app->getSessionService();
 
     Settings settings;
     settings.setValue(LogViewSettings + "/blockSize", blockSize);
@@ -78,15 +82,15 @@ void LogModelTest::initTestCase()
     }
     app->getFormatManager().addFormat(format);
 
-    logService->openBuffer(data, "test.csv", QStringList() << "TestFormat");
-    logService->createSession(logService->getLogManager()->getModules(),
-                              firstTime.toStdSysMilliseconds(),
-                              lastTime.toStdSysMilliseconds());
+    sessionService->openBuffer(data, "test.csv", QStringList() << "TestFormat");
+    sessionService->createSession(sessionService->getLogManager()->getModules(),
+                                  toTimePoint(firstTime),
+                                  toTimePoint(lastTime));
 }
 
 void LogModelTest::testInitialLoad()
 {
-    LogModel model(logService);
+    LogModel model(sessionService);
     QSignalSpy resetSpy(&model, &QAbstractItemModel::modelReset);
     model.goToTime(firstTime);
 
@@ -108,7 +112,7 @@ void LogModelTest::testInitialLoad()
 
 void LogModelTest::testAvailableModules()
 {
-    LogModel model(logService);
+    LogModel model(sessionService);
     auto modules = model.availableValues(
         static_cast<int>(LogModel::PredefinedColumn::Module));
     QVERIFY(modules.find(QString("test")) != modules.end());
@@ -116,13 +120,13 @@ void LogModelTest::testAvailableModules()
 
 void LogModelTest::testHeaderData()
 {
-    LogModel model(logService);
+    LogModel model(sessionService);
     QCOMPARE(model.headerData(static_cast<int>(LogModel::PredefinedColumn::Module), Qt::Horizontal).toString(), QStringLiteral("module"));
 }
 
 void LogModelTest::testLoadMultipleBlocks()
 {
-    LogModel model(logService);
+    LogModel model(sessionService);
     QSignalSpy resetSpy(&model, &QAbstractItemModel::modelReset);
 
     model.goToTime(std::chrono::system_clock::time_point::max());
@@ -175,7 +179,7 @@ void LogModelTest::testLoadMultipleBlocks()
 
 void LogModelTest::testFetchDownMore()
 {
-    LogModel model(logService);
+    LogModel model(sessionService);
     QSignalSpy resetSpy(&model, &QAbstractItemModel::modelReset);
 
     model.goToTime(firstTime);

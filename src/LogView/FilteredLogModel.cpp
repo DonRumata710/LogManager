@@ -2,8 +2,8 @@
 
 #include <chrono>
 
-FilteredLogModel::FilteredLogModel(LogService* logService, const LogFilter& filter, QObject* parent) :
-    LogModel(logService, parent),
+FilteredLogModel::FilteredLogModel(SessionService* sessionService, const LogFilter& filter, QObject* parent) :
+    LogModel(sessionService, parent),
     filter(filter)
 {}
 
@@ -22,9 +22,9 @@ const LogFilter& FilteredLogModel::getFilter() const
     return filter;
 }
 
-void FilteredLogModel::setFilter(const LogFilter& newFilter)
+void FilteredLogModel::applyFilter(const LogFilter& newFilter)
 {
-    filter = newFilter;
+    filter.apply(newFilter);
     goToTime(std::chrono::system_clock::time_point::min());
 }
 

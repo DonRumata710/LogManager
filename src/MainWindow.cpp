@@ -9,6 +9,11 @@
 #include "LogView/LogFilterModel.h"
 #include "FormatCreation/FormatCreationWizard.h"
 #include "TimelineDialog.h"
+#include "services/SessionService.h"
+#include "services/SearchService.h"
+#include "services/ExportService.h"
+#include "services/TimelineService.h"
+
 #include <utility>
 #include <QScrollBar>
 #include <QFileDialog>
@@ -56,23 +61,34 @@ MainWindow::MainWindow(QWidget *parent) :
 
     setLogActionsEnabled(!selectedFormats.empty());
 
-    auto logService = qobject_cast<Application*>(QApplication::instance())->getLogService();
-    connect(this, &MainWindow::openFile, logService, &LogService::openFile);
-    connect(this, &MainWindow::openFolder, logService, &LogService::openFolder);
-    connect(logService, &LogService::logManagerCreated, this, &MainWindow::logManagerCreated);
-    connect(logService, &LogService::progressUpdated, this, &MainWindow::handleProgress);
-    connect(logService, &LogService::handleError, this, &MainWindow::handleError);
+    auto app = qobject_cast<Application*>(QApplication::instance());
+    auto sessionService = app->getSessionService();
+    auto searchService = app->getSearchService();
+    auto exportService = app->getExportService();
+    auto timelineService = app->getTimelineService();
 
-    connect(this, &MainWindow::openTimeline, logService, &LogService::showTimeline);
-    connect(logService, &LogService::timelineReady, this, [this](QWidget* parent, std::vector<Statistics::Bucket> data) {
+    connect(this, &MainWindow::openFile, sessionService, &SessionService::openFile);
+    connect(this, &MainWindow::openFolder, sessionService, &SessionService::openFolder);
+    connect(sessionService, &SessionService::logManagerCreated, this, &MainWindow::logManagerCreated);
+
+    connect(sessionService, &SessionService::progressUpdated, this, &MainWindow::handleProgress);
+    connect(searchService, &SearchService::progressUpdated, this, &MainWindow::handleProgress);
+    connect(exportService, &ExportService::progressUpdated, this, &MainWindow::handleProgress);
+
+    connect(sessionService, &SessionService::handleError, this, &MainWindow::handleError);
+    connect(searchService, &SearchService::handleError, this, &MainWindow::handleError);
+    connect(exportService, &ExportService::handleError, this, &MainWindow::handleError);
+
+    connect(this, SIGNAL(exportData(QString,QDateTime,QDateTime)), exportService, SLOT(exportData(QString,QDateTime,QDateTime)));
+    connect(this, SIGNAL(exportData(QString,QDateTime,QDateTime,QStringList)), exportService, SLOT(exportData(QString,QDateTime,QDateTime,QStringList)));
+    connect(this, SIGNAL(exportData(QString,QTreeView*)), exportService, SLOT(exportData(QString,QTreeView*)));
+    connect(this, SIGNAL(exportData(QString,QDateTime,QDateTime,QStringList,LogFilter)), exportService, SLOT(exportData(QString,QDateTime,QDateTime,QStringList,LogFilter)));
+
+    connect(this, &MainWindow::openTimeline, timelineService, &TimelineService::showTimeline);
+    connect(timelineService, &TimelineService::timelineReady, this, [this](QWidget* parent, std::vector<Statistics::Bucket> data) {
         TimelineDialog dialog(std::move(data), parent);
         dialog.exec();
     });
-
-    connect(this, SIGNAL(exportData(QString,QDateTime,QDateTime)), logService, SLOT(exportData(QString,QDateTime,QDateTime)));
-    connect(this, SIGNAL(exportData(QString,QDateTime,QDateTime,QStringList)), logService, SLOT(exportData(QString,QDateTime,QDateTime,QStringList)));
-    connect(this, SIGNAL(exportData(QString,QTreeView*)), logService, SLOT(exportData(QString,QTreeView*)));
-    connect(this, SIGNAL(exportData(QString,QDateTime,QDateTime,QStringList,LogFilter)), logService, SLOT(exportData(QString,QDateTime,QDateTime,QStringList,LogFilter)));
 
     connect(ui->searchBar, &SearchBar::handleError, this, &MainWindow::handleError);
     connect(ui->logView, &LogView::handleError, this, &MainWindow::handleError);
@@ -327,10 +343,11 @@ void MainWindow::logManagerCreated(const QString& source)
 {
     QT_SLOT_BEGIN
 
-    auto logService = qobject_cast<Application*>(QApplication::instance())->getLogService();
+    auto app = qobject_cast<Application*>(QApplication::instance());
+    auto sessionService = app->getSessionService();
 
-    auto logManager = logService->getLogManager();
-    if (!logService->getLogManager())
+    auto logManager = sessionService->getLogManager();
+    if (!sessionService->getLogManager())
     {
         qWarning() << "LogManager is not created.";
         return;
@@ -358,12 +375,12 @@ void MainWindow::logManagerCreated(const QString& source)
         return;
     }
 
-    logService->createSession(modules, startDate.toStdSysMilliseconds(), endDate.addMSecs(1).toStdSysMilliseconds());
+    sessionService->createSession(modules, startDate.toStdSysMilliseconds(), endDate.addMSecs(1).toStdSysMilliseconds());
 
     auto proxyModel = new LogFilterModel(this);
     connect(proxyModel, &LogFilterModel::handleError, this, &MainWindow::handleError);
 
-    auto logModel = new LogModel(logService, proxyModel);
+    auto logModel = new LogModel(sessionService, proxyModel);
     connect(logModel, &LogModel::handleError, this, &MainWindow::handleError);
 
     if (scrollToEnd)
@@ -462,18 +479,8 @@ void MainWindow::updateFormatActions(bool enabled)
 
 void MainWindow::switchModel(QAbstractItemModel* model)
 {
-    if (model)
-    {
-        auto resizeFunc = [view = ui->logView]() {
-            view->header()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
-        };
-
-        connect(model, &QAbstractItemModel::modelReset, resizeFunc);
-    }
-
     auto oldModel = ui->logView->model();
     ui->logView->setLogModel(model);
-    ui->logView->header()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
     if (oldModel)
         delete oldModel;
 

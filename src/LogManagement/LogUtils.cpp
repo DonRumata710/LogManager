@@ -217,7 +217,7 @@ std::chrono::system_clock::time_point parseTime(const QString& timeStr, const st
 
     std::string input = timeStr.toStdString();
 
-    size_t dotPos = input.find('.');
+    size_t dotPos = input.rfind('.');
     std::string_view baseStr{ &*input.begin(), (dotPos != std::string_view::npos ? dotPos : input.size()) };
     std::string_view fracStr = (dotPos != std::string_view::npos ? std::string_view{ input.begin() + dotPos + 1, input.end() } : std::string_view{});
 
