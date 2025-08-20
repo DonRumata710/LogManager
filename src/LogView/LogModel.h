@@ -10,6 +10,7 @@
 #include <set>
 #include <unordered_set>
 #include <unordered_map>
+#include <vector>
 
 class LogFilter;
 
@@ -80,6 +81,7 @@ public:
     bool isBookmarked(const QModelIndex& index) const;
     void clearBookmarks();
     bool hasBookmarks() const;
+    std::vector<LogEntry> getBookmarks() const;
 
 signals:
     void startPageSwap();
@@ -88,6 +90,7 @@ signals:
     void requestedTimeAvailable(const QModelIndex& index);
 
     void handleError(const QString& message);
+    void bookmarksChanged();
 
 public slots:
     void handleIterator(int, bool);

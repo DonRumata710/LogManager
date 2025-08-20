@@ -2,6 +2,7 @@
 
 #include <QAbstractItemModel>
 #include <QTreeView>
+#include <QDateTime>
 
 class QContextMenuEvent;
 
@@ -17,6 +18,9 @@ public:
     LogView(QWidget* parent = nullptr);
 
     void setLogModel(QAbstractItemModel* model);
+
+public slots:
+    void bookmarkActivated(const QDateTime& time);
 
 signals:
     void handleError(const QString& message);
