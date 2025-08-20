@@ -60,6 +60,14 @@ void LogView::setLogModel(QAbstractItemModel* newModel)
     connect(currentLogModel, &LogModel::rowsRemoved, this, &LogView::handleFirstLineRemoving);
 }
 
+void LogView::bookmarkActivated(const QDateTime& time)
+{
+    QT_SLOT_BEGIN
+    if (currentLogModel)
+        currentLogModel->goToTime(time);
+    QT_SLOT_END
+}
+
 void LogView::checkFetchNeeded()
 {
     QT_SLOT_BEGIN
