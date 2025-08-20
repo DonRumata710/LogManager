@@ -7,12 +7,14 @@
 #include "Settings.h"
 #include "LogView/LogModel.h"
 #include "LogView/LogFilterModel.h"
+#include "LogView/LogView.h"
 #include "FormatCreation/FormatCreationWizard.h"
 #include "TimelineDialog.h"
 #include "services/SessionService.h"
 #include "services/SearchService.h"
 #include "services/ExportService.h"
 #include "services/TimelineService.h"
+#include "BookmarkTable.h"
 
 #include <utility>
 #include <QScrollBar>
@@ -39,6 +41,9 @@ MainWindow::MainWindow(QWidget *parent) :
     statusBar()->addPermanentWidget(progressBar);
 
     ui->searchBar->hide();
+
+    ui->bookmarkTable->hide();
+    connect(ui->bookmarkTable, &BookmarkTable::bookmarkActivated, ui->logView, &LogView::bookmarkActivated);
 
     searchController = new SearchController(ui->searchBar, ui->logView, this);
     connect(ui->searchBar, &SearchBar::handleError, this, &MainWindow::handleError);
@@ -167,6 +172,9 @@ void MainWindow::on_actionClose_triggered()
     switchModel(nullptr);
     setCloseActionEnabled(false);
     ui->searchBar->hide();
+    ui->bookmarkTable->clearBookmarks();
+    ui->bookmarkTable->hide();
+    ui->actionShow_bookmarks->setChecked(false);
     setTitleClosed();
 
     QT_SLOT_END
@@ -339,6 +347,13 @@ void MainWindow::on_actionFiltered_export_triggered()
     QT_SLOT_END
 }
 
+void MainWindow::on_actionShow_bookmarks_triggered()
+{
+    QT_SLOT_BEGIN
+    ui->bookmarkTable->setVisible(ui->actionShow_bookmarks->isChecked());
+    QT_SLOT_END
+}
+
 void MainWindow::logManagerCreated(const QString& source)
 {
     QT_SLOT_BEGIN
@@ -382,6 +397,7 @@ void MainWindow::logManagerCreated(const QString& source)
 
     auto logModel = new LogModel(sessionService, proxyModel);
     connect(logModel, &LogModel::handleError, this, &MainWindow::handleError);
+    connect(logModel, &LogModel::bookmarksChanged, this, &MainWindow::updateBookmarks);
 
     if (scrollToEnd)
     {
@@ -398,6 +414,7 @@ void MainWindow::logManagerCreated(const QString& source)
     switchModel(proxyModel);
     setCloseActionEnabled(true);
     ui->searchBar->show();
+    updateBookmarks();
 
     setTitleOpened(source);
 
@@ -485,6 +502,18 @@ void MainWindow::switchModel(QAbstractItemModel* model)
         delete oldModel;
 
     searchController->updateModel();
+}
+
+void MainWindow::updateBookmarks()
+{
+    auto logModel = getLogModel();
+    if (!logModel)
+    {
+        ui->bookmarkTable->clearBookmarks();
+        return;
+    }
+
+    ui->bookmarkTable->setBookmarks(logModel->getBookmarks());
 }
 
 LogModel* MainWindow::getLogModel()

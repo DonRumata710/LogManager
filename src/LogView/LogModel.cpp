@@ -9,6 +9,7 @@
 #include <QFontDatabase>
 #include <QBrush>
 #include <QColor>
+#include <algorithm>
 
 
 LogModel::LogModel(SessionService* sessionService, QObject *parent) :
@@ -476,6 +477,8 @@ void LogModel::toggleBookmark(const QModelIndex& index)
         auto childBottom = this->index(0, columnCount() - 1, top);
         emit dataChanged(childTop, childBottom, { Qt::BackgroundRole });
     }
+
+    emit bookmarksChanged();
 }
 
 bool LogModel::isBookmarked(const QModelIndex& index) const
@@ -503,11 +506,26 @@ void LogModel::clearBookmarks()
         auto bottom = index(logs.size() - 1, columnCount() - 1);
         emit dataChanged(top, bottom, { Qt::BackgroundRole });
     }
+
+    emit bookmarksChanged();
 }
 
 bool LogModel::hasBookmarks() const
 {
     return !bookmarks.empty();
+}
+
+std::vector<LogEntry> LogModel::getBookmarks() const
+{
+    std::vector<LogEntry> result;
+    result.reserve(bookmarks.size());
+    for (const auto& pair : bookmarks)
+        result.push_back(pair.second);
+    std::sort(result.begin(), result.end(), [](const LogEntry& a, const LogEntry& b)
+    {
+        return a.time < b.time;
+    });
+    return result;
 }
 
 void LogModel::handleIterator(int index, bool isStraight)

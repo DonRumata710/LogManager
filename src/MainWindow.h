@@ -8,6 +8,7 @@
 #include <QProgressBar>
 #include <QAbstractItemModel>
 #include <QTreeView>
+#include <QDateTime>
 
 
 namespace Ui {
@@ -38,6 +39,8 @@ private slots:
     void on_actionFull_export_triggered();
     void on_actionFiltered_export_triggered();
 
+    void on_actionShow_bookmarks_triggered();
+
     void logManagerCreated(const QString& source);
 
     void handleProgress(const QString& message, int percent);
@@ -65,6 +68,7 @@ private:
     void updateFormatActions(bool enabled);
 
     void switchModel(QAbstractItemModel* model);
+    void updateBookmarks();
 
     LogModel* getLogModel();
 
