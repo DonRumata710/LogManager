@@ -98,7 +98,7 @@ const std::unordered_set<QString>& LogManager::getModules() const
     return logStorage->getModules();
 }
 
-const std::unordered_set<QVariant, VariantHash>& LogManager::getEnumList(const QString& field) const
+std::unordered_set<QVariant, VariantHash> LogManager::getEnumList(const QString& field) const
 {
     return logStorage->getEnumList(field);
 }

@@ -10,8 +10,8 @@
 #include <QtCharts/QValueAxis>
 #include <QVBoxLayout>
 
-TimelineDialog::TimelineDialog(const std::vector<Statistics::Bucket>& data, QWidget* parent)
-    : QDialog(parent)
+
+TimelineDialog::TimelineDialog(const std::vector<Statistics::Bucket>& data, QWidget* parent) : QDialog(parent)
 {
     auto layout = new QVBoxLayout(this);
     setLayout(layout);
@@ -21,8 +21,8 @@ TimelineDialog::TimelineDialog(const std::vector<Statistics::Bucket>& data, QWid
 
 void TimelineDialog::populateChart(const std::vector<Statistics::Bucket>& data)
 {
-    auto series = new QtCharts::QBarSeries(this);
-    auto set = new QtCharts::QBarSet(tr("Messages"));
+    auto series = new QBarSeries(this);
+    auto set = new QBarSet(tr("Messages"));
     QStringList categories;
     for (const auto& bucket : data)
     {
@@ -31,21 +31,21 @@ void TimelineDialog::populateChart(const std::vector<Statistics::Bucket>& data)
     }
     series->append(set);
 
-    auto chart = new QtCharts::QChart();
+    auto chart = new QChart();
     chart->addSeries(series);
     chart->setTitle(tr("Timeline"));
-    chart->setAnimationOptions(QtCharts::QChart::SeriesAnimations);
+    chart->setAnimationOptions(QChart::SeriesAnimations);
 
-    auto axisX = new QtCharts::QBarCategoryAxis();
+    auto axisX = new QBarCategoryAxis();
     axisX->append(categories);
     chart->addAxis(axisX, Qt::AlignBottom);
     series->attachAxis(axisX);
 
-    auto axisY = new QtCharts::QValueAxis();
+    auto axisY = new QValueAxis();
     chart->addAxis(axisY, Qt::AlignLeft);
     series->attachAxis(axisY);
 
-    auto chartView = new QtCharts::QChartView(chart, this);
+    auto chartView = new QChartView(chart, this);
     chartView->setRenderHint(QPainter::Antialiasing);
 
     if (layout())

@@ -217,7 +217,7 @@ const std::unordered_set<QVariant, VariantHash> LogModel::availableValues(int se
     if (!field.isEnum)
         return {};
 
-    return service->getSession()->getEnumList(field.name);
+    return service->getEnumList(field.name);
 }
 
 QDateTime convertToQDateTime(const std::chrono::system_clock::time_point& timePoint)

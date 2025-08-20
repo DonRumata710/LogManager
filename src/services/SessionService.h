@@ -17,6 +17,8 @@
 #include <memory>
 #include <variant>
 #include <optional>
+#include <unordered_set>
+#include <QVariant>
 
 class SessionService : public QObject
 {
@@ -44,6 +46,8 @@ public:
 
     const ThreadSafePtr<LogManager>& getLogManager() const;
     const ThreadSafePtr<Session>& getSession() const;
+
+    std::unordered_set<QVariant, VariantHash> getEnumList(const QString& field) const;
 
     void createSession(const std::unordered_set<QString>& modules,
                        const std::chrono::system_clock::time_point& minTime,

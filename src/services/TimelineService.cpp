@@ -1,12 +1,13 @@
 #include "TimelineService.h"
 #include "SessionService.h"
+#include "../Utils.h"
 
 #include <QMetaType>
+
 #include <chrono>
 #include <utility>
 
-TimelineService::TimelineService(SessionService* sessionService, QObject* parent)
-    : QObject(parent), sessionService(sessionService)
+TimelineService::TimelineService(SessionService* sessionService, QObject* parent) : QObject(parent), sessionService(sessionService)
 {
     qRegisterMetaType<Statistics::Bucket>("Statistics::Bucket");
     qRegisterMetaType<std::vector<Statistics::Bucket>>("std::vector<Statistics::Bucket>");
@@ -14,6 +15,10 @@ TimelineService::TimelineService(SessionService* sessionService, QObject* parent
 
 void TimelineService::showTimeline(QWidget* parent)
 {
+    QT_SLOT_BEGIN
+
+    emit progressUpdated(QStringLiteral("Preparing timeline..."), 0);
+
     auto sessionPtr = sessionService->getSession();
     if (!sessionPtr)
         return;
@@ -22,6 +27,10 @@ void TimelineService::showTimeline(QWidget* parent)
     auto end = sessionPtr->getMaxTime();
     auto data = Statistics::LogHistogram::calculate(*sessionPtr.get(), start, end, std::chrono::minutes(1));
 
+    emit progressUpdated(QStringLiteral("Timeline ready"), 100);
+
     emit timelineReady(parent, std::move(data));
+
+    QT_SLOT_END
 }
 

@@ -140,31 +140,19 @@ const LogStorage::LogMetaEntry& LogStorage::findNextLog(const QString& module, c
     return emptyPair;
 }
 
-std::unordered_set<QVariant, VariantHash>& LogStorage::getEnumList(const QString& field)
+void LogStorage::addEnumValue(const QString& field, const QVariant& value)
 {
-    auto it = enumLists.find(field);
-    if (it == enumLists.end())
-    {
-        return enumLists.emplace(field, std::unordered_set<QVariant, VariantHash>{}).first->second;
-    }
-    else
-    {
-        return it->second;
-    }
+    enumLists[field].emplace(value);
 }
 
-const std::unordered_set<QVariant, VariantHash>& LogStorage::getEnumList(const QString& field) const
+std::unordered_set<QVariant, VariantHash> LogStorage::getEnumList(const QString& field) const
 {
     auto it = enumLists.find(field);
     if (it != enumLists.end())
     {
         return it->second;
     }
-    else
-    {
-        static const std::unordered_set<QVariant, VariantHash> emptySet;
-        return emptySet;
-    }
+    return {};
 }
 
 std::chrono::system_clock::time_point LogStorage::getMinTime() const

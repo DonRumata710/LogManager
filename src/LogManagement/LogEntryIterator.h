@@ -350,7 +350,7 @@ private:
                         }
 
                         if (field.values.empty())
-                            logStorage->getEnumList(field.name).emplace(fieldValue);
+                            logStorage->addEnumValue(field.name, fieldValue);
                     }
 
                     entry.values[field.name] = fieldValue;

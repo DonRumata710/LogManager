@@ -15,6 +15,8 @@ public:
 
 signals:
     void timelineReady(QWidget* parent, std::vector<Statistics::Bucket> data);
+    void progressUpdated(const QString& message, int progress);
+    void handleError(const QString& message);
 
 public slots:
     void showTimeline(QWidget* parent);

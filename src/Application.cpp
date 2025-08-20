@@ -5,9 +5,9 @@
 
 
 Application::Application(int& argc, char** argv) :
-    QApplication(argc, argv)
+    QApplication(argc, argv),
+    serviceThread(std::make_unique<QThread>(this))
 {
-    serviceThread = new QThread(this);
     serviceThread->start();
 
     sessionService = new SessionService();
@@ -15,10 +15,10 @@ Application::Application(int& argc, char** argv) :
     exportService = new ExportService(sessionService);
     timelineService = new TimelineService(sessionService);
 
-    sessionService->moveToThread(serviceThread);
-    searchService->moveToThread(serviceThread);
-    exportService->moveToThread(serviceThread);
-    timelineService->moveToThread(serviceThread);
+    sessionService->moveToThread(serviceThread.get());
+    searchService->moveToThread(serviceThread.get());
+    exportService->moveToThread(serviceThread.get());
+    timelineService->moveToThread(serviceThread.get());
 
     setApplicationName(APPLICATION_NAME);
     setApplicationVersion(APPLICATION_VERSION);
@@ -34,13 +34,8 @@ Application::~Application()
     {
         serviceThread->quit();
         serviceThread->wait();
-        delete serviceThread;
+        serviceThread.reset();
     }
-
-    delete timelineService;
-    delete exportService;
-    delete searchService;
-    delete sessionService;
 }
 
 FormatManager& Application::getFormatManager()

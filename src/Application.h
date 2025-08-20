@@ -27,7 +27,7 @@ public:
 private:
     FormatManager formatManager;
 
-    QThread* serviceThread;
+    std::unique_ptr<QThread> serviceThread;
     SessionService* sessionService;
     SearchService* searchService;
     ExportService* exportService;
