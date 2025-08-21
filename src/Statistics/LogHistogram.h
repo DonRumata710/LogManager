@@ -20,6 +20,11 @@ public:
                                          const std::chrono::system_clock::time_point& start,
                                          const std::chrono::system_clock::time_point& end,
                                          const std::chrono::system_clock::duration& bucketSize);
+
+    static std::chrono::system_clock::duration suggestBucketSize(
+        const std::chrono::system_clock::time_point& start,
+        const std::chrono::system_clock::time_point& end,
+        std::size_t maxBuckets = 120);
 };
 }
 

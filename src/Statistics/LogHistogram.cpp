@@ -1,5 +1,6 @@
 #include "LogHistogram.h"
-
+#include <algorithm>
+#include <cstdint>
 namespace Statistics
 {
 std::vector<Bucket> LogHistogram::calculate(Session& session,
@@ -31,6 +32,21 @@ std::vector<Bucket> LogHistogram::calculate(Session& session,
     }
 
     return result;
+}
+
+std::chrono::system_clock::duration LogHistogram::suggestBucketSize(
+        const std::chrono::system_clock::time_point& start,
+        const std::chrono::system_clock::time_point& end,
+        std::size_t maxBuckets)
+{
+    if (end <= start || maxBuckets == 0)
+        return std::chrono::seconds(1);
+
+    auto diff = end - start;
+    auto totalSeconds = std::chrono::duration_cast<std::chrono::seconds>(diff).count();
+    auto bucketSeconds = std::max<std::int64_t>(1,
+        (totalSeconds + static_cast<std::int64_t>(maxBuckets) - 1) / static_cast<std::int64_t>(maxBuckets));
+    return std::chrono::seconds(bucketSeconds);
 }
 }
 
