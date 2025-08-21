@@ -48,11 +48,10 @@
     </property>
     <addaction name="actionOpen_file"/>
     <addaction name="actionOpen_folder"/>
-    <addaction name="actionTimeline"/>
     <addaction name="separator"/>
     <addaction name="actionClose"/>
    </widget>
-  <widget class="QMenu" name="menuFormats">
+   <widget class="QMenu" name="menuFormats">
     <property name="title">
      <string>Format</string>
     </property>
@@ -70,19 +69,21 @@
     </property>
     <addaction name="actionExport_as_is"/>
     <addaction name="actionFull_export"/>
-   <addaction name="actionFiltered_export"/>
+    <addaction name="actionFiltered_export"/>
+   </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>View</string>
+    </property>
+    <addaction name="actionShow_bookmarks"/>
+    <addaction name="separator"/>
+    <addaction name="actionTimeline"/>
+   </widget>
+   <addaction name="menuLogs"/>
+   <addaction name="menuFormats"/>
+   <addaction name="menuExport"/>
+   <addaction name="menuView"/>
   </widget>
-  <widget class="QMenu" name="menuView">
-   <property name="title">
-    <string>View</string>
-   </property>
-   <addaction name="actionShow_bookmarks"/>
-  </widget>
-  <addaction name="menuLogs"/>
-  <addaction name="menuFormats"/>
-  <addaction name="menuExport"/>
-  <addaction name="menuView"/>
- </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionOpen_file">
    <property name="text">
@@ -135,7 +136,7 @@
     <string>Timeline...</string>
    </property>
   </action>
- <action name="actionExport_as_is">
+  <action name="actionExport_as_is">
    <property name="text">
     <string>Export current view</string>
    </property>
