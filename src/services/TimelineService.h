@@ -10,16 +10,17 @@ class QWidget;
 class TimelineService : public QObject
 {
     Q_OBJECT
+
 public:
     explicit TimelineService(SessionService* sessionService, QObject* parent = nullptr);
 
 signals:
-    void timelineReady(QWidget* parent, std::vector<Statistics::Bucket> data);
+    void timelineReady(std::vector<Statistics::Bucket> data);
     void progressUpdated(const QString& message, int progress);
     void handleError(const QString& message);
 
 public slots:
-    void showTimeline(QWidget* parent);
+    void showTimeline();
 
 private:
     SessionService* sessionService;

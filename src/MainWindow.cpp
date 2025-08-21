@@ -79,10 +79,12 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(sessionService, &SessionService::progressUpdated, this, &MainWindow::handleProgress);
     connect(searchService, &SearchService::progressUpdated, this, &MainWindow::handleProgress);
     connect(exportService, &ExportService::progressUpdated, this, &MainWindow::handleProgress);
+    connect(timelineService, &TimelineService::progressUpdated, this, &MainWindow::handleProgress);
 
     connect(sessionService, &SessionService::handleError, this, &MainWindow::handleError);
     connect(searchService, &SearchService::handleError, this, &MainWindow::handleError);
     connect(exportService, &ExportService::handleError, this, &MainWindow::handleError);
+    connect(timelineService, &TimelineService::handleError, this, &MainWindow::handleError);
 
     connect(this, SIGNAL(exportData(QString,QDateTime,QDateTime)), exportService, SLOT(exportData(QString,QDateTime,QDateTime)));
     connect(this, SIGNAL(exportData(QString,QDateTime,QDateTime,QStringList)), exportService, SLOT(exportData(QString,QDateTime,QDateTime,QStringList)));
@@ -90,10 +92,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(this, SIGNAL(exportData(QString,QDateTime,QDateTime,QStringList,LogFilter)), exportService, SLOT(exportData(QString,QDateTime,QDateTime,QStringList,LogFilter)));
 
     connect(this, &MainWindow::openTimeline, timelineService, &TimelineService::showTimeline);
-    connect(timelineService, &TimelineService::timelineReady, this, [this](QWidget* parent, std::vector<Statistics::Bucket> data) {
-        TimelineDialog dialog(std::move(data), parent);
-        dialog.exec();
-    });
+    connect(timelineService, &TimelineService::timelineReady, this, &MainWindow::timelineReady);
 
     connect(ui->searchBar, &SearchBar::handleError, this, &MainWindow::handleError);
     connect(ui->logView, &LogView::handleError, this, &MainWindow::handleError);
@@ -184,7 +183,7 @@ void MainWindow::on_actionTimeline_triggered()
 {
     QT_SLOT_BEGIN
 
-    openTimeline(this);
+    openTimeline();
 
     QT_SLOT_END
 }
@@ -420,6 +419,17 @@ void MainWindow::logManagerCreated(const QString& source)
 
     QT_SLOT_END
 }
+
+void MainWindow::timelineReady(QWidget* parent, std::vector<Statistics::Bucket> data)
+{
+    QT_SLOT_BEGIN
+
+    TimelineDialog dialog(std::move(data), parent);
+    dialog.exec();
+
+    QT_SLOT_END
+}
+
 
 void MainWindow::handleProgress(const QString& message, int percent)
 {

@@ -43,6 +43,8 @@ private slots:
 
     void logManagerCreated(const QString& source);
 
+    void timelineReady(QWidget* parent, std::vector<Statistics::Bucket> data);
+
     void handleProgress(const QString& message, int percent);
 
     void handleError(const QString& message);
@@ -57,7 +59,7 @@ signals:
 
     void exportData(const QString& filename, QTreeView* view);
 
-    void openTimeline(QWidget* parent);
+    void openTimeline();
 
 private:
     void addFormat(const std::string& format);

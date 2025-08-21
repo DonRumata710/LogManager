@@ -13,7 +13,7 @@ TimelineService::TimelineService(SessionService* sessionService, QObject* parent
     qRegisterMetaType<std::vector<Statistics::Bucket>>("std::vector<Statistics::Bucket>");
 }
 
-void TimelineService::showTimeline(QWidget* parent)
+void TimelineService::showTimeline()
 {
     QT_SLOT_BEGIN
 
@@ -29,7 +29,7 @@ void TimelineService::showTimeline(QWidget* parent)
 
     emit progressUpdated(QStringLiteral("Timeline ready"), 100);
 
-    emit timelineReady(parent, std::move(data));
+    emit timelineReady(std::move(data));
 
     QT_SLOT_END
 }
