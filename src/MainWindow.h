@@ -3,6 +3,7 @@
 #include "LogManagement/FormatManager.h"
 #include "LogView/LogModel.h"
 #include "SearchController.h"
+#include "Statistics/LogHistogram.h"
 
 #include <QMainWindow>
 #include <QProgressBar>
@@ -27,6 +28,7 @@ private slots:
     void on_actionOpen_folder_triggered();
     void on_actionOpen_file_triggered();
     void on_actionClose_triggered();
+    void on_actionTimeline_triggered();
     void on_actionAdd_format_triggered();
     void on_actionRemove_format_triggered();
     void on_actionRefresh_format_triggered();
@@ -42,6 +44,8 @@ private slots:
 
     void logManagerCreated(const QString& source);
 
+    void timelineReady(std::vector<Statistics::Bucket> data);
+
     void handleProgress(const QString& message, int percent);
 
     void handleError(const QString& message);
@@ -55,6 +59,8 @@ signals:
     void exportData(const QString& filename, const QDateTime& startTime, const QDateTime& endTime, const QStringList& fields, const LogFilter& filter);
 
     void exportData(const QString& filename, QTreeView* view);
+
+    void openTimeline();
 
 private:
     void addFormat(const std::string& format);

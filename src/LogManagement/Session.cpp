@@ -23,7 +23,7 @@ const std::unordered_set<QString>& Session::getModules() const
     return logStorage->getModules();
 }
 
-const std::unordered_set<QVariant, VariantHash>& Session::getEnumList(const QString& field) const
+std::unordered_set<QVariant, VariantHash> Session::getEnumList(const QString& field) const
 {
     return logStorage->getEnumList(field);
 }

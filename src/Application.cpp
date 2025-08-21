@@ -5,18 +5,20 @@
 
 
 Application::Application(int& argc, char** argv) :
-    QApplication(argc, argv)
+    QApplication(argc, argv),
+    serviceThread(std::make_unique<QThread>(this))
 {
-    serviceThread = new QThread(this);
     serviceThread->start();
 
-    sessionService = new SessionService();
-    searchService = new SearchService(sessionService);
-    exportService = new ExportService(sessionService);
+    sessionService = std::make_unique<SessionService>();
+    searchService = std::make_unique<SearchService>(sessionService.get());
+    exportService = std::make_unique<ExportService>(sessionService.get());
+    timelineService = std::make_unique<TimelineService>(sessionService.get());
 
-    sessionService->moveToThread(serviceThread);
-    searchService->moveToThread(serviceThread);
-    exportService->moveToThread(serviceThread);
+    sessionService->moveToThread(serviceThread.get());
+    searchService->moveToThread(serviceThread.get());
+    exportService->moveToThread(serviceThread.get());
+    timelineService->moveToThread(serviceThread.get());
 
     setApplicationName(APPLICATION_NAME);
     setApplicationVersion(APPLICATION_VERSION);
@@ -32,12 +34,8 @@ Application::~Application()
     {
         serviceThread->quit();
         serviceThread->wait();
-        delete serviceThread;
+        serviceThread.reset();
     }
-
-    delete exportService;
-    delete searchService;
-    delete sessionService;
 }
 
 FormatManager& Application::getFormatManager()
@@ -47,15 +45,20 @@ FormatManager& Application::getFormatManager()
 
 SessionService* Application::getSessionService()
 {
-    return sessionService;
+    return sessionService.get();
 }
 
 SearchService* Application::getSearchService()
 {
-    return searchService;
+    return searchService.get();
 }
 
 ExportService* Application::getExportService()
 {
-    return exportService;
+    return exportService.get();
+}
+
+TimelineService* Application::getTimelineService()
+{
+    return timelineService.get();
 }

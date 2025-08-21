@@ -9,11 +9,14 @@
 #include "LogView/LogFilterModel.h"
 #include "LogView/LogView.h"
 #include "FormatCreation/FormatCreationWizard.h"
+#include "TimelineDialog.h"
 #include "services/SessionService.h"
 #include "services/SearchService.h"
 #include "services/ExportService.h"
+#include "services/TimelineService.h"
 #include "BookmarkTable.h"
 
+#include <utility>
 #include <QScrollBar>
 #include <QFileDialog>
 #include <QInputDialog>
@@ -67,6 +70,7 @@ MainWindow::MainWindow(QWidget *parent) :
     auto sessionService = app->getSessionService();
     auto searchService = app->getSearchService();
     auto exportService = app->getExportService();
+    auto timelineService = app->getTimelineService();
 
     connect(this, &MainWindow::openFile, sessionService, &SessionService::openFile);
     connect(this, &MainWindow::openFolder, sessionService, &SessionService::openFolder);
@@ -75,15 +79,20 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(sessionService, &SessionService::progressUpdated, this, &MainWindow::handleProgress);
     connect(searchService, &SearchService::progressUpdated, this, &MainWindow::handleProgress);
     connect(exportService, &ExportService::progressUpdated, this, &MainWindow::handleProgress);
+    connect(timelineService, &TimelineService::progressUpdated, this, &MainWindow::handleProgress);
 
     connect(sessionService, &SessionService::handleError, this, &MainWindow::handleError);
     connect(searchService, &SearchService::handleError, this, &MainWindow::handleError);
     connect(exportService, &ExportService::handleError, this, &MainWindow::handleError);
+    connect(timelineService, &TimelineService::handleError, this, &MainWindow::handleError);
 
     connect(this, SIGNAL(exportData(QString,QDateTime,QDateTime)), exportService, SLOT(exportData(QString,QDateTime,QDateTime)));
     connect(this, SIGNAL(exportData(QString,QDateTime,QDateTime,QStringList)), exportService, SLOT(exportData(QString,QDateTime,QDateTime,QStringList)));
     connect(this, SIGNAL(exportData(QString,QTreeView*)), exportService, SLOT(exportData(QString,QTreeView*)));
     connect(this, SIGNAL(exportData(QString,QDateTime,QDateTime,QStringList,LogFilter)), exportService, SLOT(exportData(QString,QDateTime,QDateTime,QStringList,LogFilter)));
+
+    connect(this, &MainWindow::openTimeline, timelineService, &TimelineService::showTimeline);
+    connect(timelineService, &TimelineService::timelineReady, this, &MainWindow::timelineReady);
 
     connect(ui->searchBar, &SearchBar::handleError, this, &MainWindow::handleError);
     connect(ui->logView, &LogView::handleError, this, &MainWindow::handleError);
@@ -166,6 +175,15 @@ void MainWindow::on_actionClose_triggered()
     ui->bookmarkTable->hide();
     ui->actionShow_bookmarks->setChecked(false);
     setTitleClosed();
+
+    QT_SLOT_END
+}
+
+void MainWindow::on_actionTimeline_triggered()
+{
+    QT_SLOT_BEGIN
+
+    openTimeline();
 
     QT_SLOT_END
 }
@@ -402,6 +420,17 @@ void MainWindow::logManagerCreated(const QString& source)
     QT_SLOT_END
 }
 
+void MainWindow::timelineReady(std::vector<Statistics::Bucket> data)
+{
+    QT_SLOT_BEGIN
+
+    TimelineDialog dialog(std::move(data), this);
+    dialog.exec();
+
+    QT_SLOT_END
+}
+
+
 void MainWindow::handleProgress(const QString& message, int percent)
 {
     if (percent >= 100)
@@ -465,6 +494,7 @@ void MainWindow::setLogActionsEnabled(bool enabled)
 void MainWindow::setCloseActionEnabled(bool enabled)
 {
     ui->actionClose->setEnabled(enabled);
+    ui->actionTimeline->setEnabled(enabled);
 }
 
 void MainWindow::updateFormatActions(bool enabled)

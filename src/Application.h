@@ -4,6 +4,7 @@
 #include "services/SessionService.h"
 #include "services/SearchService.h"
 #include "services/ExportService.h"
+#include "services/TimelineService.h"
 
 #include <QApplication>
 #include <QThread>
@@ -21,12 +22,14 @@ public:
     SessionService* getSessionService();
     SearchService* getSearchService();
     ExportService* getExportService();
+    TimelineService* getTimelineService();
 
 private:
     FormatManager formatManager;
 
-    QThread* serviceThread;
-    SessionService* sessionService;
-    SearchService* searchService;
-    ExportService* exportService;
+    std::unique_ptr<QThread> serviceThread;
+    std::unique_ptr<SessionService> sessionService;
+    std::unique_ptr<SearchService> searchService;
+    std::unique_ptr<ExportService> exportService;
+    std::unique_ptr<TimelineService> timelineService;
 };

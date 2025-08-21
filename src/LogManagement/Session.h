@@ -18,7 +18,7 @@ public:
     const std::unordered_set<std::shared_ptr<Format>>& getFormats() const;
     const std::unordered_set<QString>& getModules() const;
 
-    const std::unordered_set<QVariant, VariantHash>& getEnumList(const QString& field) const;
+    std::unordered_set<QVariant, VariantHash> getEnumList(const QString& field) const;
 
     std::chrono::system_clock::time_point getMinTime() const;
     std::chrono::system_clock::time_point getMaxTime() const;

@@ -24,7 +24,7 @@ jobs:
           arch: win64_msvc2022_64
           host: 'windows'
           target: 'desktop'
-          modules: 'qt5compat'
+          modules: 'qt5compat qtcharts'
 
       - name: Cache ZLib
         id: cache-zlib

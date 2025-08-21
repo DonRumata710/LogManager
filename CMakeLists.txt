@@ -22,7 +22,7 @@ set(CMAKE_AUTORCC ON)
 
 check_local_hints()
 
-find_package(Qt6 COMPONENTS Core Gui Widgets Test REQUIRED)
+find_package(Qt6 COMPONENTS Core Gui Widgets Charts Test REQUIRED)
 find_package(QuaZip-Qt6 COMPONENTS QuaZip)
 find_package(Boost COMPONENTS headers REQUIRED)
 
@@ -75,6 +75,7 @@ target_link_libraries(${PROJECT_NAME}
         Qt6::Core
         Qt6::Gui
         Qt6::Widgets
+        Qt6::Charts
         QuaZip::QuaZip
         Boost::headers
 )
@@ -94,7 +95,7 @@ foreach(test_src ${TEST_SOURCES})
 
     target_include_directories(${test_name} PRIVATE ${PROJECT_SOURCE_DIR}/src)
     target_include_directories(${test_name} PRIVATE ${PROJECT_SOURCE_DIR}/src/FormatCreation)
-    target_link_libraries(${test_name} Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test QuaZip::QuaZip Boost::headers)
+    target_link_libraries(${test_name} Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Charts Qt6::Test QuaZip::QuaZip Boost::headers)
 
     add_test(NAME ${test_name} COMMAND ${test_name})
 endforeach()
