@@ -10,6 +10,7 @@
 #include "LogView/LogView.h"
 #include "FormatCreation/FormatCreationWizard.h"
 #include "TimelineDialog.h"
+#include "TimeFrameDialog.h"
 #include "services/SessionService.h"
 #include "services/SearchService.h"
 #include "services/ExportService.h"
@@ -183,7 +184,20 @@ void MainWindow::on_actionTimeline_triggered()
 {
     QT_SLOT_BEGIN
 
-    openTimeline();
+    auto app = qobject_cast<Application*>(QApplication::instance());
+    auto sessionService = app->getSessionService();
+    auto sessionPtr = sessionService->getSession();
+    if (!sessionPtr)
+        return;
+
+    QDateTime start = DateTimeFromChronoSystemClock(sessionPtr->getMinTime());
+    QDateTime end = DateTimeFromChronoSystemClock(sessionPtr->getMaxTime());
+
+    TimeFrameDialog frameDialog(start, end, this);
+    if (frameDialog.exec() != QDialog::Accepted)
+        return;
+
+    emit openTimeline(frameDialog.startDateTime(), frameDialog.endDateTime());
 
     QT_SLOT_END
 }

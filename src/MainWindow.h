@@ -60,7 +60,7 @@ signals:
 
     void exportData(const QString& filename, QTreeView* view);
 
-    void openTimeline();
+    void openTimeline(const QDateTime& start, const QDateTime& end);
 
 private:
     void addFormat(const std::string& format);

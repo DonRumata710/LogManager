@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QDateTime>
 #include <vector>
 #include "Statistics/LogHistogram.h"
 
@@ -20,7 +21,7 @@ signals:
     void handleError(const QString& message);
 
 public slots:
-    void showTimeline();
+    void showTimeline(const QDateTime& start, const QDateTime& end);
 
 private:
     SessionService* sessionService;
