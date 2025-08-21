@@ -16,13 +16,16 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
-     <widget class="LogView" name="logView"/>
-    </item>
-    <item>
-     <widget class="BookmarkTable" name="bookmarkTable">
-      <property name="visible">
-       <bool>false</bool>
+     <widget class="QSplitter" name="logSplitter">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
       </property>
+      <widget class="LogView" name="logView"/>
+      <widget class="BookmarkTable" name="bookmarkTable">
+       <property name="visible">
+        <bool>false</bool>
+       </property>
+      </widget>
      </widget>
     </item>
     <item>
