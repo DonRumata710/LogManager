@@ -218,8 +218,8 @@ bool LogManager::addFile(DirectoryScanner& scanner, const QString& filename, con
 
     LogMetadata metadata;
     metadata.format = result->format;
-    metadata.fileBuilder = [this, createFileFunc](const QString& filename, const std::shared_ptr<Format>& format) {
-        return std::make_shared<Log>(createLog(filename, createFileFunc, format));
+    metadata.fileBuilder = [createFileFunc](const QString& filename, const std::shared_ptr<Format>& format) {
+        return std::make_shared<Log>(LogManager::createLog(filename, createFileFunc, format));
     };
     metadata.filename = filename;
     scanner.addFile(module, std::move(metadata), result->start, result->end);
