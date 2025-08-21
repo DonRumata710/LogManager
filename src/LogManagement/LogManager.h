@@ -47,7 +47,7 @@ private:
     std::optional<FileDesc> scanLogFile(const QString& filename, std::function<std::unique_ptr<QIODevice>(const QString&)> createFileFunc, const std::vector<std::shared_ptr<Format>>& formats);
     std::chrono::system_clock::time_point getEndTime(const QString& filename, Log& log, const std::shared_ptr<Format>& format);
 
-    Log createLog(const QString& filename, std::function<std::unique_ptr<QIODevice>(const QString&)> createFileFunc, std::shared_ptr<Format> format);
+    static Log createLog(const QString& filename, std::function<std::unique_ptr<QIODevice>(const QString&)> createFileFunc, std::shared_ptr<Format> format);
 
     static void readIntoBuffer(QIODevice& source, QBuffer& targetBuffer);
 
