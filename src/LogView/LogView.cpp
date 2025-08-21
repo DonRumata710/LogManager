@@ -167,15 +167,21 @@ void LogView::handleFirstLineRemoving(const QModelIndex& parent, int first, int 
     if (lastScrollPosition)
     {
         if (parent.isValid() || lastScrollPosition->row() < first)
+        {
+            lastScrollPosition.reset();
             return;
+        }
 
         auto* logModel = qobject_cast<LogModel*>(model());
         auto* proxyModel = qobject_cast<QAbstractProxyModel*>(model());
         if (proxyModel)
             logModel = qobject_cast<LogModel*>(proxyModel->sourceModel());
 
-        auto newIndex = logModel->index(lastScrollPosition->row() - last + first, lastScrollPosition->column());
-        scrollTo(proxyModel->mapFromSource(newIndex), QAbstractItemView::ScrollHint::PositionAtTop);
+        int count = last - first + 1;
+        auto newIndex = logModel->index(lastScrollPosition->row() - count,
+                                      lastScrollPosition->column());
+        scrollTo(proxyModel->mapFromSource(newIndex),
+                 QAbstractItemView::ScrollHint::PositionAtTop);
         lastScrollPosition.reset();
     }
     else
@@ -191,15 +197,21 @@ void LogView::handleFirstLineAddition(const QModelIndex& parent, int first, int 
     if (lastScrollPosition)
     {
         if (parent.isValid() || lastScrollPosition->row() < first)
+        {
+            lastScrollPosition.reset();
             return;
+        }
 
         auto* logModel = qobject_cast<LogModel*>(model());
         auto* proxyModel = qobject_cast<QAbstractProxyModel*>(model());
         if (proxyModel)
             logModel = qobject_cast<LogModel*>(proxyModel->sourceModel());
 
-        auto newIndex = logModel->index(lastScrollPosition->row() + last - first, lastScrollPosition->column());
-        scrollTo(proxyModel->mapFromSource(newIndex), QAbstractItemView::ScrollHint::PositionAtTop);
+        int count = last - first + 1;
+        auto newIndex = logModel->index(lastScrollPosition->row() + count,
+                                      lastScrollPosition->column());
+        scrollTo(proxyModel->mapFromSource(newIndex),
+                 QAbstractItemView::ScrollHint::PositionAtTop);
         lastScrollPosition.reset();
     }
     else
