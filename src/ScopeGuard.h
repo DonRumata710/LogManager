@@ -8,7 +8,7 @@ class ScopeGuard
 public:
     explicit ScopeGuard(std::function<void()> _onExitScope);
 
-    ~ScopeGuard();
+    ~ScopeGuard() noexcept;
 
     ScopeGuard(ScopeGuard&& other) = default;
     ScopeGuard& operator=(ScopeGuard&& other) = default;

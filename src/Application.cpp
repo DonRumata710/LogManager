@@ -10,10 +10,10 @@ Application::Application(int& argc, char** argv) :
 {
     serviceThread->start();
 
-    sessionService = new SessionService();
-    searchService = new SearchService(sessionService);
-    exportService = new ExportService(sessionService);
-    timelineService = new TimelineService(sessionService);
+    sessionService = std::make_unique<SessionService>();
+    searchService = std::make_unique<SearchService>(sessionService.get());
+    exportService = std::make_unique<ExportService>(sessionService.get());
+    timelineService = std::make_unique<TimelineService>(sessionService.get());
 
     sessionService->moveToThread(serviceThread.get());
     searchService->moveToThread(serviceThread.get());
@@ -45,20 +45,20 @@ FormatManager& Application::getFormatManager()
 
 SessionService* Application::getSessionService()
 {
-    return sessionService;
+    return sessionService.get();
 }
 
 SearchService* Application::getSearchService()
 {
-    return searchService;
+    return searchService.get();
 }
 
 ExportService* Application::getExportService()
 {
-    return exportService;
+    return exportService.get();
 }
 
 TimelineService* Application::getTimelineService()
 {
-    return timelineService;
+    return timelineService.get();
 }

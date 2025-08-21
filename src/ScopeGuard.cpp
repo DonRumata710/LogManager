@@ -1,12 +1,25 @@
 #include <ScopeGuard.h>
 
+#include <QDebug>
+
 
 ScopeGuard::ScopeGuard(std::function<void ()> _onExitScope) : onExitScope(_onExitScope)
 {}
 
 ScopeGuard::~ScopeGuard()
 {
-    onExitScope();
+    try
+    {
+        onExitScope();
+    }
+    catch(const std::exception& e)
+    {
+        qWarning() << "Exception in ScopeGuard destructor:" << e.what();
+    }
+    catch(...)
+    {
+        qWarning() << "Unknown exception in ScopeGuard destructor";
+    }
 }
 
 void ScopeGuard::commit()

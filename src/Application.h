@@ -28,8 +28,8 @@ private:
     FormatManager formatManager;
 
     std::unique_ptr<QThread> serviceThread;
-    SessionService* sessionService;
-    SearchService* searchService;
-    ExportService* exportService;
-    TimelineService* timelineService;
+    std::unique_ptr<SessionService> sessionService;
+    std::unique_ptr<SearchService> searchService;
+    std::unique_ptr<ExportService> exportService;
+    std::unique_ptr<TimelineService> timelineService;
 };
