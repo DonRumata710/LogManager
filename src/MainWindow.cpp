@@ -104,6 +104,9 @@ MainWindow::~MainWindow()
     Settings settings;
     settings.setValue(objectName() + "/geometry", saveGeometry());
     settings.setValue(objectName() + "/state", saveState());
+    auto sizes = ui->logSplitter->sizes();
+    if (sizes.size() >= 2)
+        settings.setValue(objectName() + "/bookmarkTableSize", sizes[1]);
 
     delete ui;
 }
@@ -363,7 +366,34 @@ void MainWindow::on_actionFiltered_export_triggered()
 void MainWindow::on_actionShow_bookmarks_triggered()
 {
     QT_SLOT_BEGIN
-    ui->bookmarkTable->setVisible(ui->actionShow_bookmarks->isChecked());
+    bool checked = ui->actionShow_bookmarks->isChecked();
+    if (checked)
+    {
+        ui->bookmarkTable->setVisible(true);
+        Settings settings;
+        int bookmarkSize = settings.value(objectName() + "/bookmarkTableSize", 100).toInt();
+        auto sizes = ui->logSplitter->sizes();
+        if (sizes.size() >= 2)
+        {
+            int total = sizes[0] + sizes[1];
+            if (bookmarkSize < total)
+            {
+                sizes[1] = bookmarkSize;
+                sizes[0] = total - bookmarkSize;
+                ui->logSplitter->setSizes(sizes);
+            }
+        }
+    }
+    else
+    {
+        auto sizes = ui->logSplitter->sizes();
+        if (sizes.size() >= 2)
+        {
+            Settings settings;
+            settings.setValue(objectName() + "/bookmarkTableSize", sizes[1]);
+        }
+        ui->bookmarkTable->setVisible(false);
+    }
     QT_SLOT_END
 }
 
