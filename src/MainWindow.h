@@ -3,6 +3,7 @@
 #include "LogManagement/FormatManager.h"
 #include "LogView/LogModel.h"
 #include "SearchController.h"
+#include "Statistics/LogHistogram.h"
 
 #include <QMainWindow>
 #include <QProgressBar>
@@ -43,7 +44,7 @@ private slots:
 
     void logManagerCreated(const QString& source);
 
-    void timelineReady(QWidget* parent, std::vector<Statistics::Bucket> data);
+    void timelineReady(std::vector<Statistics::Bucket> data);
 
     void handleProgress(const QString& message, int percent);
 

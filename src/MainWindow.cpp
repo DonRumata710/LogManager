@@ -420,11 +420,11 @@ void MainWindow::logManagerCreated(const QString& source)
     QT_SLOT_END
 }
 
-void MainWindow::timelineReady(QWidget* parent, std::vector<Statistics::Bucket> data)
+void MainWindow::timelineReady(std::vector<Statistics::Bucket> data)
 {
     QT_SLOT_BEGIN
 
-    TimelineDialog dialog(std::move(data), parent);
+    TimelineDialog dialog(std::move(data), this);
     dialog.exec();
 
     QT_SLOT_END
