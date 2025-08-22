@@ -150,9 +150,13 @@ void SearchController::search(const QModelIndex& from, const QString& searchTerm
 
         QDateTime startTime = backward ? model->getStartTime() : model->getLastEntryTime();
         if (useFilters)
-            startGlobalSearchWithFilter(model->getStartTime(), searchTerm, lastColumn, regexEnabled, backward, proxyModel->exportFilter());
+            startGlobalSearchWithFilter(startTime, searchTerm, lastColumn, regexEnabled, backward, proxyModel->exportFilter());
         else
-            startGlobalSearch(model->getStartTime(), searchTerm, lastColumn, regexEnabled, backward);
+            startGlobalSearch(startTime, searchTerm, lastColumn, regexEnabled, backward);
+    }
+    else
+    {
+        qDebug() << "Search term not found:" << searchTerm;
     }
 
     QT_SLOT_END
