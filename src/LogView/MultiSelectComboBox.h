@@ -2,6 +2,9 @@
 
 #include <QComboBox>
 #include <QListWidget>
+#include <QAction>
+
+#include "LogFilterModel.h"
 
 
 class MultiSelectComboBox : public QComboBox
@@ -19,9 +22,12 @@ public:
     void SetSearchBarPlaceHolderText(const QString& aPlaceHolderText);
     void SetPlaceHolderText(const QString& aPlaceHolderText);
     void ResetSelection();
+    void setMode(FilterType mode);
+    FilterType mode() const { return mMode; }
 
 signals:
     void selectionChanged();
+    void filterModeChanged(FilterType mode);
 
 public slots:
     void clear();
@@ -37,10 +43,13 @@ private:
     void stateChanged(int aState);
     void onSearch(const QString& aSearchString);
     void itemClicked(int aIndex);
+    void updateModeAction();
 
     QListWidget* mListWidget;
     QLineEdit* mLineEdit;
     QLineEdit* mSearchBar;
     QVariantList mCurrentData;
     QStringList mItems;
+    QAction* mModeAction;
+    FilterType mMode = FilterType::Whitelist;
 };

@@ -8,6 +8,7 @@
 #include <QAbstractItemModel>
 #include <QResizeEvent>
 #include <QMenu>
+#include <QStyle>
 
 
 FilterHeader::FilterHeader(Qt::Orientation orientation, QWidget *parent) : QHeaderView(orientation, parent)
@@ -89,6 +90,8 @@ void FilterHeader::updateEditors()
                 continue;
             }
         }
+
+        cb->setMode(proxyLogModel->filterMode(i));
 
         for (const auto& val : values)
             cb->addItem(val.toString(), val);
@@ -193,6 +196,18 @@ void FilterHeader::setupEditors()
                 auto filter = t;
                 proxyModel->setFilterWildcard(i, filter);
             });
+            QAction* modeAction = edit->addAction(style()->standardIcon(QStyle::SP_DialogApplyButton), QLineEdit::TrailingPosition);
+            if (proxyModel->filterMode(i) == FilterType::Blacklist)
+                modeAction->setIcon(style()->standardIcon(QStyle::SP_DialogCancelButton));
+            modeAction->setToolTip(tr("Toggle whitelist/blacklist"));
+            connect(modeAction, &QAction::triggered, this, [proxyModel, i, modeAction, this]() {
+                auto newMode = proxyModel->filterMode(i) == FilterType::Whitelist ? FilterType::Blacklist : FilterType::Whitelist;
+                proxyModel->setFilterMode(i, newMode);
+                if (newMode == FilterType::Whitelist)
+                    modeAction->setIcon(style()->standardIcon(QStyle::SP_DialogApplyButton));
+                else
+                    modeAction->setIcon(style()->standardIcon(QStyle::SP_DialogCancelButton));
+            });
 
             editors.push_back(edit);
         }
@@ -218,9 +233,14 @@ QWidget* FilterHeader::createComboBoxEditor(int i, const std::unordered_set<QVar
     for (const auto& val : values)
         comboBox->addItem(val.toString(), val);
 
+    comboBox->setMode(proxyModel->filterMode(i));
+
     connect(comboBox, &MultiSelectComboBox::currentTextChanged, this, [this, i, proxyModel, comboBox](const QString& text) {
         emit filterChanged(i, text);
         proxyModel->setVariantList(i, comboBox->currentText());
+    });
+    connect(comboBox, &MultiSelectComboBox::filterModeChanged, this, [proxyModel, i](FilterType mode) {
+        proxyModel->setFilterMode(i, mode);
     });
 
     return comboBox;

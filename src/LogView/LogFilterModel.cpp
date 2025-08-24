@@ -24,7 +24,10 @@ void LogFilterModel::setFilterWildcard(int column, const QString& pattern)
     if (pattern.isEmpty())
         columnFilters.erase(column);
     else
-        columnFilters[column] = QRegularExpression{ QRegularExpression::wildcardToRegularExpression(pattern, QRegularExpression::WildcardConversionOption::UnanchoredWildcardConversion) };
+    {
+        auto& filter = columnFilters[column];
+        filter.regex = QRegularExpression{ QRegularExpression::wildcardToRegularExpression(pattern, QRegularExpression::WildcardConversionOption::UnanchoredWildcardConversion) };
+    }
 
     invalidateFilter();
     double after = rowCount();
@@ -49,7 +52,10 @@ void LogFilterModel::setFilterRegularExpression(int column, const QString& patte
     if (pattern.isEmpty())
         columnFilters.erase(column);
     else
-        columnFilters[column] = QRegularExpression(pattern);
+    {
+        auto& filter = columnFilters[column];
+        filter.regex = QRegularExpression(pattern);
+    }
 
     invalidateFilter();
     double after = rowCount();
@@ -74,7 +80,10 @@ void LogFilterModel::setVariantList(int column, const QStringList& values)
     if (values.isEmpty())
         variants.erase(column);
     else
-        variants[column] = std::unordered_set<QString>{ values.begin(), values.end() };
+    {
+        auto& filter = variants[column];
+        filter.values = std::unordered_set<QString>{ values.begin(), values.end() };
+    }
 
     invalidateFilter();
     double after = rowCount();
@@ -85,6 +94,31 @@ void LogFilterModel::setVariantList(int column, const QStringList& values)
         filterEstimates[column] = after > 0 ? before / after : before;
 
     updateSourceModel();
+}
+
+void LogFilterModel::setFilterMode(int column, FilterType type)
+{
+    auto it = columnFilters.find(column);
+    if (it != columnFilters.end())
+        it->second.type = type;
+    auto itv = variants.find(column);
+    if (itv != variants.end())
+        itv->second.type = type;
+
+    filterEstimates.erase(column);
+    invalidateFilter();
+    updateSourceModel();
+}
+
+FilterType LogFilterModel::filterMode(int column) const
+{
+    auto it = columnFilters.find(column);
+    if (it != columnFilters.end())
+        return it->second.type;
+    auto itv = variants.find(column);
+    if (itv != variants.end())
+        return itv->second.type;
+    return FilterType::Whitelist;
 }
 
 void LogFilterModel::setSourceModel(QAbstractItemModel* model)
@@ -103,6 +137,7 @@ LogFilter LogFilterModel::exportFilter() const
     auto fieldFilters = columnFilters;
     QStringList fields;
     std::unordered_set<QString> modules;
+    FilterType modulesType = FilterType::Whitelist;
     for (int i = 0; i < sourceModel()->columnCount(); ++i)
     {
         if (i == static_cast<int>(LogModel::PredefinedColumn::Module))
@@ -110,7 +145,8 @@ LogFilter LogFilterModel::exportFilter() const
             auto it = filterVariants.find(i);
             if (it != filterVariants.end())
             {
-                modules = it->second;
+                modules = it->second.values;
+                modulesType = it->second.type;
                 filterVariants.erase(it);
             }
             continue;
@@ -136,7 +172,7 @@ LogFilter LogFilterModel::exportFilter() const
         }
     }
 
-    return LogFilter{ fieldFilters, filterVariants, fields, modules };
+    return LogFilter{ fieldFilters, filterVariants, fields, modules, modulesType };
 }
 
 bool LogFilterModel::filterAcceptsRow(int source_row, const QModelIndex& source_parent) const
@@ -147,21 +183,29 @@ bool LogFilterModel::filterAcceptsRow(int source_row, const QModelIndex& source_
     for (const auto& filter : columnFilters)
     {
         int column = filter.first;
-        const QRegularExpression& rx = filter.second;
+        const QRegularExpression& rx = filter.second.regex;
         QModelIndex idx = sourceModel()->index(source_row, column, source_parent);
         QString text = sourceModel()->data(idx, filterRole()).toString();
-        if (!rx.pattern().isEmpty() && !rx.match(text).hasMatch())
+        if (rx.pattern().isEmpty())
+            continue;
+        bool match = rx.match(text).hasMatch();
+        if (filter.second.type == FilterType::Whitelist && !match)
+            return false;
+        if (filter.second.type == FilterType::Blacklist && match)
             return false;
     }
 
     for (const auto& filter : variants)
     {
         int column = filter.first;
-        const auto& variantSet = filter.second;
+        const auto& variantSet = filter.second.values;
         QModelIndex idx = sourceModel()->index(source_row, column, source_parent);
         QString text = sourceModel()->data(idx, filterRole()).toString();
 
-        if (variantSet.find(text) == variantSet.end())
+        bool contains = variantSet.find(text) != variantSet.end();
+        if (filter.second.type == FilterType::Whitelist && !contains)
+            return false;
+        if (filter.second.type == FilterType::Blacklist && contains)
             return false;
     }
 
