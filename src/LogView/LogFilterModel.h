@@ -13,6 +13,16 @@ class LogModel;
 class FilteredLogModel;
 
 
+#ifndef FILTER_TYPE_ENUM
+#define FILTER_TYPE_ENUM
+enum class FilterType
+{
+    Whitelist,
+    Blacklist
+};
+Q_DECLARE_METATYPE(FilterType);
+#endif
+
 class LogFilterModel : public QSortFilterProxyModel
 {
     Q_OBJECT
@@ -23,6 +33,8 @@ public:
     void setFilterWildcard(int column, const QString& pattern);
     void setFilterRegularExpression(int column, const QString& pattern);
     void setVariantList(int column, const QStringList& values);
+    void setFilterMode(int column, FilterType type);
+    FilterType filterMode(int column) const;
 
     void setSourceModel(QAbstractItemModel* sourceModel) override;
 
@@ -40,8 +52,8 @@ private:
     void updateSourceModel();
     void clearFilters();
 
-    std::unordered_map<int, QRegularExpression> columnFilters;
-    std::unordered_map<int, std::unordered_set<QString>> variants;
+    std::unordered_map<int, RegexFilter> columnFilters;
+    std::unordered_map<int, VariantFilter> variants;
     std::unordered_map<int, double> filterEstimates;
 
     LogModel* baseModel = nullptr;
