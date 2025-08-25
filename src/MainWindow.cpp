@@ -388,11 +388,12 @@ void MainWindow::on_actionFiltered_export_triggered()
 void MainWindow::on_actionShow_bookmarks_triggered()
 {
     QT_SLOT_BEGIN
+
+    Settings settings;
     bool checked = ui->actionShow_bookmarks->isChecked();
     if (checked)
     {
         ui->bookmarkTable->setVisible(true);
-        Settings settings;
         int bookmarkSize = settings.value(objectName() + "/bookmarkTableSize", 100).toInt();
         auto sizes = ui->logSplitter->sizes();
         if (sizes.size() >= 2)
@@ -411,11 +412,13 @@ void MainWindow::on_actionShow_bookmarks_triggered()
         auto sizes = ui->logSplitter->sizes();
         if (sizes.size() >= 2)
         {
-            Settings settings;
             settings.setValue(objectName() + "/bookmarkTableSize", sizes[1]);
         }
         ui->bookmarkTable->setVisible(false);
     }
+
+    settings.setValue(objectName() + "/bookmarksVisible", checked);
+
     QT_SLOT_END
 }
 
@@ -479,6 +482,27 @@ void MainWindow::logManagerCreated(const QString& source)
     switchModel(proxyModel);
     setCloseActionEnabled(true);
     ui->searchBar->show();
+
+    Settings settings;
+    auto bookmarkTableVisible = settings.value(objectName() + "/bookmarksVisible", false).toBool();
+    ui->bookmarkTable->setVisible(bookmarkTableVisible);
+    if (bookmarkTableVisible)
+    {
+        ui->actionShow_bookmarks->setChecked(true);
+        int bookmarkSize = settings.value(objectName() + "/bookmarkTableSize", 100).toInt();
+        auto sizes = ui->logSplitter->sizes();
+        if (sizes.size() >= 2)
+        {
+            int total = sizes[0] + sizes[1];
+            if (bookmarkSize < total)
+            {
+                sizes[1] = bookmarkSize;
+                sizes[0] = total - bookmarkSize;
+                ui->logSplitter->setSizes(sizes);
+            }
+        }
+    }
+
     updateBookmarks();
 
     setTitleOpened(source);

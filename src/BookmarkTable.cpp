@@ -4,15 +4,20 @@
 
 #include <QAbstractItemView>
 #include <QDateTime>
+#include <QHeaderView>
 
-BookmarkTable::BookmarkTable(QWidget* parent)
-    : QTableWidget(parent)
+
+BookmarkTable::BookmarkTable(QWidget* parent) : QTableWidget(parent)
 {
     setColumnCount(2);
     setHorizontalHeaderLabels(QStringList{ tr("Time"), tr("Line") });
     setSelectionBehavior(QAbstractItemView::SelectRows);
     setSelectionMode(QAbstractItemView::SingleSelection);
     setEditTriggers(QAbstractItemView::NoEditTriggers);
+
+    horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeMode::ResizeToContents);
+    horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeMode::Stretch);
+
     connect(this, &QTableWidget::cellActivated, this, &BookmarkTable::handleCellActivated);
 }
 
