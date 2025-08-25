@@ -2,6 +2,7 @@
 
 #include "LogManagement/Format.h"
 #include "LogView/LogFilterModel.h"
+#include "MultiSelectComboBox.h"
 
 #include <QHeaderView>
 #include <QLineEdit>
@@ -39,9 +40,12 @@ private:
     void setupEditors();
     void adjustLastColumn();
 
-    QWidget* createComboBoxEditor(int section, const std::unordered_set<QVariant, VariantHash>& values, LogFilterModel* proxyModel);
+    MultiSelectComboBox* createComboBoxEditor(int section, const std::unordered_set<QVariant, VariantHash>& values, LogFilterModel* proxyModel);
 
 private:
     std::vector<QWidget*> editors;
     int filterHeight = 20;
+
+    const QIcon whitelistIcon = QIcon(":/LogManager/filter-add.svg");
+    const QIcon blacklistIcon = QIcon(":/LogManager/filter-remove.svg");
 };

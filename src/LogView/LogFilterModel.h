@@ -13,16 +13,6 @@ class LogModel;
 class FilteredLogModel;
 
 
-#ifndef FILTER_TYPE_ENUM
-#define FILTER_TYPE_ENUM
-enum class FilterType
-{
-    Whitelist,
-    Blacklist
-};
-Q_DECLARE_METATYPE(FilterType);
-#endif
-
 class LogFilterModel : public QSortFilterProxyModel
 {
     Q_OBJECT
@@ -55,6 +45,7 @@ private:
     std::unordered_map<int, RegexFilter> columnFilters;
     std::unordered_map<int, VariantFilter> variants;
     std::unordered_map<int, double> filterEstimates;
+    std::unordered_map<int, FilterType> filterTypes;
 
     LogModel* baseModel = nullptr;
     std::unique_ptr<FilteredLogModel> filteredModel;

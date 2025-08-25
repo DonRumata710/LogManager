@@ -101,9 +101,15 @@ void LogFilterModel::setFilterMode(int column, FilterType type)
     auto it = columnFilters.find(column);
     if (it != columnFilters.end())
         it->second.type = type;
+
     auto itv = variants.find(column);
     if (itv != variants.end())
         itv->second.type = type;
+
+    filterTypes[column] = type;
+
+    if (it == columnFilters.end() && itv == variants.end())
+        return;
 
     filterEstimates.erase(column);
     invalidateFilter();
@@ -112,12 +118,10 @@ void LogFilterModel::setFilterMode(int column, FilterType type)
 
 FilterType LogFilterModel::filterMode(int column) const
 {
-    auto it = columnFilters.find(column);
-    if (it != columnFilters.end())
-        return it->second.type;
-    auto itv = variants.find(column);
-    if (itv != variants.end())
-        return itv->second.type;
+    auto typeIt = filterTypes.find(column);
+    if (typeIt != filterTypes.end())
+        return typeIt->second;
+
     return FilterType::Whitelist;
 }
 

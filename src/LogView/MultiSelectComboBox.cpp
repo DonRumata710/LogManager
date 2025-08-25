@@ -14,8 +14,7 @@ MultiSelectComboBox::MultiSelectComboBox(QWidget* aParent) :
     QComboBox(aParent),
     mListWidget(new QListWidget(this)),
     mLineEdit(new QLineEdit(this)),
-    mSearchBar(new QLineEdit(this)),
-    mModeAction(nullptr)
+    mSearchBar(new QLineEdit(this))
 {
     QListWidgetItem* curItem = new QListWidgetItem(mListWidget);
     mSearchBar->setPlaceholderText("Search..");
@@ -29,13 +28,6 @@ MultiSelectComboBox::MultiSelectComboBox(QWidget* aParent) :
     setModel(mListWidget->model());
     setView(mListWidget);
     setLineEdit(mLineEdit);
-
-    mModeAction = mLineEdit->addAction(style()->standardIcon(QStyle::SP_DialogApplyButton), QLineEdit::TrailingPosition);
-    mModeAction->setToolTip(tr("Toggle whitelist/blacklist"));
-    connect(mModeAction, &QAction::triggered, this, [this]() {
-        setMode(mMode == FilterType::Whitelist ? FilterType::Blacklist : FilterType::Whitelist);
-    });
-    updateModeAction();
 
     connect(mSearchBar, &QLineEdit::textChanged, this, &MultiSelectComboBox::onSearch);
     connect(this, static_cast<void (QComboBox::*)(int)>(&QComboBox::activated), this, &MultiSelectComboBox::itemClicked);
@@ -245,23 +237,7 @@ void MultiSelectComboBox::ResetSelection()
     }
 }
 
-void MultiSelectComboBox::setMode(FilterType mode)
+QAction *MultiSelectComboBox::AddAction(const QIcon &icon)
 {
-    if (mMode == mode)
-        return;
-    mMode = mode;
-    updateModeAction();
-    emit filterModeChanged(mMode);
+    return mLineEdit->addAction(icon, QLineEdit::TrailingPosition);
 }
-
-
-void MultiSelectComboBox::updateModeAction()
-{
-    if (!mModeAction)
-        return;
-    if (mMode == FilterType::Whitelist)
-        mModeAction->setIcon(style()->standardIcon(QStyle::SP_DialogApplyButton));
-    else
-        mModeAction->setIcon(style()->standardIcon(QStyle::SP_DialogCancelButton));
-}
-

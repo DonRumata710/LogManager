@@ -2,7 +2,6 @@
 
 #include "LogFilterModel.h"
 #include "LogModel.h"
-#include "MultiSelectComboBox.h"
 #include "Utils.h"
 
 #include <QAbstractItemModel>
@@ -90,8 +89,6 @@ void FilterHeader::updateEditors()
                 continue;
             }
         }
-
-        cb->setMode(proxyLogModel->filterMode(i));
 
         for (const auto& val : values)
             cb->addItem(val.toString(), val);
@@ -185,6 +182,7 @@ void FilterHeader::setupEditors()
 
     for (int i = 0; i < model()->columnCount(); ++i)
     {
+        QAction* modeAction = nullptr;
         auto values = logModel->availableValues(i);
         if (values.empty())
         {
@@ -196,25 +194,32 @@ void FilterHeader::setupEditors()
                 auto filter = t;
                 proxyModel->setFilterWildcard(i, filter);
             });
-            QAction* modeAction = edit->addAction(style()->standardIcon(QStyle::SP_DialogApplyButton), QLineEdit::TrailingPosition);
-            if (proxyModel->filterMode(i) == FilterType::Blacklist)
-                modeAction->setIcon(style()->standardIcon(QStyle::SP_DialogCancelButton));
-            modeAction->setToolTip(tr("Toggle whitelist/blacklist"));
-            connect(modeAction, &QAction::triggered, this, [proxyModel, i, modeAction, this]() {
-                auto newMode = proxyModel->filterMode(i) == FilterType::Whitelist ? FilterType::Blacklist : FilterType::Whitelist;
-                proxyModel->setFilterMode(i, newMode);
-                if (newMode == FilterType::Whitelist)
-                    modeAction->setIcon(style()->standardIcon(QStyle::SP_DialogApplyButton));
-                else
-                    modeAction->setIcon(style()->standardIcon(QStyle::SP_DialogCancelButton));
-            });
+
+            modeAction = edit->addAction(whitelistIcon, QLineEdit::TrailingPosition);
 
             editors.push_back(edit);
         }
         else
         {
-            editors.push_back(createComboBoxEditor(i, values, proxyModel));
+            auto cb = createComboBoxEditor(i, values, proxyModel);
+            modeAction = cb->AddAction(whitelistIcon);
+            editors.push_back(cb);
         }
+        
+        if (!modeAction)
+            throw std::runtime_error("Failed to create mode action");
+
+        if (proxyModel->filterMode(i) == FilterType::Blacklist)
+            modeAction->setIcon(blacklistIcon);
+        modeAction->setToolTip(tr("Toggle whitelist/blacklist"));
+        connect(modeAction, &QAction::triggered, this, [proxyModel, i, modeAction, this]() {
+            auto newMode = ((proxyModel->filterMode(i) == FilterType::Whitelist) ? FilterType::Blacklist : FilterType::Whitelist);
+            proxyModel->setFilterMode(i, newMode);
+            if (newMode == FilterType::Whitelist)
+                modeAction->setIcon(whitelistIcon);
+            else
+                modeAction->setIcon(blacklistIcon);
+        });
     }
     updatePositions();
 }
@@ -225,7 +230,7 @@ void FilterHeader::adjustLastColumn()
         setSectionResizeMode(model()->columnCount() - 1, QHeaderView::ResizeMode::Stretch);
 }
 
-QWidget* FilterHeader::createComboBoxEditor(int i, const std::unordered_set<QVariant, VariantHash>& values, LogFilterModel* proxyModel)
+MultiSelectComboBox* FilterHeader::createComboBoxEditor(int i, const std::unordered_set<QVariant, VariantHash>& values, LogFilterModel* proxyModel)
 {
     auto comboBox = new MultiSelectComboBox(this);
     comboBox->setPlaceholderText(tr("Filter"));
@@ -233,15 +238,9 @@ QWidget* FilterHeader::createComboBoxEditor(int i, const std::unordered_set<QVar
     for (const auto& val : values)
         comboBox->addItem(val.toString(), val);
 
-    comboBox->setMode(proxyModel->filterMode(i));
-
     connect(comboBox, &MultiSelectComboBox::currentTextChanged, this, [this, i, proxyModel, comboBox](const QString& text) {
         emit filterChanged(i, text);
         proxyModel->setVariantList(i, comboBox->currentText());
     });
-    connect(comboBox, &MultiSelectComboBox::filterModeChanged, this, [proxyModel, i](FilterType mode) {
-        proxyModel->setFilterMode(i, mode);
-    });
-
     return comboBox;
 }

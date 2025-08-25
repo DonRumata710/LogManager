@@ -6,15 +6,13 @@
 
 #include <unordered_set>
 
-#ifndef FILTER_TYPE_ENUM
-#define FILTER_TYPE_ENUM
+
 enum class FilterType
 {
     Whitelist,
     Blacklist
 };
 Q_DECLARE_METATYPE(FilterType);
-#endif
 
 struct RegexFilter
 {

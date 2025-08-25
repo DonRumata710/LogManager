@@ -149,8 +149,9 @@ void SearchController::search(const QModelIndex& from, const QString& searchTerm
         currentSearchTerm = searchTerm;
 
         QDateTime startTime = backward ? model->getStartTime() : model->getLastEntryTime();
-        if (useFilters)
-            startGlobalSearchWithFilter(startTime, searchTerm, lastColumn, regexEnabled, backward, proxyModel->exportFilter());
+        auto filters = proxyModel->exportFilter();
+        if (useFilters && !filters.isEmpty())
+            startGlobalSearchWithFilter(startTime, searchTerm, lastColumn, regexEnabled, backward, filters);
         else
             startGlobalSearch(startTime, searchTerm, lastColumn, regexEnabled, backward);
     }
