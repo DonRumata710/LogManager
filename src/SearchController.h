@@ -6,6 +6,7 @@
 
 #include <QObject>
 #include <QAbstractItemView>
+#include <chrono>
 
 
 class SearchController : public QObject
@@ -21,8 +22,8 @@ public:
     static bool checkEntry(const QString& textToSearch, const QString& searchTerm, bool lastColumn, bool regexEnabled);
 
 signals:
-    void startGlobalSearch(const QDateTime& startTime, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward);
-    void startGlobalSearchWithFilter(const QDateTime& startTime, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, const LogFilter& filter);
+    void startGlobalSearch(const std::chrono::system_clock::time_point& startTime, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward);
+    void startGlobalSearchWithFilter(const std::chrono::system_clock::time_point& startTime, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, const LogFilter& filter);
 
     void handleError(const QString& message);
 
@@ -30,7 +31,7 @@ public slots:
     void localSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters);
     void commonSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters);
 
-    void handleSearchResult(const QString& searchTerm, const QDateTime& entryTime);
+    void handleSearchResult(const QString& searchTerm, const std::chrono::system_clock::time_point& entryTime);
     void handleLoadingFinished(const QModelIndex& index);
 
 private:

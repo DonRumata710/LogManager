@@ -3,6 +3,7 @@
 #include "Utils.h"
 
 #include <QAbstractItemView>
+#include <QDateTime>
 
 BookmarkTable::BookmarkTable(QWidget* parent)
     : QTableWidget(parent)
@@ -44,6 +45,6 @@ void BookmarkTable::handleCellActivated(int row, int column)
     auto item = this->item(row, 0);
     if (!item)
         return;
-    emit bookmarkActivated(item->data(Qt::UserRole).toDateTime());
+    emit bookmarkActivated(ChronoSystemClockFromDateTime(item->data(Qt::UserRole).toDateTime()));
 }
 

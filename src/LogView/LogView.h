@@ -2,7 +2,7 @@
 
 #include <QAbstractItemModel>
 #include <QTreeView>
-#include <QDateTime>
+#include <chrono>
 
 class QContextMenuEvent;
 
@@ -20,7 +20,7 @@ public:
     void setLogModel(QAbstractItemModel* model);
 
 public slots:
-    void bookmarkActivated(const QDateTime& time);
+    void bookmarkActivated(const std::chrono::system_clock::time_point& time);
 
 signals:
     void handleError(const QString& message);

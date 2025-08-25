@@ -7,7 +7,7 @@ SearchService::SearchService(SessionService* sessionService, QObject* parent)
     : QObject(parent), sessionService(sessionService)
 {}
 
-void SearchService::search(const QDateTime& time, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward)
+void SearchService::search(const std::chrono::system_clock::time_point& time, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward)
 {
     QT_SLOT_BEGIN
 
@@ -26,7 +26,7 @@ void SearchService::search(const QDateTime& time, const QString& searchTerm, boo
         return;
     }
 
-    auto startTime = time.toStdSysMilliseconds();
+    auto startTime = time;
     auto endTime = session->getMaxTime();
     auto totalMs = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
     auto iterator = LogEntryIterator<>(session->getIterator<true>(startTime, endTime));
@@ -46,7 +46,7 @@ void SearchService::search(const QDateTime& time, const QString& searchTerm, boo
 
         if (SearchController::checkEntry(entry->line, searchTerm, lastColumn, regexEnabled))
         {
-            emit searchFinished(searchTerm, DateTimeFromChronoSystemClock(entry->time));
+            emit searchFinished(searchTerm, entry->time);
             emit progressUpdated(QStringLiteral("Search finished"), 100);
             return;
         }
@@ -57,7 +57,7 @@ void SearchService::search(const QDateTime& time, const QString& searchTerm, boo
     QT_SLOT_END
 }
 
-void SearchService::searchWithFilter(const QDateTime& time, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, const LogFilter& filter)
+void SearchService::searchWithFilter(const std::chrono::system_clock::time_point& time, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, const LogFilter& filter)
 {
     QT_SLOT_BEGIN
 
@@ -76,7 +76,7 @@ void SearchService::searchWithFilter(const QDateTime& time, const QString& searc
         return;
     }
 
-    auto startTimeF = time.toStdSysMilliseconds();
+    auto startTimeF = time;
     auto endTimeF = session->getMaxTime();
     auto totalMsF = std::chrono::duration_cast<std::chrono::milliseconds>(endTimeF - startTimeF).count();
     auto iterator = LogEntryIterator<>(session->getIterator<true>(startTimeF, endTimeF));
@@ -96,7 +96,7 @@ void SearchService::searchWithFilter(const QDateTime& time, const QString& searc
 
         if (SearchController::checkEntry(entry->line, searchTerm, lastColumn, regexEnabled) && filter.check(entry.value()))
         {
-            emit searchFinished(searchTerm, DateTimeFromChronoSystemClock(entry->time));
+            emit searchFinished(searchTerm, entry->time);
             emit progressUpdated(QStringLiteral("Search finished"), 100);
             return;
         }

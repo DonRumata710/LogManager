@@ -5,7 +5,7 @@
 #include "ThreadSafePtr.h"
 
 #include <QObject>
-#include <QDateTime>
+#include <chrono>
 
 class SessionService;
 
@@ -16,12 +16,12 @@ public:
     explicit SearchService(SessionService* sessionService, QObject* parent = nullptr);
 
 public slots:
-    void search(const QDateTime& time, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward);
-    void searchWithFilter(const QDateTime& time, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, const LogFilter& filter);
+    void search(const std::chrono::system_clock::time_point& time, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward);
+    void searchWithFilter(const std::chrono::system_clock::time_point& time, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, const LogFilter& filter);
 
 signals:
     void progressUpdated(const QString& message, int percent);
-    void searchFinished(const QString& searchTerm, const QDateTime& entryTime);
+    void searchFinished(const QString& searchTerm, const std::chrono::system_clock::time_point& entryTime);
     void handleError(const QString& message);
 
 private:

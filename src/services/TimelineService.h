@@ -1,8 +1,8 @@
 #pragma once
 
 #include <QObject>
-#include <QDateTime>
 #include <vector>
+#include <chrono>
 #include "Statistics/LogHistogram.h"
 
 class SessionService;
@@ -21,7 +21,7 @@ signals:
     void handleError(const QString& message);
 
 public slots:
-    void showTimeline(const QDateTime& start, const QDateTime& end);
+    void showTimeline(const std::chrono::system_clock::time_point& start, const std::chrono::system_clock::time_point& end);
 
 private:
     SessionService* sessionService;

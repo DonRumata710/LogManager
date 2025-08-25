@@ -6,7 +6,7 @@ ExportService::ExportService(SessionService* sessionService, QObject* parent)
     : QObject(parent), sessionService(sessionService)
 {}
 
-void ExportService::exportData(const QString& filename, const QDateTime& startTime, const QDateTime& endTime)
+void ExportService::exportData(const QString& filename, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime)
 {
     QT_SLOT_BEGIN
 
@@ -22,7 +22,7 @@ void ExportService::exportData(const QString& filename, const QDateTime& startTi
     QT_SLOT_END
 }
 
-void ExportService::exportData(const QString& filename, const QDateTime& startTime, const QDateTime& endTime, const QStringList& fields)
+void ExportService::exportData(const QString& filename, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime, const QStringList& fields)
 {
     QT_SLOT_BEGIN
 
@@ -51,7 +51,7 @@ void ExportService::exportData(const QString& filename, const QDateTime& startTi
     QT_SLOT_END
 }
 
-void ExportService::exportData(const QString& filename, const QDateTime& startTime, const QDateTime& endTime, const QStringList& fields, const LogFilter& filter)
+void ExportService::exportData(const QString& filename, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime, const QStringList& fields, const LogFilter& filter)
 {
     QT_SLOT_BEGIN
 
@@ -153,7 +153,7 @@ void ExportService::exportData(const QString& filename, QTreeView* view)
     QT_SLOT_END
 }
 
-void ExportService::exportDataToFile(const QString& filename, const QDateTime& startTime, const QDateTime& endTime,
+void ExportService::exportDataToFile(const QString& filename, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime,
                                      const std::function<void (QFile&, const LogEntry&)>& writeFunction,
                                      const std::function<void (QFile& file)>& prefix)
 {
@@ -180,11 +180,9 @@ void ExportService::exportDataToFile(const QString& filename, const QDateTime& s
     if (prefix)
         prefix(file);
 
-    auto startMs = startTime.toStdSysMilliseconds();
-    auto endMs = endTime.toStdSysMilliseconds();
-    auto totalMs = std::chrono::duration_cast<std::chrono::milliseconds>(endMs - startMs).count();
+    auto totalMs = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
 
-    auto iterator = session->getIterator(startMs, endMs);
+    auto iterator = session->getIterator(startTime, endTime);
     int lastPercent = 0;
     while (iterator.hasLogs())
     {
@@ -194,7 +192,7 @@ void ExportService::exportDataToFile(const QString& filename, const QDateTime& s
 
         writeFunction(file, entry.value());
 
-        auto curMs = std::chrono::duration_cast<std::chrono::milliseconds>(entry->time - startMs).count();
+        auto curMs = std::chrono::duration_cast<std::chrono::milliseconds>(entry->time - startTime).count();
         int percent = totalMs ? static_cast<int>(100LL * curMs / totalMs) : 0;
         if (percent != lastPercent && percent <= 100)
         {
@@ -207,7 +205,7 @@ void ExportService::exportDataToFile(const QString& filename, const QDateTime& s
         emit progressUpdated(QStringLiteral("Exporting data to %1 ...").arg(filename), 100);
 }
 
-void ExportService::exportDataToFile(const QString& filename, const QDateTime& startTime, const QDateTime& endTime,
+void ExportService::exportDataToFile(const QString& filename, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime,
                                      const std::function<void (QFile&, const LogEntry&)>& writeFunction, const QStringList& fields)
 {
     exportDataToFile(filename, startTime, endTime, writeFunction,

@@ -79,7 +79,7 @@ void SearchController::commonSearch(const QString& searchTerm, bool lastColumn, 
     QT_SLOT_END
 }
 
-void SearchController::handleSearchResult(const QString& searchTerm, const QDateTime& entryTime)
+void SearchController::handleSearchResult(const QString& searchTerm, const std::chrono::system_clock::time_point& entryTime)
 {
     QT_SLOT_BEGIN
 
@@ -148,7 +148,7 @@ void SearchController::search(const QModelIndex& from, const QString& searchTerm
         qDebug() << "Starting global search for term:" << searchTerm;
         currentSearchTerm = searchTerm;
 
-        QDateTime startTime = backward ? model->getStartTime() : model->getLastEntryTime();
+        auto startTime = ChronoSystemClockFromDateTime(backward ? model->getStartTime() : model->getLastEntryTime());
         auto filters = proxyModel->exportFilter();
         if (useFilters && !filters.isEmpty())
             startGlobalSearchWithFilter(startTime, searchTerm, lastColumn, regexEnabled, backward, filters);
