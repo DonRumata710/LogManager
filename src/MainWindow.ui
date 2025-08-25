@@ -18,7 +18,7 @@
     <item>
      <widget class="QSplitter" name="logSplitter">
       <property name="orientation">
-       <enum>Qt::Vertical</enum>
+       <enum>Qt::Orientation::Vertical</enum>
       </property>
       <widget class="LogView" name="logView"/>
       <widget class="BookmarkTable" name="bookmarkTable">
