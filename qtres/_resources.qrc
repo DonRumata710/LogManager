@@ -1,7 +1,0 @@
-<RCC>
-    <qresource prefix="/">
-        <file alias="LogManager/search-common.svg">search-common.svg</file>
-        <file alias="LogManager/search-local.svg">search-local.svg</file>
-        <file alias="LogManager/right-arrow.png">right-arrow.png</file>
-    </qresource>
-</RCC>

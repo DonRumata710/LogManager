@@ -47,7 +47,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/qtres)
         )
 
         if(NOT "${QT_RESOURCES}" STREQUAL "")
-            set(qrcName "${TARGET}_resources")
+            set(qrcName "${PROJECT_NAME}_resources")
             set(RESOURCE_FILE "${CMAKE_CURRENT_SOURCE_DIR}/qtres/${qrcName}.qrc")
 
             generate_qrc_file("${QT_RESOURCES}" "${CMAKE_CURRENT_SOURCE_DIR}/qtres" "${PROJECT_NAME}/" "${RESOURCE_FILE}")
