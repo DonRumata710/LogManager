@@ -3,8 +3,8 @@
 #include "LogManagement/LogEntry.h"
 
 #include <QTableWidget>
-#include <QDateTime>
 #include <vector>
+#include <chrono>
 
 class BookmarkTable : public QTableWidget
 {
@@ -16,7 +16,7 @@ public:
     void clearBookmarks();
 
 signals:
-    void bookmarkActivated(const QDateTime& time);
+    void bookmarkActivated(const std::chrono::system_clock::time_point& time);
 
 private slots:
     void handleCellActivated(int row, int column);

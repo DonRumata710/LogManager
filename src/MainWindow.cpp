@@ -87,10 +87,22 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(exportService, &ExportService::handleError, this, &MainWindow::handleError);
     connect(timelineService, &TimelineService::handleError, this, &MainWindow::handleError);
 
-    connect(this, SIGNAL(exportData(QString,QDateTime,QDateTime)), exportService, SLOT(exportData(QString,QDateTime,QDateTime)));
-    connect(this, SIGNAL(exportData(QString,QDateTime,QDateTime,QStringList)), exportService, SLOT(exportData(QString,QDateTime,QDateTime,QStringList)));
-    connect(this, SIGNAL(exportData(QString,QTreeView*)), exportService, SLOT(exportData(QString,QTreeView*)));
-    connect(this, SIGNAL(exportData(QString,QDateTime,QDateTime,QStringList,LogFilter)), exportService, SLOT(exportData(QString,QDateTime,QDateTime,QStringList,LogFilter)));
+    connect(this,
+            qOverload<const QString&, const std::chrono::system_clock::time_point&, const std::chrono::system_clock::time_point&>(&MainWindow::exportData),
+            exportService,
+            qOverload<const QString&, const std::chrono::system_clock::time_point&, const std::chrono::system_clock::time_point&>(&ExportService::exportData));
+    connect(this,
+            qOverload<const QString&, const std::chrono::system_clock::time_point&, const std::chrono::system_clock::time_point&, const QStringList&>(&MainWindow::exportData),
+            exportService,
+            qOverload<const QString&, const std::chrono::system_clock::time_point&, const std::chrono::system_clock::time_point&, const QStringList&>(&ExportService::exportData));
+    connect(this,
+            qOverload<const QString&, QTreeView*>(&MainWindow::exportData),
+            exportService,
+            qOverload<const QString&, QTreeView*>(&ExportService::exportData));
+    connect(this,
+            qOverload<const QString&, const std::chrono::system_clock::time_point&, const std::chrono::system_clock::time_point&, const QStringList&, const LogFilter&>(&MainWindow::exportData),
+            exportService,
+            qOverload<const QString&, const std::chrono::system_clock::time_point&, const std::chrono::system_clock::time_point&, const QStringList&, const LogFilter&>(&ExportService::exportData));
 
     connect(this, &MainWindow::openTimeline, timelineService, &TimelineService::showTimeline);
     connect(timelineService, &TimelineService::timelineReady, this, &MainWindow::timelineReady);
@@ -200,7 +212,8 @@ void MainWindow::on_actionTimeline_triggered()
     if (frameDialog.exec() != QDialog::Accepted)
         return;
 
-    emit openTimeline(frameDialog.startDateTime(), frameDialog.endDateTime());
+    emit openTimeline(ChronoSystemClockFromDateTime(frameDialog.startDateTime()),
+                      ChronoSystemClockFromDateTime(frameDialog.endDateTime()));
 
     QT_SLOT_END
 }
@@ -334,9 +347,14 @@ void MainWindow::on_actionFull_export_triggered()
 
     bool originFormat = fileName.endsWith(".log", Qt::CaseInsensitive);
     if (originFormat)
-        exportData(fileName, logModel->getStartTime(), logModel->getEndTime());
+        exportData(fileName,
+                   ChronoSystemClockFromDateTime(logModel->getStartTime()),
+                   ChronoSystemClockFromDateTime(logModel->getEndTime()));
     else
-        exportData(fileName, logModel->getStartTime(), logModel->getEndTime(), logModel->getFieldsName());
+        exportData(fileName,
+                   ChronoSystemClockFromDateTime(logModel->getStartTime()),
+                   ChronoSystemClockFromDateTime(logModel->getEndTime()),
+                   logModel->getFieldsName());
 
     QT_SLOT_END
 }
@@ -358,7 +376,11 @@ void MainWindow::on_actionFiltered_export_triggered()
 
     auto logModel = qobject_cast<LogModel*>(logFilterModel->sourceModel());
 
-    exportData(fileName, logModel->getStartTime(), logModel->getEndTime(), logModel->getFieldsName(), logFilterModel->exportFilter());
+    exportData(fileName,
+               ChronoSystemClockFromDateTime(logModel->getStartTime()),
+               ChronoSystemClockFromDateTime(logModel->getEndTime()),
+               logModel->getFieldsName(),
+               logFilterModel->exportFilter());
 
     QT_SLOT_END
 }

@@ -9,7 +9,7 @@
 #include <QProgressBar>
 #include <QAbstractItemModel>
 #include <QTreeView>
-#include <QDateTime>
+#include <chrono>
 
 
 namespace Ui {
@@ -54,13 +54,13 @@ signals:
     void openFile(const QString& file, const QStringList& formats);
     void openFolder(const QString& logDirectory, const QStringList& formats);
 
-    void exportData(const QString& filename, const QDateTime& startTime, const QDateTime& endTime);
-    void exportData(const QString& filename, const QDateTime& startTime, const QDateTime& endTime, const QStringList& fields);
-    void exportData(const QString& filename, const QDateTime& startTime, const QDateTime& endTime, const QStringList& fields, const LogFilter& filter);
+    void exportData(const QString& filename, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime);
+    void exportData(const QString& filename, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime, const QStringList& fields);
+    void exportData(const QString& filename, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime, const QStringList& fields, const LogFilter& filter);
 
     void exportData(const QString& filename, QTreeView* view);
 
-    void openTimeline(const QDateTime& start, const QDateTime& end);
+    void openTimeline(const std::chrono::system_clock::time_point& start, const std::chrono::system_clock::time_point& end);
 
 private:
     void addFormat(const std::string& format);

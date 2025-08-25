@@ -9,6 +9,11 @@ QDateTime DateTimeFromChronoSystemClock(const std::chrono::system_clock::time_po
     return QDateTime::fromMSecsSinceEpoch(minMs, Qt::LocalTime);
 }
 
+std::chrono::system_clock::time_point ChronoSystemClockFromDateTime(const QDateTime& dt)
+{
+    return std::chrono::system_clock::time_point{ std::chrono::milliseconds{ dt.toMSecsSinceEpoch() } };
+}
+
 Tracer::Tracer(const char* functionName) : functionName(functionName)
 {
     qDebug() << "start" << functionName;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QDebug>
+#include <QMetaType>
 
 #include <chrono>
 
@@ -34,3 +35,6 @@ private:
 class QDateTime;
 
 QDateTime DateTimeFromChronoSystemClock(const std::chrono::system_clock::time_point& tp);
+std::chrono::system_clock::time_point ChronoSystemClockFromDateTime(const QDateTime& dt);
+
+Q_DECLARE_METATYPE(std::chrono::system_clock::time_point)

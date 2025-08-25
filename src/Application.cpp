@@ -1,4 +1,5 @@
 #include "Application.h"
+#include "Utils.h"
 
 #include <QSettings>
 #include <QDir>
@@ -9,6 +10,8 @@ Application::Application(int& argc, char** argv) :
     serviceThread(std::make_unique<QThread>(this))
 {
     serviceThread->start();
+
+    qRegisterMetaType<std::chrono::system_clock::time_point>("std::chrono::system_clock::time_point");
 
     sessionService = std::make_unique<SessionService>();
     searchService = std::make_unique<SearchService>(sessionService.get());

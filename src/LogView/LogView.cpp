@@ -60,7 +60,7 @@ void LogView::setLogModel(QAbstractItemModel* newModel)
     connect(currentLogModel, &LogModel::rowsRemoved, this, &LogView::handleFirstLineRemoving);
 }
 
-void LogView::bookmarkActivated(const QDateTime& time)
+void LogView::bookmarkActivated(const std::chrono::system_clock::time_point& time)
 {
     QT_SLOT_BEGIN
     if (currentLogModel)

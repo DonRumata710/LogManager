@@ -105,7 +105,7 @@ void ServiceTests::testSearchService()
 {
     QSignalSpy spy(searchService, &SearchService::searchFinished);
     QVERIFY2(spy.isValid(), "QSignalSpy: failed to connect to SearchService::searchFinished");
-    searchService->search(firstTime, "searchterm", false, false, false);
+    searchService->search(toTimePoint(firstTime), "searchterm", false, false, false);
 
     if (spy.isEmpty())
         QVERIFY(spy.wait(1000));
@@ -118,7 +118,7 @@ void ServiceTests::testSearchService()
 void ServiceTests::testExportService()
 {
     QString outFile = tempDir->filePath("export.csv");
-    exportService->exportData(outFile, firstTime, secondTime);
+    exportService->exportData(outFile, toTimePoint(firstTime), toTimePoint(secondTime));
     QFile file(outFile);
     QVERIFY(file.open(QIODevice::ReadOnly | QIODevice::Text));
     QString content = file.readAll();
