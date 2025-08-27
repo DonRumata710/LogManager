@@ -44,21 +44,29 @@ void SearchBar::on_toolButton_clicked()
     QT_SLOT_END
 }
 
-void SearchBar::on_bLocalSearch_clicked()
+void SearchBar::on_bFindNext_clicked()
 {
     QT_SLOT_BEGIN
 
-    localSearch(ui->lineEdit->text(), ui->cbLastColumnSearch->isChecked(), ui->cbRegExpSuppor->isChecked(), ui->cbBackward->isChecked(), ui->cbUseFilters->isChecked());
+    bool local = ui->cbSearchMode->currentIndex() == 0;
+    if (local)
+        emit localSearch(ui->lineEdit->text(), ui->cbLastColumnSearch->isChecked(), ui->cbRegExpSuppor->isChecked(), ui->cbBackward->isChecked(), ui->cbUseFilters->isChecked(), false);
+    else
+        emit commonSearch(ui->lineEdit->text(), ui->cbLastColumnSearch->isChecked(), ui->cbRegExpSuppor->isChecked(), ui->cbBackward->isChecked(), ui->cbUseFilters->isChecked(), false);
 
     QT_SLOT_END
 }
 
 
-void SearchBar::on_bCommonSearch_clicked()
+void SearchBar::on_bFindAll_clicked()
 {
     QT_SLOT_BEGIN
 
-    commonSearch(ui->lineEdit->text(), ui->cbLastColumnSearch->isChecked(), ui->cbRegExpSuppor->isChecked(), ui->cbBackward->isChecked(), ui->cbUseFilters->isChecked());
+    bool local = ui->cbSearchMode->currentIndex() == 0;
+    if (local)
+        emit localSearch(ui->lineEdit->text(), ui->cbLastColumnSearch->isChecked(), ui->cbRegExpSuppor->isChecked(), ui->cbBackward->isChecked(), ui->cbUseFilters->isChecked(), true);
+    else
+        emit commonSearch(ui->lineEdit->text(), ui->cbLastColumnSearch->isChecked(), ui->cbRegExpSuppor->isChecked(), ui->cbBackward->isChecked(), ui->cbUseFilters->isChecked(), true);
 
     QT_SLOT_END
 }

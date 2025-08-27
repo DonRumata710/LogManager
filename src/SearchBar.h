@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QWidget>
+#include <QStringList>
 
 namespace Ui {
 class SearchBar;
@@ -15,16 +16,16 @@ public:
     ~SearchBar();
 
 signals:
-    void localSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters);
-    void commonSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters);
+    void localSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters, bool findAll);
+    void commonSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters, bool findAll);
 
     void handleError(const QString& message);
 
 private slots:
     void on_toolButton_clicked();
 
-    void on_bLocalSearch_clicked();
-    void on_bCommonSearch_clicked();
+    void on_bFindNext_clicked();
+    void on_bFindAll_clicked();
 
 private:
     Ui::SearchBar *ui;

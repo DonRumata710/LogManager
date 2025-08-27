@@ -64,9 +64,23 @@
        <widget class="QLineEdit" name="lineEdit"/>
       </item>
       <item>
-       <widget class="QToolButton" name="bLocalSearch">
+       <widget class="QComboBox" name="cbSearchMode">
+        <item>
+         <property name="text">
+          <string>Log view</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Global</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item>
+       <widget class="QToolButton" name="bFindNext">
         <property name="toolTip">
-         <string>Search in log view</string>
+         <string>Find next</string>
         </property>
         <property name="text">
          <string/>
@@ -78,9 +92,9 @@
        </widget>
       </item>
       <item>
-       <widget class="QToolButton" name="bCommonSearch">
+       <widget class="QToolButton" name="bFindAll">
         <property name="toolTip">
-         <string>Global search</string>
+         <string>Find all</string>
         </property>
         <property name="text">
          <string/>

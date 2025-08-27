@@ -61,20 +61,20 @@ bool SearchController::checkEntry(const QString& textToSearch, const QString& se
     return false;
 }
 
-void SearchController::localSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters)
+void SearchController::localSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters, bool findAll)
 {
     QT_SLOT_BEGIN
 
-    search(logView->currentIndex(), searchTerm, lastColumn, regexEnabled, backward, useFilters, false);
+    search(logView->currentIndex(), searchTerm, lastColumn, regexEnabled, backward, useFilters, false, findAll);
 
     QT_SLOT_END
 }
 
-void SearchController::commonSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters)
+void SearchController::commonSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters, bool findAll)
 {
     QT_SLOT_BEGIN
 
-    search(logView->currentIndex(), searchTerm, lastColumn, regexEnabled, backward, useFilters, true);
+    search(logView->currentIndex(), searchTerm, lastColumn, regexEnabled, backward, useFilters, true, findAll);
 
     QT_SLOT_END
 }
@@ -113,7 +113,7 @@ void SearchController::handleLoadingFinished(const QModelIndex& index)
     QT_SLOT_END
 }
 
-void SearchController::search(const QModelIndex& from, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters, bool globalSearch)
+void SearchController::search(const QModelIndex& from, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters, bool globalSearch, bool findAll)
 {
     QT_SLOT_BEGIN
 
@@ -122,42 +122,66 @@ void SearchController::search(const QModelIndex& from, const QString& searchTerm
     if (!model && proxyModel)
         model = qobject_cast<LogModel*>(proxyModel->sourceModel());
 
-    size_t start = from.row() + (backward ? -1 : 1);
-    for (size_t i = start; i < model->rowCount(); backward ? --i : ++i)
+    if (findAll)
     {
-        QModelIndex index{ model->index(i, 0) };
-        if (proxyModel && !proxyModel->filterAcceptsRow(i, QModelIndex()))
-            continue;
-
-        QString textToSearch = model->data(index, static_cast<int>(lastColumn ? LogModel::MetaData::Message : LogModel::MetaData::Line)).toString();
-        if (checkEntry(textToSearch, searchTerm, lastColumn, regexEnabled))
+        QStringList results;
+        for (int i = 0; i < model->rowCount(); ++i)
         {
-            qDebug() << "Search found at row:" << i << "text:" << textToSearch;
+            QModelIndex index{ model->index(i, 0) };
+            if (proxyModel && !proxyModel->filterAcceptsRow(i, QModelIndex()))
+                continue;
 
-            if (proxyModel)
-                index = proxyModel->mapFromSource(index);
-
-            logView->selectionModel()->setCurrentIndex(index, QItemSelectionModel::SelectionFlag::SelectCurrent | QItemSelectionModel::SelectionFlag::Rows);
-            logView->scrollTo(index, QTreeView::PositionAtCenter);
-            return;
+            QString textToSearch = model->data(index, static_cast<int>(lastColumn ? LogModel::MetaData::Message : LogModel::MetaData::Line)).toString();
+            if (checkEntry(textToSearch, searchTerm, lastColumn, regexEnabled))
+                results << textToSearch;
         }
-    }
 
-    if (globalSearch)
-    {
-        qDebug() << "Starting global search for term:" << searchTerm;
-        currentSearchTerm = searchTerm;
-
-        auto startTime = ChronoSystemClockFromDateTime(backward ? model->getStartTime() : model->getLastEntryTime());
-        auto filters = proxyModel->exportFilter();
-        if (useFilters && !filters.isEmpty())
-            startGlobalSearchWithFilter(startTime, searchTerm, lastColumn, regexEnabled, backward, filters);
-        else
-            startGlobalSearch(startTime, searchTerm, lastColumn, regexEnabled, backward);
+        emit searchResults(results);
     }
     else
     {
-        qDebug() << "Search term not found:" << searchTerm;
+        size_t start = from.row() + (backward ? -1 : 1);
+        bool found = false;
+        for (size_t i = start; i < model->rowCount(); backward ? --i : ++i)
+        {
+            QModelIndex index{ model->index(i, 0) };
+            if (proxyModel && !proxyModel->filterAcceptsRow(i, QModelIndex()))
+                continue;
+
+            QString textToSearch = model->data(index, static_cast<int>(lastColumn ? LogModel::MetaData::Message : LogModel::MetaData::Line)).toString();
+            if (checkEntry(textToSearch, searchTerm, lastColumn, regexEnabled))
+            {
+                qDebug() << "Search found at row:" << i << "text:" << textToSearch;
+
+                if (proxyModel)
+                    index = proxyModel->mapFromSource(index);
+
+                logView->selectionModel()->setCurrentIndex(index, QItemSelectionModel::SelectionFlag::SelectCurrent | QItemSelectionModel::SelectionFlag::Rows);
+                logView->scrollTo(index, QTreeView::PositionAtCenter);
+                found = true;
+                break;
+            }
+        }
+
+        if (!found)
+        {
+            if (globalSearch)
+            {
+                qDebug() << "Starting global search for term:" << searchTerm;
+                currentSearchTerm = searchTerm;
+
+                auto startTime = ChronoSystemClockFromDateTime(backward ? model->getStartTime() : model->getLastEntryTime());
+                auto filters = proxyModel->exportFilter();
+                if (useFilters && !filters.isEmpty())
+                    startGlobalSearchWithFilter(startTime, searchTerm, lastColumn, regexEnabled, backward, filters);
+                else
+                    startGlobalSearch(startTime, searchTerm, lastColumn, regexEnabled, backward);
+            }
+            else
+            {
+                qDebug() << "Search term not found:" << searchTerm;
+            }
+        }
     }
 
     QT_SLOT_END
