@@ -35,10 +35,8 @@ private slots:
     void on_actionSelect_all_triggered();
     void on_actionDeselect_all_triggered();
 
-    void on_actionExport_as_is_triggered();
-
+    void on_actionExport_current_view();
     void on_actionFull_export_triggered();
-    void on_actionFiltered_export_triggered();
 
     void on_actionShow_bookmarks_triggered();
 
@@ -54,9 +52,10 @@ signals:
     void openFile(const QString& file, const QStringList& formats);
     void openFolder(const QString& logDirectory, const QStringList& formats);
 
-    void exportData(const QString& filename, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime);
-    void exportData(const QString& filename, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime, const QStringList& fields);
-    void exportData(const QString& filename, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime, const QStringList& fields, const LogFilter& filter);
+    void exportData(const QString& folder, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime);
+    void exportData(const QString& folder, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime, const QStringList& fields, const LogFilter& filter);
+    void exportDataToTable(const QString& filename, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime, const QStringList& fields);
+    void exportDataToTable(const QString& filename, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime, const QStringList& fields, const LogFilter& filter);
 
     void exportData(const QString& filename, QTreeView* view);
 

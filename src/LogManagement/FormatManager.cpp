@@ -1,7 +1,6 @@
 #include "FormatManager.h"
 
 #include <QDir>
-#include <QSettings>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
