@@ -16,9 +16,10 @@ public:
     explicit ExportService(SessionService* sessionService, QObject* parent = nullptr);
 
 public slots:
-    void exportData(const QString& filename, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime);
-    void exportData(const QString& filename, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime, const QStringList& fields);
-    void exportData(const QString& filename, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime, const QStringList& fields, const LogFilter& filter);
+    void exportData(const QString& folder, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime);
+    void exportData(const QString& folder, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime, const QStringList& fields, const LogFilter& filter);
+    void exportDataToTable(const QString& filename, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime, const QStringList& fields);
+    void exportDataToTable(const QString& filename, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime, const QStringList& fields, const LogFilter& filter);
     void exportData(const QString& filename, QTreeView* view);
 
 signals:

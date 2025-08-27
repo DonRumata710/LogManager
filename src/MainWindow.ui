@@ -70,9 +70,8 @@
     <property name="title">
      <string>Export</string>
     </property>
-    <addaction name="actionExport_as_is"/>
+    <addaction name="actionExport_current_view"/>
     <addaction name="actionFull_export"/>
-    <addaction name="actionFiltered_export"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -139,7 +138,7 @@
     <string>Timeline...</string>
    </property>
   </action>
-  <action name="actionExport_as_is">
+  <action name="actionExport_current_view">
    <property name="text">
     <string>Export current view</string>
    </property>
@@ -147,11 +146,6 @@
   <action name="actionFull_export">
    <property name="text">
     <string>Full export</string>
-   </property>
-  </action>
-  <action name="actionFiltered_export">
-   <property name="text">
-    <string>Filtered export</string>
    </property>
   </action>
   <action name="actionShow_bookmarks">

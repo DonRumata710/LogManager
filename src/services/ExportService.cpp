@@ -1,9 +1,12 @@
 #include "ExportService.h"
 #include "SessionService.h"
 #include "Utils.h"
+#include "LogView/LogModel.h"
 
-ExportService::ExportService(SessionService* sessionService, QObject* parent)
-    : QObject(parent), sessionService(sessionService)
+
+ExportService::ExportService(SessionService* sessionService, QObject* parent) :
+    QObject(parent),
+    sessionService(sessionService)
 {}
 
 void ExportService::exportData(const QString& filename, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime)
@@ -22,18 +25,40 @@ void ExportService::exportData(const QString& filename, const std::chrono::syste
     QT_SLOT_END
 }
 
-void ExportService::exportData(const QString& filename, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime, const QStringList& fields)
+void ExportService::exportData(const QString& filename, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime, const QStringList& fields, const LogFilter& filter)
+{
+    QT_SLOT_BEGIN
+
+    emit progressUpdated(QStringLiteral("Exporting data to %1 ...").arg(filename), 0);
+
+    exportDataToFile(filename, startTime, endTime, [&fields, &filter](QFile& file, const LogEntry& entry) {
+        if (!filter.check(entry))
+            return;
+
+        file.write(entry.line.toUtf8());
+        file.write("\n");
+    });
+
+    emit progressUpdated(QStringLiteral("Export finished"), 100);
+
+    QT_SLOT_END
+}
+
+void ExportService::exportDataToTable(const QString& filename, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime, const QStringList& fields)
 {
     QT_SLOT_BEGIN
 
     emit progressUpdated(QStringLiteral("Exporting data to %1 ...").arg(filename), 0);
 
     exportDataToFile(filename, startTime, endTime, [&fields](QFile& file, const LogEntry& entry) {
-        for (const auto& field : fields)
+        for (int i = 0; i < fields.size(); ++i)
         {
+            const auto& field = fields[i];
             auto value = entry.values.find(field);
             if (value != entry.values.end())
                 file.write(value->second.toString().toUtf8());
+            else if (i == static_cast<int>(LogModel::PredefinedColumn::Module))
+                file.write(entry.module.toUtf8());
             file.write(";");
         }
 
@@ -51,7 +76,7 @@ void ExportService::exportData(const QString& filename, const std::chrono::syste
     QT_SLOT_END
 }
 
-void ExportService::exportData(const QString& filename, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime, const QStringList& fields, const LogFilter& filter)
+void ExportService::exportDataToTable(const QString& filename, const std::chrono::system_clock::time_point& startTime, const std::chrono::system_clock::time_point& endTime, const QStringList& fields, const LogFilter& filter)
 {
     QT_SLOT_BEGIN
 
@@ -61,11 +86,14 @@ void ExportService::exportData(const QString& filename, const std::chrono::syste
         if (!filter.check(entry))
             return;
 
-        for (const auto& field : fields)
+        for (int i = 0; i < fields.size(); ++i)
         {
+            const auto& field = fields[i];
             auto value = entry.values.find(field);
             if (value != entry.values.end())
                 file.write(value->second.toString().toUtf8());
+            else if (i == static_cast<int>(LogModel::PredefinedColumn::Module))
+                file.write(entry.module.toUtf8());
             file.write(";");
         }
 
