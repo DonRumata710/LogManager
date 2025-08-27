@@ -16,6 +16,7 @@
 #include "services/ExportService.h"
 #include "services/TimelineService.h"
 #include "BookmarkTable.h"
+#include "SearchResultsWidget.h"
 
 #include <utility>
 #include <QScrollBar>
@@ -42,11 +43,13 @@ MainWindow::MainWindow(QWidget *parent) :
     statusBar()->addPermanentWidget(progressBar);
 
     ui->searchBar->hide();
+    ui->searchResults->hide();
 
     ui->bookmarkTable->hide();
     connect(ui->bookmarkTable, &BookmarkTable::bookmarkActivated, ui->logView, &LogView::bookmarkActivated);
 
     searchController = new SearchController(ui->searchBar, ui->logView, this);
+    connect(searchController, &SearchController::searchResults, ui->searchResults, &SearchResultsWidget::showResults);
     connect(ui->searchBar, &SearchBar::handleError, this, &MainWindow::handleError);
 
     Settings settings;

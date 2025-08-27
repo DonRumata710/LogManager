@@ -31,6 +31,9 @@
     <item>
      <widget class="SearchBar" name="searchBar" native="true"/>
     </item>
+    <item>
+     <widget class="SearchResultsWidget" name="searchResults" native="true"/>
+    </item>
    </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -170,6 +173,12 @@
    <class>SearchBar</class>
    <extends>QWidget</extends>
    <header>SearchBar.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>SearchResultsWidget</class>
+   <extends>QWidget</extends>
+   <header>SearchResultsWidget.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>

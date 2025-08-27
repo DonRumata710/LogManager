@@ -61,20 +61,20 @@ bool SearchController::checkEntry(const QString& textToSearch, const QString& se
     return false;
 }
 
-void SearchController::localSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters)
+void SearchController::localSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters, bool findAll)
 {
     QT_SLOT_BEGIN
 
-    search(logView->currentIndex(), searchTerm, lastColumn, regexEnabled, backward, useFilters, false);
+    search(logView->currentIndex(), searchTerm, lastColumn, regexEnabled, backward, useFilters, false, findAll);
 
     QT_SLOT_END
 }
 
-void SearchController::commonSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters)
+void SearchController::commonSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters, bool findAll)
 {
     QT_SLOT_BEGIN
 
-    search(logView->currentIndex(), searchTerm, lastColumn, regexEnabled, backward, useFilters, true);
+    search(logView->currentIndex(), searchTerm, lastColumn, regexEnabled, backward, useFilters, true, findAll);
 
     QT_SLOT_END
 }
@@ -113,7 +113,7 @@ void SearchController::handleLoadingFinished(const QModelIndex& index)
     QT_SLOT_END
 }
 
-void SearchController::search(const QModelIndex& from, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters, bool globalSearch)
+void SearchController::search(const QModelIndex& from, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters, bool globalSearch, bool findAll)
 {
     QT_SLOT_BEGIN
 
@@ -121,6 +121,25 @@ void SearchController::search(const QModelIndex& from, const QString& searchTerm
     auto model = qobject_cast<LogModel*>(logView->model());
     if (!model && proxyModel)
         model = qobject_cast<LogModel*>(proxyModel->sourceModel());
+
+    if (findAll)
+    {
+        QStringList results;
+        for (int i = 0; i < model->rowCount(); ++i)
+        {
+            QModelIndex index{ model->index(i, 0) };
+            if (proxyModel && !proxyModel->filterAcceptsRow(i, QModelIndex()))
+                continue;
+
+            QString textToSearch = model->data(index, static_cast<int>(lastColumn ? LogModel::MetaData::Message : LogModel::MetaData::Line)).toString();
+            if (checkEntry(textToSearch, searchTerm, lastColumn, regexEnabled))
+                results << textToSearch;
+        }
+
+        emit searchResults(results);
+        QT_SLOT_END
+        return;
+    }
 
     size_t start = from.row() + (backward ? -1 : 1);
     for (size_t i = start; i < model->rowCount(); backward ? --i : ++i)
@@ -139,6 +158,7 @@ void SearchController::search(const QModelIndex& from, const QString& searchTerm
 
             logView->selectionModel()->setCurrentIndex(index, QItemSelectionModel::SelectionFlag::SelectCurrent | QItemSelectionModel::SelectionFlag::Rows);
             logView->scrollTo(index, QTreeView::PositionAtCenter);
+            QT_SLOT_END
             return;
         }
     }
