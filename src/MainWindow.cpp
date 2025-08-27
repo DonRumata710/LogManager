@@ -51,7 +51,6 @@ MainWindow::MainWindow(QWidget *parent) :
 
     searchController = new SearchController(ui->searchBar, ui->logView, this);
     connect(searchController, &SearchController::searchResults, ui->searchResults, &SearchResultsWidget::showResults);
-    connect(ui->searchBar, &SearchBar::handleError, this, &MainWindow::handleError);
 
     Settings settings;
     qDebug() << "Settings location: " << settings.fileName();
@@ -117,6 +116,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(ui->searchBar, &SearchBar::handleError, this, &MainWindow::handleError);
     connect(ui->logView, &LogView::handleError, this, &MainWindow::handleError);
+    connect(ui->searchResults, &SearchResultsWidget::handleError, this, &MainWindow::handleError);
 }
 
 MainWindow::~MainWindow()

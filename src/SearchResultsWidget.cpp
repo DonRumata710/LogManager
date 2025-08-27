@@ -3,9 +3,10 @@
 
 #include "Utils.h"
 
-SearchResultsWidget::SearchResultsWidget(QWidget* parent)
-    : QWidget(parent),
-      ui(new Ui::SearchResultsWidget)
+
+SearchResultsWidget::SearchResultsWidget(QWidget* parent) :
+    QWidget(parent),
+    ui(new Ui::SearchResultsWidget)
 {
     ui->setupUi(this);
     hide();

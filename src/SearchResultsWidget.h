@@ -3,6 +3,7 @@
 #include <QWidget>
 #include <QStringList>
 
+
 namespace Ui {
 class SearchResultsWidget;
 }
@@ -15,6 +16,9 @@ public:
     explicit SearchResultsWidget(QWidget* parent = nullptr);
     ~SearchResultsWidget();
 
+signals:
+    void handleError(const QString& msg);
+
 public slots:
     void showResults(const QStringList& results);
 
@@ -24,4 +28,3 @@ private slots:
 private:
     Ui::SearchResultsWidget* ui;
 };
-
