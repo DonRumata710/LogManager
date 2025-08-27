@@ -16,6 +16,7 @@
 #include "services/ExportService.h"
 #include "services/TimelineService.h"
 #include "BookmarkTable.h"
+#include "ExportSettingsDialog.h"
 
 #include <utility>
 #include <QScrollBar>
@@ -92,17 +93,21 @@ MainWindow::MainWindow(QWidget *parent) :
             exportService,
             qOverload<const QString&, const std::chrono::system_clock::time_point&, const std::chrono::system_clock::time_point&>(&ExportService::exportData));
     connect(this,
-            qOverload<const QString&, const std::chrono::system_clock::time_point&, const std::chrono::system_clock::time_point&, const QStringList&>(&MainWindow::exportData),
+            qOverload<const QString&, const std::chrono::system_clock::time_point&, const std::chrono::system_clock::time_point&, const QStringList&, const LogFilter&>(&MainWindow::exportData),
             exportService,
-            qOverload<const QString&, const std::chrono::system_clock::time_point&, const std::chrono::system_clock::time_point&, const QStringList&>(&ExportService::exportData));
+            qOverload<const QString&, const std::chrono::system_clock::time_point&, const std::chrono::system_clock::time_point&, const QStringList&, const LogFilter&>(&ExportService::exportData));
+    connect(this,
+            qOverload<const QString&, const std::chrono::system_clock::time_point&, const std::chrono::system_clock::time_point&, const QStringList&>(&MainWindow::exportDataToTable),
+            exportService,
+            qOverload<const QString&, const std::chrono::system_clock::time_point&, const std::chrono::system_clock::time_point&, const QStringList&>(&ExportService::exportDataToTable));
+    connect(this,
+            qOverload<const QString&, const std::chrono::system_clock::time_point&, const std::chrono::system_clock::time_point&, const QStringList&, const LogFilter&>(&MainWindow::exportDataToTable),
+            exportService,
+            qOverload<const QString&, const std::chrono::system_clock::time_point&, const std::chrono::system_clock::time_point&, const QStringList&, const LogFilter&>(&ExportService::exportDataToTable));
     connect(this,
             qOverload<const QString&, QTreeView*>(&MainWindow::exportData),
             exportService,
             qOverload<const QString&, QTreeView*>(&ExportService::exportData));
-    connect(this,
-            qOverload<const QString&, const std::chrono::system_clock::time_point&, const std::chrono::system_clock::time_point&, const QStringList&, const LogFilter&>(&MainWindow::exportData),
-            exportService,
-            qOverload<const QString&, const std::chrono::system_clock::time_point&, const std::chrono::system_clock::time_point&, const QStringList&, const LogFilter&>(&ExportService::exportData));
 
     connect(this, &MainWindow::openTimeline, timelineService, &TimelineService::showTimeline);
     connect(timelineService, &TimelineService::timelineReady, this, &MainWindow::timelineReady);
@@ -317,7 +322,7 @@ void MainWindow::on_actionDeselect_all_triggered()
     QT_SLOT_END
 }
 
-void MainWindow::on_actionExport_as_is_triggered()
+void MainWindow::on_actionExport_current_view()
 {
     QT_SLOT_BEGIN
 
@@ -334,8 +339,18 @@ void MainWindow::on_actionFull_export_triggered()
 {
     QT_SLOT_BEGIN
 
-    QString fileName = QFileDialog::getSaveFileName(this, tr("Export Logs"), QDir::currentPath(), tr("Origin format logs (*.log);; CSV Files (*.csv)"));
-    if (fileName.isEmpty())
+    ExportSettingsDialog settingsDialog(this);
+    if (settingsDialog.exec() != QDialog::Accepted)
+        return;
+
+    QString fileName;
+    QString folder;
+    if (settingsDialog.csvFormat())
+        fileName = QFileDialog::getSaveFileName(this, tr("Export Logs"), QDir::currentPath(), tr("CSV Files (*.csv)"));
+    else
+        folder = QFileDialog::getExistingDirectory(this, tr("Export Logs"), QDir::currentPath());
+
+    if (fileName.isEmpty() && folder.isEmpty())
         return;
 
     auto logModel = getLogModel();
@@ -345,42 +360,48 @@ void MainWindow::on_actionFull_export_triggered()
         return;
     }
 
-    bool originFormat = fileName.endsWith(".log", Qt::CaseInsensitive);
-    if (originFormat)
-        exportData(fileName,
-                   ChronoSystemClockFromDateTime(logModel->getStartTime()),
-                   ChronoSystemClockFromDateTime(logModel->getEndTime()));
-    else
-        exportData(fileName,
-                   ChronoSystemClockFromDateTime(logModel->getStartTime()),
-                   ChronoSystemClockFromDateTime(logModel->getEndTime()),
-                   logModel->getFieldsName());
-
-    QT_SLOT_END
-}
-
-void MainWindow::on_actionFiltered_export_triggered()
-{
-    QT_SLOT_BEGIN
-
-    QString fileName = QFileDialog::getSaveFileName(this, tr("Export Logs"), QDir::currentPath(), tr("Origin format logs (*.log);; CSV Files (*.csv)"));
-    if (fileName.isEmpty())
-        return;
-
     auto logFilterModel = qobject_cast<LogFilterModel*>(ui->logView->model());
-    if (!logFilterModel)
+    if (!logFilterModel && settingsDialog.useFilters())
     {
         qWarning() << "Log model is not set.";
         return;
     }
 
-    auto logModel = qobject_cast<LogModel*>(logFilterModel->sourceModel());
-
-    exportData(fileName,
-               ChronoSystemClockFromDateTime(logModel->getStartTime()),
-               ChronoSystemClockFromDateTime(logModel->getEndTime()),
-               logModel->getFieldsName(),
-               logFilterModel->exportFilter());
+    if (settingsDialog.csvFormat())
+    {
+        if (settingsDialog.useFilters())
+        {
+            exportDataToTable(fileName,
+                              ChronoSystemClockFromDateTime(logModel->getStartTime()),
+                              ChronoSystemClockFromDateTime(logModel->getEndTime()),
+                              logModel->getFieldsName());
+        }
+        else
+        {
+            exportDataToTable(fileName,
+                              ChronoSystemClockFromDateTime(logModel->getStartTime()),
+                              ChronoSystemClockFromDateTime(logModel->getEndTime()),
+                              logModel->getFieldsName(),
+                              logFilterModel->exportFilter());
+        }
+    }
+    else
+    {
+        if (settingsDialog.useFilters())
+        {
+            exportData(fileName,
+                       ChronoSystemClockFromDateTime(logModel->getStartTime()),
+                       ChronoSystemClockFromDateTime(logModel->getEndTime()),
+                       logModel->getFieldsName(),
+                       logFilterModel->exportFilter());
+        }
+        else
+        {
+            exportData(fileName,
+                       ChronoSystemClockFromDateTime(logModel->getStartTime()),
+                       ChronoSystemClockFromDateTime(logModel->getEndTime()));
+        }
+    }
 
     QT_SLOT_END
 }
