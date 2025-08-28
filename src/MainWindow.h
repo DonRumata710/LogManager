@@ -9,6 +9,7 @@
 #include <QProgressBar>
 #include <QAbstractItemModel>
 #include <QTreeView>
+#include <QStringList>
 #include <chrono>
 
 
@@ -48,6 +49,8 @@ private slots:
 
     void handleError(const QString& message);
 
+    void openRecent();
+
 signals:
     void openFile(const QString& file, const QStringList& formats);
     void openFolder(const QString& logDirectory, const QStringList& formats);
@@ -77,6 +80,9 @@ private:
     void setTitleOpened(const QString& source);
     void setTitleClosed();
 
+    void addRecentItem(const QString& path);
+    void updateRecentMenu();
+
 private:
     Ui::MainWindow *ui;
     FormatManager& formatManager;
@@ -84,6 +90,8 @@ private:
     std::vector<QAction*> formatActions;
 
     QStringList selectedFormats;
+
+    QStringList recentItems;
 
     QProgressBar* progressBar = nullptr;
 
