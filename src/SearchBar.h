@@ -1,13 +1,13 @@
 #pragma once
 
-#include <QWidget>
+#include <QDockWidget>
 #include <QStringList>
 
 namespace Ui {
 class SearchBar;
 }
 
-class SearchBar : public QWidget
+class SearchBar : public QDockWidget
 {
     Q_OBJECT
 
@@ -29,4 +29,5 @@ private slots:
 
 private:
     Ui::SearchBar *ui;
+    QWidget* mWidget = nullptr;
 };

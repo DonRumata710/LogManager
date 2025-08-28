@@ -1,44 +1,32 @@
 #include "SearchResultsWidget.h"
-#include "ui_SearchResultsWidget.h"
+#include <QListWidget>
 
 #include "Utils.h"
 
 
 SearchResultsWidget::SearchResultsWidget(QWidget* parent) :
-    QWidget(parent),
-    ui(new Ui::SearchResultsWidget)
+    QDockWidget(parent)
 {
-    ui->setupUi(this);
+    mResults = new QListWidget(this);
+    setWidget(mResults);
     hide();
-}
-
-SearchResultsWidget::~SearchResultsWidget()
-{
-    delete ui;
 }
 
 void SearchResultsWidget::showResults(const QStringList& results)
 {
     QT_SLOT_BEGIN
 
-    ui->lwResults->clear();
+    mResults->clear();
     if (results.isEmpty())
     {
         hide();
     }
     else
     {
-        ui->lwResults->addItems(results);
+        mResults->addItems(results);
         show();
     }
 
-    QT_SLOT_END
-}
-
-void SearchResultsWidget::on_bHideResults_clicked()
-{
-    QT_SLOT_BEGIN
-    hide();
     QT_SLOT_END
 }
 

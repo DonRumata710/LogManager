@@ -51,15 +51,15 @@ LogModel::LogModel(SessionService* sessionService, QObject *parent) :
 
 void LogModel::goToTime(const QDateTime& time)
 {
-    goToTime(time.toStdSysMilliseconds());
+    goToTime(ChronoSystemClockFromDateTime(time));
 }
 
 void LogModel::goToTime(const std::chrono::system_clock::time_point& time)
 {
     if (!logs.empty() &&
         ((time >= logs.begin()->entry.time && time <= logs.back().entry.time) ||
-         (time < getStartTime().toStdSysMilliseconds() && reverseIterator && !reverseIterator->hasLogs()) ||
-         (time > getEndTime().toStdSysMilliseconds() && iterator && !iterator->hasLogs())))
+         (time < ChronoSystemClockFromDateTime(getStartTime()) && reverseIterator && !reverseIterator->hasLogs()) ||
+         (time > ChronoSystemClockFromDateTime(getEndTime()) && iterator && !iterator->hasLogs())))
     {
         qDebug() << "LogModel::goToTime: requested time is already in the current range.";
         QModelIndex index;
@@ -106,16 +106,16 @@ void LogModel::goToTime(const std::chrono::system_clock::time_point& time)
         if (!upperEntryCache || time - lowerEntryCache->time < upperEntryCache->time - time)
         {
             if (!reverseIterator || reverseIterator->getCurrentTime() != lowerEntryCache->time)
-                reverseIterator = createIterator<false>(*lowerEntryCache, startTime.toStdSysMilliseconds(), lowerEntryCache->time);
+                reverseIterator = createIterator<false>(*lowerEntryCache, ChronoSystemClockFromDateTime(startTime), lowerEntryCache->time);
             if (!iterator || iterator->getCurrentTime() != lowerEntryCache->time)
-                iterator = createIterator<true>(*lowerEntryCache, lowerEntryCache->time, endTime.toStdSysMilliseconds());
+                iterator = createIterator<true>(*lowerEntryCache, lowerEntryCache->time, ChronoSystemClockFromDateTime(endTime));
         }
         else if (!lowerEntryCache || upperEntryCache->time - time < time - lowerEntryCache->time)
         {
             if (!reverseIterator || reverseIterator->getCurrentTime() != upperEntryCache->time)
-                reverseIterator = createIterator<false>(*upperEntryCache, startTime.toStdSysMilliseconds(), upperEntryCache->time);
+                reverseIterator = createIterator<false>(*upperEntryCache, ChronoSystemClockFromDateTime(startTime), upperEntryCache->time);
             if (!iterator || iterator->getCurrentTime() != upperEntryCache->time)
-                iterator = createIterator<true>(*upperEntryCache, upperEntryCache->time, endTime.toStdSysMilliseconds());
+                iterator = createIterator<true>(*upperEntryCache, upperEntryCache->time, ChronoSystemClockFromDateTime(endTime));
         }
         return;
     }
@@ -132,25 +132,25 @@ void LogModel::goToTime(const std::chrono::system_clock::time_point& time)
         entryCache.emplace_hint(upperCacheIt, MergeHeapCache{ newTime });
     }
 
-    if (time < getStartTime().toStdSysMilliseconds())
+    if (time < ChronoSystemClockFromDateTime(getStartTime()))
     {
-        MergeHeapCache newCache{ getStartTime().toStdSysMilliseconds() };
-        iterator = createIterator<true>(newCache, startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
-        reverseIterator = createIterator<false>(newCache, startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
+        MergeHeapCache newCache{ ChronoSystemClockFromDateTime(getStartTime()) };
+        iterator = createIterator<true>(newCache, ChronoSystemClockFromDateTime(startTime), ChronoSystemClockFromDateTime(endTime));
+        reverseIterator = createIterator<false>(newCache, ChronoSystemClockFromDateTime(startTime), ChronoSystemClockFromDateTime(endTime));
         dataRequests[service->requestLogEntries(iterator, blockSize)] = DataRequestType::ReplaceForward;
         entryCache.emplace(std::move(newCache));
     }
-    else if (time >= getEndTime().toStdSysMilliseconds())
+    else if (time >= ChronoSystemClockFromDateTime(getEndTime()))
     {
-        MergeHeapCache newCache{ getEndTime().toStdSysMilliseconds() };
-        iterator = createIterator<true>(newCache, startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
-        reverseIterator = createIterator<false>(newCache, startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
+        MergeHeapCache newCache{ ChronoSystemClockFromDateTime(getEndTime()) };
+        iterator = createIterator<true>(newCache, ChronoSystemClockFromDateTime(startTime), ChronoSystemClockFromDateTime(endTime));
+        reverseIterator = createIterator<false>(newCache, ChronoSystemClockFromDateTime(startTime), ChronoSystemClockFromDateTime(endTime));
         dataRequests[service->requestLogEntries(reverseIterator, blockSize)] = DataRequestType::ReplaceBackward;
         entryCache.emplace(std::move(newCache));
     }
     else
     {
-        iteratorIndex = service->requestIterator(time, endTime.toStdSysMilliseconds());
+        iteratorIndex = service->requestIterator(time, ChronoSystemClockFromDateTime(endTime));
     }
 }
 
@@ -548,7 +548,7 @@ void LogModel::handleIterator(int index, bool isStraight)
                 return;
             }
 
-            reverseIterator = createIterator<false>(newCache, startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
+            reverseIterator = createIterator<false>(newCache, ChronoSystemClockFromDateTime(startTime), ChronoSystemClockFromDateTime(endTime));
             dataRequests[service->requestLogEntries(iterator, blockSize)] = DataRequestType::ReplaceForward;
 
             entryCache.emplace(std::move(newCache));
@@ -566,7 +566,7 @@ void LogModel::handleIterator(int index, bool isStraight)
                 return;
             }
 
-            iterator = createIterator<true>(newCache, startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
+            iterator = createIterator<true>(newCache, ChronoSystemClockFromDateTime(startTime), ChronoSystemClockFromDateTime(endTime));
             dataRequests[service->requestLogEntries(reverseIterator, blockSize)] = DataRequestType::ReplaceBackward;
 
             entryCache.emplace(std::move(newCache));
@@ -646,7 +646,7 @@ void LogModel::handleData(int index)
             if (cacheIt == entryCache.end())
                 qCritical() << "LogModel::handleData: no cache found for reverse iterator";
             else if (++cacheIt != entryCache.end())
-                reverseIterator = createIterator<false>(*cacheIt, startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
+                reverseIterator = createIterator<false>(*cacheIt, ChronoSystemClockFromDateTime(startTime), ChronoSystemClockFromDateTime(endTime));
 
             beginRemoveRows(QModelIndex(), 0, logs.size() - blockSize * blockCount - 1);
             logs.erase(logs.begin(), logs.begin() + logs.size() - blockSize * blockCount);
@@ -711,7 +711,7 @@ void LogModel::handleData(int index)
                 --cacheIt;
 
             if (cacheIt != entryCache.end())
-                iterator = createIterator<true>(*cacheIt, cacheIt->time, endTime.toStdSysMilliseconds());
+                iterator = createIterator<true>(*cacheIt, cacheIt->time, ChronoSystemClockFromDateTime(endTime));
 
             beginRemoveRows(QModelIndex(), blockSize * blockCount, logs.size() - 1);
             logs.erase(logs.begin() + blockSize * blockCount, logs.end());
@@ -754,7 +754,7 @@ void LogModel::handleData(int index)
             int requestedEntry = -1;
             for (int i = 0; i < logs.size(); ++i)
             {
-                std::chrono::system_clock::time_point requestedTimePoint = requestedTime.toStdSysMilliseconds();
+                std::chrono::system_clock::time_point requestedTimePoint = ChronoSystemClockFromDateTime(requestedTime);
                 if (logs[i].entry.time >= requestedTimePoint)
                 {
                     requestedEntry = logs[i].index;
@@ -854,8 +854,8 @@ void LogModel::reinitIteratorsWithClosestTime(const MergeHeapCache& newCache, Co
         if (it == entryCache.end())
             throw std::logic_error("LogModel::handleIterator: unexpected end of cache");
 
-        iterator = createIterator<true>(*it, startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
-        reverseIterator = createIterator<false>(*it, startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
+        iterator = createIterator<true>(*it, ChronoSystemClockFromDateTime(startTime), ChronoSystemClockFromDateTime(endTime));
+        reverseIterator = createIterator<false>(*it, ChronoSystemClockFromDateTime(startTime), ChronoSystemClockFromDateTime(endTime));
 
         break;
     }
@@ -866,8 +866,8 @@ void LogModel::reinitIteratorsWithClosestTime(const MergeHeapCache& newCache, Co
             throw std::logic_error("LogModel::handleIterator: unexpected beginning of cache");
         --it;
 
-        iterator = createIterator<true>(*it, startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
-        reverseIterator = createIterator<false>(*it, startTime.toStdSysMilliseconds(), endTime.toStdSysMilliseconds());
+        iterator = createIterator<true>(*it, ChronoSystemClockFromDateTime(startTime), ChronoSystemClockFromDateTime(endTime));
+        reverseIterator = createIterator<false>(*it, ChronoSystemClockFromDateTime(startTime), ChronoSystemClockFromDateTime(endTime));
 
         break;
     }

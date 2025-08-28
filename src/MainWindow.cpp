@@ -15,6 +15,7 @@
 #include "services/SearchService.h"
 #include "services/ExportService.h"
 #include "services/TimelineService.h"
+#include "SearchBar.h"
 #include "BookmarkTable.h"
 #include "ExportSettingsDialog.h"
 #include "SearchResultsWidget.h"
@@ -43,14 +44,24 @@ MainWindow::MainWindow(QWidget *parent) :
     progressBar->setTextVisible(true);
     statusBar()->addPermanentWidget(progressBar);
 
-    ui->searchBar->hide();
-    ui->searchResults->hide();
+    searchBar = new SearchBar(this);
+    searchBar->setWindowTitle(tr("Search"));
+    addDockWidget(Qt::BottomDockWidgetArea, searchBar);
+    searchBar->hide();
 
-    ui->bookmarkTable->hide();
-    connect(ui->bookmarkTable, &BookmarkTable::bookmarkActivated, ui->logView, &LogView::bookmarkActivated);
+    searchResults = new SearchResultsWidget(this);
+    searchResults->setWindowTitle(tr("Search Results"));
+    addDockWidget(Qt::BottomDockWidgetArea, searchResults);
+    searchResults->hide();
 
-    searchController = new SearchController(ui->searchBar, ui->logView, this);
-    connect(searchController, &SearchController::searchResults, ui->searchResults, &SearchResultsWidget::showResults);
+    bookmarkTable = new BookmarkTable(this);
+    bookmarkTable->setWindowTitle(tr("Bookmarks"));
+    addDockWidget(Qt::BottomDockWidgetArea, bookmarkTable);
+    bookmarkTable->hide();
+    connect(bookmarkTable, &BookmarkTable::bookmarkActivated, ui->logView, &LogView::bookmarkActivated);
+
+    searchController = new SearchController(searchBar, ui->logView, this);
+    connect(searchController, &SearchController::searchResults, searchResults, &SearchResultsWidget::showResults);
 
     Settings settings;
     qDebug() << "Settings location: " << settings.fileName();
@@ -114,9 +125,9 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(this, &MainWindow::openTimeline, timelineService, &TimelineService::showTimeline);
     connect(timelineService, &TimelineService::timelineReady, this, &MainWindow::timelineReady);
 
-    connect(ui->searchBar, &SearchBar::handleError, this, &MainWindow::handleError);
+    connect(searchBar, &SearchBar::handleError, this, &MainWindow::handleError);
     connect(ui->logView, &LogView::handleError, this, &MainWindow::handleError);
-    connect(ui->searchResults, &SearchResultsWidget::handleError, this, &MainWindow::handleError);
+    connect(searchResults, &SearchResultsWidget::handleError, this, &MainWindow::handleError);
 }
 
 MainWindow::~MainWindow()
@@ -124,9 +135,6 @@ MainWindow::~MainWindow()
     Settings settings;
     settings.setValue(objectName() + "/geometry", saveGeometry());
     settings.setValue(objectName() + "/state", saveState());
-    auto sizes = ui->logSplitter->sizes();
-    if (sizes.size() >= 2)
-        settings.setValue(objectName() + "/bookmarkTableSize", sizes[1]);
 
     delete ui;
 }
@@ -194,9 +202,10 @@ void MainWindow::on_actionClose_triggered()
 
     switchModel(nullptr);
     setCloseActionEnabled(false);
-    ui->searchBar->hide();
-    ui->bookmarkTable->clearBookmarks();
-    ui->bookmarkTable->hide();
+    searchBar->hide();
+    bookmarkTable->clearBookmarks();
+    bookmarkTable->hide();
+    searchResults->hide();
     ui->actionShow_bookmarks->setChecked(false);
     setTitleClosed();
 
@@ -415,32 +424,7 @@ void MainWindow::on_actionShow_bookmarks_triggered()
 
     Settings settings;
     bool checked = ui->actionShow_bookmarks->isChecked();
-    if (checked)
-    {
-        ui->bookmarkTable->setVisible(true);
-        int bookmarkSize = settings.value(objectName() + "/bookmarkTableSize", 100).toInt();
-        auto sizes = ui->logSplitter->sizes();
-        if (sizes.size() >= 2)
-        {
-            int total = sizes[0] + sizes[1];
-            if (bookmarkSize < total)
-            {
-                sizes[1] = bookmarkSize;
-                sizes[0] = total - bookmarkSize;
-                ui->logSplitter->setSizes(sizes);
-            }
-        }
-    }
-    else
-    {
-        auto sizes = ui->logSplitter->sizes();
-        if (sizes.size() >= 2)
-        {
-            settings.setValue(objectName() + "/bookmarkTableSize", sizes[1]);
-        }
-        ui->bookmarkTable->setVisible(false);
-    }
-
+    bookmarkTable->setVisible(checked);
     settings.setValue(objectName() + "/bookmarksVisible", checked);
 
     QT_SLOT_END
@@ -482,7 +466,9 @@ void MainWindow::logManagerCreated(const QString& source)
         return;
     }
 
-    sessionService->createSession(modules, startDate.toStdSysMilliseconds(), endDate.addMSecs(1).toStdSysMilliseconds());
+    sessionService->createSession(modules,
+                                 ChronoSystemClockFromDateTime(startDate),
+                                 ChronoSystemClockFromDateTime(endDate.addMSecs(1)));
 
     auto proxyModel = new LogFilterModel(this);
     connect(proxyModel, &LogFilterModel::handleError, this, &MainWindow::handleError);
@@ -505,27 +491,12 @@ void MainWindow::logManagerCreated(const QString& source)
 
     switchModel(proxyModel);
     setCloseActionEnabled(true);
-    ui->searchBar->show();
+    searchBar->show();
 
     Settings settings;
-    auto bookmarkTableVisible = settings.value(objectName() + "/bookmarksVisible", false).toBool();
-    ui->bookmarkTable->setVisible(bookmarkTableVisible);
-    if (bookmarkTableVisible)
-    {
-        ui->actionShow_bookmarks->setChecked(true);
-        int bookmarkSize = settings.value(objectName() + "/bookmarkTableSize", 100).toInt();
-        auto sizes = ui->logSplitter->sizes();
-        if (sizes.size() >= 2)
-        {
-            int total = sizes[0] + sizes[1];
-            if (bookmarkSize < total)
-            {
-                sizes[1] = bookmarkSize;
-                sizes[0] = total - bookmarkSize;
-                ui->logSplitter->setSizes(sizes);
-            }
-        }
-    }
+    bool bookmarkTableVisible = settings.value(objectName() + "/bookmarksVisible", false).toBool();
+    bookmarkTable->setVisible(bookmarkTableVisible);
+    ui->actionShow_bookmarks->setChecked(bookmarkTableVisible);
 
     updateBookmarks();
 
@@ -633,11 +604,11 @@ void MainWindow::updateBookmarks()
     auto logModel = getLogModel();
     if (!logModel)
     {
-        ui->bookmarkTable->clearBookmarks();
+        bookmarkTable->clearBookmarks();
         return;
     }
 
-    ui->bookmarkTable->setBookmarks(logModel->getBookmarks());
+    bookmarkTable->setBookmarks(logModel->getBookmarks());
 }
 
 LogModel* MainWindow::getLogModel()

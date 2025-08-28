@@ -12,6 +12,10 @@
 #include <chrono>
 
 
+class SearchBar;
+class BookmarkTable;
+class SearchResultsWidget;
+
 namespace Ui {
 class MainWindow;
 }
@@ -88,4 +92,8 @@ private:
     QProgressBar* progressBar = nullptr;
 
     SearchController* searchController;
+
+    SearchBar* searchBar = nullptr;
+    BookmarkTable* bookmarkTable = nullptr;
+    SearchResultsWidget* searchResults = nullptr;
 };

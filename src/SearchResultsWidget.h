@@ -1,20 +1,17 @@
 #pragma once
 
-#include <QWidget>
+#include <QDockWidget>
 #include <QStringList>
 
+class QListWidget;
 
-namespace Ui {
-class SearchResultsWidget;
-}
-
-class SearchResultsWidget : public QWidget
+class SearchResultsWidget : public QDockWidget
 {
     Q_OBJECT
 
 public:
     explicit SearchResultsWidget(QWidget* parent = nullptr);
-    ~SearchResultsWidget();
+    ~SearchResultsWidget() override = default;
 
 signals:
     void handleError(const QString& msg);
@@ -22,9 +19,6 @@ signals:
 public slots:
     void showResults(const QStringList& results);
 
-private slots:
-    void on_bHideResults_clicked();
-
 private:
-    Ui::SearchResultsWidget* ui;
+    QListWidget* mResults = nullptr;
 };

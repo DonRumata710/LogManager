@@ -2,6 +2,7 @@
 #include "ui_SearchBar.h"
 
 #include "Utils.h"
+#include <QToolButton>
 
 
 QPixmap rotatePixmap(const QPixmap &pixmap, qreal angle)
@@ -12,12 +13,18 @@ QPixmap rotatePixmap(const QPixmap &pixmap, qreal angle)
 }
 
 SearchBar::SearchBar(QWidget *parent) :
-    QWidget(parent),
+    QDockWidget(parent),
     ui(new Ui::SearchBar)
 {
-    ui->setupUi(this);
+    mWidget = new QWidget(this);
+    ui->setupUi(mWidget);
+    setWidget(mWidget);
 
     ui->extendedSearchWidget->hide();
+
+    connect(ui->toolButton, &QToolButton::clicked, this, &SearchBar::on_toolButton_clicked);
+    connect(ui->bFindNext, &QToolButton::clicked, this, &SearchBar::on_bFindNext_clicked);
+    connect(ui->bFindAll, &QToolButton::clicked, this, &SearchBar::on_bFindAll_clicked);
 }
 
 SearchBar::~SearchBar()
