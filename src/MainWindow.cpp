@@ -25,6 +25,9 @@
 #include <QInputDialog>
 #include <QProgressBar>
 #include <QMessageBox>
+#include <QMap>
+#include <QFileInfo>
+#include <QMenu>
 
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -69,6 +72,9 @@ MainWindow::MainWindow(QWidget *parent) :
         addFormat(format.first);
 
     setLogActionsEnabled(!selectedFormats.empty());
+
+    recentItems = settings.value("recentItems").toStringList();
+    updateRecentMenu();
 
     auto app = qobject_cast<Application*>(QApplication::instance());
     auto sessionService = app->getSessionService();
@@ -141,6 +147,8 @@ void MainWindow::on_actionOpen_folder_triggered()
 
     openFolder(folderPath, selectedFormats);
 
+    addRecentItem(folderPath);
+
     QT_SLOT_END
 }
 
@@ -184,6 +192,8 @@ void MainWindow::on_actionOpen_file_triggered()
     else
         formats = extToFormatNames[extension];
     openFile(file, formats);
+
+    addRecentItem(file);
 
     QT_SLOT_END
 }
@@ -662,4 +672,69 @@ void MainWindow::setTitleOpened(const QString& source)
 void MainWindow::setTitleClosed()
 {
     setWindowTitle(QApplication::instance()->applicationName());
+}
+
+void MainWindow::addRecentItem(const QString& path)
+{
+    Settings settings;
+    int maxItems = settings.value("recentItemsLimit", 10).toInt();
+
+    recentItems.removeAll(path);
+    recentItems.prepend(path);
+    while (recentItems.size() > maxItems)
+        recentItems.removeLast();
+
+    settings.setValue("recentItems", recentItems);
+    updateRecentMenu();
+}
+
+void MainWindow::updateRecentMenu()
+{
+    QMenu* menu = ui->menuOpenRecent;
+    menu->clear();
+    for (const auto& path : std::as_const(recentItems))
+    {
+        QAction* action = menu->addAction(path, this, &MainWindow::openRecent);
+        action->setData(path);
+    }
+    menu->setEnabled(!recentItems.isEmpty());
+}
+
+void MainWindow::openRecent()
+{
+    QT_SLOT_BEGIN
+
+    auto action = qobject_cast<QAction*>(sender());
+    if (!action)
+        return;
+
+    QString path = action->data().toString();
+    if (QFileInfo(path).isDir())
+    {
+        openFolder(path, selectedFormats);
+    }
+    else
+    {
+        QMap<QString, QStringList> extToFormatNames;
+        for (const auto& formatName : std::as_const(selectedFormats))
+        {
+            auto format = formatManager.getFormats().at(formatName.toStdString());
+            if (!format)
+                continue;
+            extToFormatNames[format->extension].append(format->name);
+        }
+
+        QString extension = path.mid(path.lastIndexOf('.'));
+        QStringList formats;
+        if (extension == ".zip")
+            formats = selectedFormats;
+        else
+            formats = extToFormatNames.value(extension);
+
+        openFile(path, formats);
+    }
+
+    addRecentItem(path);
+
+    QT_SLOT_END
 }
