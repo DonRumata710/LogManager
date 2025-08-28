@@ -36,7 +36,7 @@ private slots:
     void on_actionSelect_all_triggered();
     void on_actionDeselect_all_triggered();
 
-    void on_actionExport_current_view();
+    void on_actionExport_current_view_triggered();
     void on_actionFull_export_triggered();
 
     void on_actionShow_bookmarks_triggered();

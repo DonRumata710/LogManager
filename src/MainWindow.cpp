@@ -335,7 +335,7 @@ void MainWindow::on_actionDeselect_all_triggered()
     QT_SLOT_END
 }
 
-void MainWindow::on_actionExport_current_view()
+void MainWindow::on_actionExport_current_view_triggered()
 {
     QT_SLOT_BEGIN
 
