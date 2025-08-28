@@ -32,6 +32,7 @@ if (${ts} NOT STREQUAL "" AND QT6::LINGUIST_TOOLS_FOUND)
     add_custom_target(translations ALL DEPENDS ${QM_FILES})
 endif()
 
+file(GLOB WINDOWS_RES_FILES src/*.rc)
 file(GLOB_RECURSE SOURCES src/*.cpp)
 file(GLOB_RECURSE HEADERS src/*.h)
 file(GLOB_RECURSE UI_FILES ui/*.ui src/*.ui)
@@ -55,7 +56,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/qtres)
     endif()
 endif()
 
-add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${RESOURCE_FILE} ${QT_RESOURCES} ${UI_FILES} ${TS_FILES} ${RESOURCES})
+add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${RESOURCE_FILE} ${QT_RESOURCES} ${UI_FILES} ${TS_FILES} ${RESOURCES} ${WINDOWS_RES_FILES})
 
 target_compile_definitions(${PROJECT_NAME}
     PRIVATE
