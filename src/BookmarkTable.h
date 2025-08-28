@@ -2,11 +2,12 @@
 
 #include "LogManagement/LogEntry.h"
 
+#include <QDockWidget>
 #include <QTableWidget>
 #include <vector>
 #include <chrono>
 
-class BookmarkTable : public QTableWidget
+class BookmarkTable : public QDockWidget
 {
     Q_OBJECT
 public:
@@ -20,5 +21,8 @@ signals:
 
 private slots:
     void handleCellActivated(int row, int column);
+
+private:
+    QTableWidget* mTable;
 };
 

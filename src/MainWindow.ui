@@ -16,23 +16,7 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
-     <widget class="QSplitter" name="logSplitter">
-      <property name="orientation">
-       <enum>Qt::Orientation::Vertical</enum>
-      </property>
-      <widget class="LogView" name="logView"/>
-      <widget class="BookmarkTable" name="bookmarkTable">
-       <property name="visible">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </widget>
-    </item>
-    <item>
-     <widget class="SearchBar" name="searchBar" native="true"/>
-    </item>
-    <item>
-     <widget class="SearchResultsWidget" name="searchResults" native="true"/>
+     <widget class="LogView" name="logView"/>
     </item>
    </layout>
   </widget>
@@ -168,23 +152,6 @@
    <class>LogView</class>
    <extends>QTreeView</extends>
    <header>LogView/LogView.h</header>
-  </customwidget>
-  <customwidget>
-   <class>SearchBar</class>
-   <extends>QWidget</extends>
-   <header>SearchBar.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>SearchResultsWidget</class>
-   <extends>QWidget</extends>
-   <header>SearchResultsWidget.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>BookmarkTable</class>
-   <extends>QTableWidget</extends>
-   <header>BookmarkTable.h</header>
   </customwidget>
  </customwidgets>
  <resources/>
