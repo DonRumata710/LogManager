@@ -5,7 +5,7 @@
 #include <QToolButton>
 
 
-QPixmap rotatePixmap(const QPixmap &pixmap, qreal angle)
+QPixmap rotatePixmap(const QPixmap& pixmap, qreal angle)
 {
     QTransform transform;
     transform.rotate(angle);
@@ -13,23 +13,28 @@ QPixmap rotatePixmap(const QPixmap &pixmap, qreal angle)
 }
 
 SearchBar::SearchBar(QWidget *parent) :
-    QDockWidget(parent),
+    QWidget(parent),
     ui(new Ui::SearchBar)
 {
-    mWidget = new QWidget(this);
-    ui->setupUi(mWidget);
-    setWidget(mWidget);
-
+    ui->setupUi(this);
     ui->extendedSearchWidget->hide();
-
-    connect(ui->toolButton, &QToolButton::clicked, this, &SearchBar::on_toolButton_clicked);
-    connect(ui->bFindNext, &QToolButton::clicked, this, &SearchBar::on_bFindNext_clicked);
-    connect(ui->bFindAll, &QToolButton::clicked, this, &SearchBar::on_bFindAll_clicked);
+    ui->sbColumn->setEnabled(false);
 }
 
 SearchBar::~SearchBar()
 {
     delete ui;
+}
+
+void SearchBar::handleColumnCountChanged(int count)
+{
+    QT_SLOT_BEGIN
+
+    if (ui->sbColumn->value() > count - 1)
+        ui->sbColumn->setValue(count - 1);
+    ui->sbColumn->setMaximum(count - 1);
+
+    QT_SLOT_END
 }
 
 void SearchBar::on_toolButton_clicked()
@@ -55,11 +60,11 @@ void SearchBar::on_bFindNext_clicked()
 {
     QT_SLOT_BEGIN
 
-    bool local = ui->cbSearchMode->currentIndex() == 0;
-    if (local)
-        emit localSearch(ui->lineEdit->text(), ui->cbLastColumnSearch->isChecked(), ui->cbRegExpSuppor->isChecked(), ui->cbBackward->isChecked(), ui->cbUseFilters->isChecked(), false);
+    bool global = !ui->cbGlobalSearch->isChecked();
+    if (global)
+        emit commonSearch(ui->lineEdit->text(), ui->cbRegExpSuppor->isChecked(), ui->cbBackward->isChecked(), ui->cbUseFilters->isChecked(), false, ui->cbSpecificColumn->isChecked() ? ui->sbColumn->value() : -1);
     else
-        emit commonSearch(ui->lineEdit->text(), ui->cbLastColumnSearch->isChecked(), ui->cbRegExpSuppor->isChecked(), ui->cbBackward->isChecked(), ui->cbUseFilters->isChecked(), false);
+        emit localSearch(ui->lineEdit->text(), ui->cbRegExpSuppor->isChecked(), ui->cbBackward->isChecked(), ui->cbUseFilters->isChecked(), false, ui->cbSpecificColumn->isChecked() ? ui->sbColumn->value() : -1);
 
     QT_SLOT_END
 }
@@ -69,11 +74,20 @@ void SearchBar::on_bFindAll_clicked()
 {
     QT_SLOT_BEGIN
 
-    bool local = ui->cbSearchMode->currentIndex() == 0;
-    if (local)
-        emit localSearch(ui->lineEdit->text(), ui->cbLastColumnSearch->isChecked(), ui->cbRegExpSuppor->isChecked(), ui->cbBackward->isChecked(), ui->cbUseFilters->isChecked(), true);
+    bool global = !ui->cbGlobalSearch->isChecked();
+    if (global)
+        emit commonSearch(ui->lineEdit->text(), ui->cbRegExpSuppor->isChecked(), ui->cbBackward->isChecked(), ui->cbUseFilters->isChecked(), true, ui->cbSpecificColumn->isChecked() ? ui->sbColumn->value() : -1);
     else
-        emit commonSearch(ui->lineEdit->text(), ui->cbLastColumnSearch->isChecked(), ui->cbRegExpSuppor->isChecked(), ui->cbBackward->isChecked(), ui->cbUseFilters->isChecked(), true);
+        emit localSearch(ui->lineEdit->text(), ui->cbRegExpSuppor->isChecked(), ui->cbBackward->isChecked(), ui->cbUseFilters->isChecked(), true, ui->cbSpecificColumn->isChecked() ? ui->sbColumn->value() : -1);
+
+    QT_SLOT_END
+}
+
+void SearchBar::on_cbSpecificColumn_toggled(bool checked)
+{
+    QT_SLOT_BEGIN
+
+    ui->sbColumn->setEnabled(checked);
 
     QT_SLOT_END
 }

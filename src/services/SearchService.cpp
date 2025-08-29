@@ -7,7 +7,7 @@ SearchService::SearchService(SessionService* sessionService, QObject* parent)
     : QObject(parent), sessionService(sessionService)
 {}
 
-void SearchService::search(const std::chrono::system_clock::time_point& time, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward)
+void SearchService::search(const std::chrono::system_clock::time_point& time, const QString& searchTerm, bool regexEnabled, bool backward, bool findAll, int column, const QStringList& fields)
 {
     QT_SLOT_BEGIN
 
@@ -31,6 +31,7 @@ void SearchService::search(const std::chrono::system_clock::time_point& time, co
     auto totalMs = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
     auto iterator = LogEntryIterator<>(session->getIterator<true>(startTime, endTime));
     int lastPercent = 0;
+    QStringList foundEntries;
     while(iterator.hasLogs())
     {
         auto entry = iterator.next();
@@ -39,25 +40,40 @@ void SearchService::search(const std::chrono::system_clock::time_point& time, co
 
         auto curMs = std::chrono::duration_cast<std::chrono::milliseconds>(entry->time - startTime).count();
         int percent = totalMs ? static_cast<int>(100LL * curMs / totalMs) : 0;
-        if (percent != lastPercent && percent <= 100) {
+        if (percent != lastPercent && percent <= 100)
+        {
             emit progressUpdated(QStringLiteral("Searching for '%1' ...").arg(searchTerm), percent);
             lastPercent = percent;
         }
 
-        if (SearchController::checkEntry(entry->line, searchTerm, lastColumn, regexEnabled))
+        bool specificColumn = column >= 0 && column < entry->line.size();
+        bool lastColumn = column == -1;
+        QString textToSearch = (specificColumn ? entry->values[fields[column]].toString() : (lastColumn ? entry->values[fields[column]].toString() + entry->additionalLines : entry->line));
+
+        if (SearchController::checkEntry(entry->line, searchTerm, regexEnabled))
         {
-            emit searchFinished(searchTerm, entry->time);
-            emit progressUpdated(QStringLiteral("Search finished"), 100);
-            return;
+            if (findAll)
+            {
+                foundEntries.append(entry->line);
+            }
+            else
+            {
+                emit searchFinished(searchTerm, entry->time);
+                emit progressUpdated(QStringLiteral("Search finished"), 100);
+                return;
+            }
         }
     }
 
     emit progressUpdated(QStringLiteral("Search finished"), 100);
 
+    if (findAll)
+        emit searchResults(foundEntries);
+
     QT_SLOT_END
 }
 
-void SearchService::searchWithFilter(const std::chrono::system_clock::time_point& time, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, const LogFilter& filter)
+void SearchService::searchWithFilter(const std::chrono::system_clock::time_point& time, const QString& searchTerm, bool regexEnabled, bool backward, bool findAll, int column, const QStringList& fields, const LogFilter& filter)
 {
     QT_SLOT_BEGIN
 
@@ -81,6 +97,7 @@ void SearchService::searchWithFilter(const std::chrono::system_clock::time_point
     auto totalMsF = std::chrono::duration_cast<std::chrono::milliseconds>(endTimeF - startTimeF).count();
     auto iterator = LogEntryIterator<>(session->getIterator<true>(startTimeF, endTimeF));
     int lastPercentF = 0;
+    QStringList foundEntries;
     while(iterator.hasLogs())
     {
         auto entry = iterator.next();
@@ -89,20 +106,35 @@ void SearchService::searchWithFilter(const std::chrono::system_clock::time_point
 
         auto curMsF = std::chrono::duration_cast<std::chrono::milliseconds>(entry->time - startTimeF).count();
         int percentF = totalMsF ? static_cast<int>(100LL * curMsF / totalMsF) : 0;
-        if (percentF != lastPercentF && percentF <= 100) {
+        if (percentF != lastPercentF && percentF <= 100)
+        {
             emit progressUpdated(QStringLiteral("Searching for '%1' ...").arg(searchTerm), percentF);
             lastPercentF = percentF;
         }
 
-        if (SearchController::checkEntry(entry->line, searchTerm, lastColumn, regexEnabled) && filter.check(entry.value()))
+        bool specificColumn = column >= 0 && column < entry->line.size();
+        bool lastColumn = column == -1;
+        QString textToSearch = (specificColumn ? entry->values[fields[column]].toString() : (lastColumn ? entry->values[fields[column]].toString() + entry->additionalLines : entry->line));
+
+        if (SearchController::checkEntry(entry->line, searchTerm, regexEnabled) && filter.check(entry.value()))
         {
-            emit searchFinished(searchTerm, entry->time);
-            emit progressUpdated(QStringLiteral("Search finished"), 100);
-            return;
+            if (findAll)
+            {
+                foundEntries.append(entry->line);
+            }
+            else
+            {
+                emit searchFinished(searchTerm, entry->time);
+                emit progressUpdated(QStringLiteral("Search finished"), 100);
+                return;
+            }
         }
     }
 
     emit progressUpdated(QStringLiteral("Search finished"), 100);
+
+    if (findAll)
+        emit searchResults(foundEntries);
 
     QT_SLOT_END
 }

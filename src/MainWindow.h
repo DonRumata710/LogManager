@@ -13,7 +13,7 @@
 #include <chrono>
 
 
-class SearchBar;
+class SearchBarDockWidget;
 class BookmarkTable;
 class SearchResultsWidget;
 
@@ -44,6 +44,7 @@ private slots:
     void on_actionFull_export_triggered();
 
     void on_actionShow_bookmarks_triggered();
+    void on_actionShow_search_bar_triggered(bool checked);
 
     void logManagerCreated(const QString& source);
 
@@ -51,9 +52,9 @@ private slots:
 
     void handleProgress(const QString& message, int percent);
 
-    void handleError(const QString& message);
-
     void openRecent();
+
+    void handleError(const QString& message);
 
 signals:
     void openFile(const QString& file, const QStringList& formats);
@@ -87,6 +88,8 @@ private:
     void addRecentItem(const QString& path);
     void updateRecentMenu();
 
+    void loadSettings();
+
 private:
     Ui::MainWindow *ui;
     FormatManager& formatManager;
@@ -101,7 +104,7 @@ private:
 
     SearchController* searchController;
 
-    SearchBar* searchBar = nullptr;
+    SearchBarDockWidget* searchBar = nullptr;
     BookmarkTable* bookmarkTable = nullptr;
     SearchResultsWidget* searchResults = nullptr;
 };

@@ -105,7 +105,7 @@ void ServiceTests::testSearchService()
 {
     QSignalSpy spy(searchService, &SearchService::searchFinished);
     QVERIFY2(spy.isValid(), "QSignalSpy: failed to connect to SearchService::searchFinished");
-    searchService->search(toTimePoint(firstTime), "searchterm", false, false, false);
+    searchService->search(toTimePoint(firstTime), "searchterm", false, false, false, -1, QStringList{});
 
     if (spy.isEmpty())
         QVERIFY(spy.wait(1000));

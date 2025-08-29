@@ -69,6 +69,7 @@
     </property>
     <addaction name="actionShow_bookmarks"/>
     <addaction name="separator"/>
+    <addaction name="actionShow_search_bar"/>
     <addaction name="actionTimeline"/>
    </widget>
    <addaction name="menuLogs"/>
@@ -144,6 +145,14 @@
    </property>
    <property name="text">
     <string>Show bookmarks</string>
+   </property>
+  </action>
+  <action name="actionShow_search_bar">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show search bar</string>
    </property>
   </action>
  </widget>

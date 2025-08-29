@@ -32,6 +32,7 @@ SearchController::SearchController(SearchBar* searchBar, QAbstractItemView* logV
     connect(this, &SearchController::startGlobalSearch, searchService, &SearchService::search);
     connect(this, &SearchController::startGlobalSearchWithFilter, searchService, &SearchService::searchWithFilter);
     connect(searchService, &SearchService::searchFinished, this, &SearchController::handleSearchResult);
+    connect(searchService, &SearchService::searchResults, this, &SearchController::searchResults);
 }
 
 void SearchController::updateModel()
@@ -44,7 +45,7 @@ void SearchController::updateModel()
     connect(model, &LogModel::requestedTimeAvailable, this, &SearchController::handleLoadingFinished);
 }
 
-bool SearchController::checkEntry(const QString& textToSearch, const QString& searchTerm, bool lastColumn, bool regexEnabled)
+bool SearchController::checkEntry(const QString& textToSearch, const QString& searchTerm, bool regexEnabled)
 {
     if (regexEnabled)
     {
@@ -61,20 +62,20 @@ bool SearchController::checkEntry(const QString& textToSearch, const QString& se
     return false;
 }
 
-void SearchController::localSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters, bool findAll)
+void SearchController::localSearch(const QString& searchTerm, bool regexEnabled, bool backward, bool useFilters, bool findAll, int column)
 {
     QT_SLOT_BEGIN
 
-    search(logView->currentIndex(), searchTerm, lastColumn, regexEnabled, backward, useFilters, false, findAll);
+    search(logView->currentIndex(), searchTerm, regexEnabled, backward, useFilters, false, findAll, column);
 
     QT_SLOT_END
 }
 
-void SearchController::commonSearch(const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters, bool findAll)
+void SearchController::commonSearch(const QString& searchTerm, bool regexEnabled, bool backward, bool useFilters, bool findAll, int column)
 {
     QT_SLOT_BEGIN
 
-    search(logView->currentIndex(), searchTerm, lastColumn, regexEnabled, backward, useFilters, true, findAll);
+    search(logView->currentIndex(), searchTerm, regexEnabled, backward, useFilters, true, findAll, column);
 
     QT_SLOT_END
 }
@@ -113,7 +114,7 @@ void SearchController::handleLoadingFinished(const QModelIndex& index)
     QT_SLOT_END
 }
 
-void SearchController::search(const QModelIndex& from, const QString& searchTerm, bool lastColumn, bool regexEnabled, bool backward, bool useFilters, bool globalSearch, bool findAll)
+void SearchController::search(const QModelIndex& from, const QString& searchTerm, bool regexEnabled, bool backward, bool useFilters, bool globalSearch, bool findAll, int column)
 {
     QT_SLOT_BEGIN
 
@@ -124,19 +125,34 @@ void SearchController::search(const QModelIndex& from, const QString& searchTerm
 
     if (findAll)
     {
-        QStringList results;
-        for (int i = 0; i < model->rowCount(); ++i)
+        if (globalSearch)
         {
-            QModelIndex index{ model->index(i, 0) };
-            if (proxyModel && !proxyModel->filterAcceptsRow(i, QModelIndex()))
-                continue;
-
-            QString textToSearch = model->data(index, static_cast<int>(lastColumn ? LogModel::MetaData::Message : LogModel::MetaData::Line)).toString();
-            if (checkEntry(textToSearch, searchTerm, lastColumn, regexEnabled))
-                results << textToSearch;
+            auto startTime = ChronoSystemClockFromDateTime(model->getStartTime());
+            auto filters = proxyModel->exportFilter();
+            if (useFilters && !filters.isEmpty())
+                startGlobalSearchWithFilter(startTime, searchTerm, regexEnabled, backward, findAll, column, model->getFieldsName(), filters);
+            else
+                startGlobalSearch(startTime, searchTerm, regexEnabled, backward, findAll, column, model->getFieldsName());
         }
+        else
+        {
+            QStringList results;
+            for (int i = 0; i < model->rowCount(); ++i)
+            {
+                bool lastColumn = (column == model->columnCount() - 1);
+                bool specifiedColumn = (column >= 0 && column < model->columnCount() - 1);
+                QModelIndex index{ model->index(i, specifiedColumn ? column : 0) };
+                if (proxyModel && !proxyModel->filterAcceptsRow(i, QModelIndex()))
+                    continue;
 
-        emit searchResults(results);
+                QString textToSearch = model->data(index, specifiedColumn ? Qt::DisplayRole : static_cast<int>((lastColumn ? LogModel::MetaData::Message : LogModel::MetaData::Line))).toString();
+                if (checkEntry(textToSearch, searchTerm, regexEnabled))
+                    results << model->data(index, static_cast<int>(LogModel::MetaData::Line)).toString();
+            }
+
+            emit searchResults(results);
+            qDebug() << "Found" << results.size() << "entries for term:" << searchTerm;
+        }
     }
     else
     {
@@ -144,12 +160,14 @@ void SearchController::search(const QModelIndex& from, const QString& searchTerm
         bool found = false;
         for (size_t i = start; i < model->rowCount(); backward ? --i : ++i)
         {
-            QModelIndex index{ model->index(i, 0) };
+            bool lastColumn = (column == model->columnCount() - 1);
+            bool specifiedColumn = (column >= 0 && column < model->columnCount() - 1);
+            QModelIndex index{ model->index(i, specifiedColumn ? column : 0) };
             if (proxyModel && !proxyModel->filterAcceptsRow(i, QModelIndex()))
                 continue;
 
-            QString textToSearch = model->data(index, static_cast<int>(lastColumn ? LogModel::MetaData::Message : LogModel::MetaData::Line)).toString();
-            if (checkEntry(textToSearch, searchTerm, lastColumn, regexEnabled))
+            QString textToSearch = model->data(index, specifiedColumn ? Qt::DisplayRole : static_cast<int>((lastColumn ? LogModel::MetaData::Message : LogModel::MetaData::Line))).toString();
+            if (checkEntry(textToSearch, searchTerm, regexEnabled))
             {
                 qDebug() << "Search found at row:" << i << "text:" << textToSearch;
 
@@ -173,9 +191,9 @@ void SearchController::search(const QModelIndex& from, const QString& searchTerm
                 auto startTime = ChronoSystemClockFromDateTime(backward ? model->getStartTime() : model->getLastEntryTime());
                 auto filters = proxyModel->exportFilter();
                 if (useFilters && !filters.isEmpty())
-                    startGlobalSearchWithFilter(startTime, searchTerm, lastColumn, regexEnabled, backward, filters);
+                    startGlobalSearchWithFilter(startTime, searchTerm, regexEnabled, backward, findAll, column, model->getFieldsName(), filters);
                 else
-                    startGlobalSearch(startTime, searchTerm, lastColumn, regexEnabled, backward);
+                    startGlobalSearch(startTime, searchTerm, regexEnabled, backward, findAll, column, model->getFieldsName());
             }
             else
             {

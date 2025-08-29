@@ -6,13 +6,13 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>503</width>
-    <height>118</height>
+    <width>538</width>
+    <height>142</height>
    </rect>
   </property>
   <property name="sizePolicy">
    <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-    <horstretch>0</horstretch>
+    <horstretch>1</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
@@ -64,20 +64,6 @@
        <widget class="QLineEdit" name="lineEdit"/>
       </item>
       <item>
-       <widget class="QComboBox" name="cbSearchMode">
-        <item>
-         <property name="text">
-          <string>Log view</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>Global</string>
-         </property>
-        </item>
-       </widget>
-      </item>
-      <item>
        <widget class="QToolButton" name="bFindNext">
         <property name="toolTip">
          <string>Find next</string>
@@ -86,7 +72,7 @@
          <string/>
         </property>
         <property name="icon">
-         <iconset resource="../qtres/_resources.qrc">
+         <iconset resource="../qtres/LogManager_resources.qrc">
           <normaloff>:/LogManager/search-local.svg</normaloff>:/LogManager/search-local.svg</iconset>
         </property>
        </widget>
@@ -100,7 +86,7 @@
          <string/>
         </property>
         <property name="icon">
-         <iconset resource="../qtres/_resources.qrc">
+         <iconset resource="../qtres/LogManager_resources.qrc">
           <normaloff>:/LogManager/search-common.svg</normaloff>:/LogManager/search-common.svg</iconset>
         </property>
        </widget>
@@ -137,7 +123,7 @@ padding: 0px;</string>
          <string/>
         </property>
         <property name="icon">
-         <iconset resource="../qtres/_resources.qrc">
+         <iconset resource="../qtres/LogManager_resources.qrc">
           <normaloff>:/LogManager/right-arrow.png</normaloff>:/LogManager/right-arrow.png</iconset>
         </property>
         <property name="iconSize">
@@ -183,16 +169,13 @@ padding: 0px;</string>
       <property name="topMargin">
        <number>6</number>
       </property>
-      <item row="0" column="0">
-       <widget class="QCheckBox" name="cbLastColumnSearch">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
+      <item row="0" column="2">
+       <widget class="QCheckBox" name="cbGlobalSearch">
         <property name="text">
-         <string>Search only in last column</string>
+         <string>Global search</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
@@ -209,7 +192,67 @@ padding: 0px;</string>
         </property>
        </widget>
       </item>
+      <item row="0" column="3">
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Orientation::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item row="0" column="0" rowspan="2">
+       <widget class="QFrame" name="frame">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="frameShape">
+         <enum>QFrame::Shape::StyledPanel</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Shadow::Raised</enum>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_2">
+         <item>
+          <widget class="QCheckBox" name="cbSpecificColumn">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>Search in specific column</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QSpinBox" name="sbColumn"/>
+         </item>
+        </layout>
+       </widget>
+      </item>
       <item row="1" column="1">
+       <widget class="QCheckBox" name="cbBackward">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>Backward direction</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="2">
        <widget class="QCheckBox" name="cbUseFilters">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -225,39 +268,26 @@ padding: 0px;</string>
         </property>
        </widget>
       </item>
-      <item row="1" column="0">
-       <widget class="QCheckBox" name="cbBackward">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="text">
-         <string>Backward direction</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="2">
-       <spacer name="horizontalSpacer">
-        <property name="orientation">
-         <enum>Qt::Orientation::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
      </layout>
     </widget>
+   </item>
+   <item>
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Orientation::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>40</width>
+       <height>0</height>
+      </size>
+     </property>
+    </spacer>
    </item>
   </layout>
  </widget>
  <resources>
-  <include location="../qtres/_resources.qrc"/>
+  <include location="../qtres/LogManager_resources.qrc"/>
  </resources>
  <connections/>
 </ui>

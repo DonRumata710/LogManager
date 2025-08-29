@@ -15,7 +15,7 @@
 #include "services/SearchService.h"
 #include "services/ExportService.h"
 #include "services/TimelineService.h"
-#include "SearchBar.h"
+#include "SearchBarDockWidget.h"
 #include "BookmarkTable.h"
 #include "ExportSettingsDialog.h"
 #include "SearchResultsWidget.h"
@@ -47,44 +47,33 @@ MainWindow::MainWindow(QWidget *parent) :
     progressBar->setTextVisible(true);
     statusBar()->addPermanentWidget(progressBar);
 
-    searchBar = new SearchBar(this);
+    searchBar = new SearchBarDockWidget(this);
     searchBar->setWindowTitle(tr("Search"));
-    addDockWidget(Qt::BottomDockWidgetArea, searchBar);
     searchBar->hide();
 
     searchResults = new SearchResultsWidget(this);
     searchResults->setWindowTitle(tr("Search Results"));
-    addDockWidget(Qt::BottomDockWidgetArea, searchResults);
     searchResults->hide();
+
+    addDockWidget(Qt::BottomDockWidgetArea, searchBar);
+    splitDockWidget(searchBar, searchResults, Qt::Vertical);
 
     bookmarkTable = new BookmarkTable(this);
     bookmarkTable->setWindowTitle(tr("Bookmarks"));
-    addDockWidget(Qt::BottomDockWidgetArea, bookmarkTable);
     bookmarkTable->hide();
+    addDockWidget(Qt::TopDockWidgetArea, bookmarkTable);
     connect(bookmarkTable, &BookmarkTable::bookmarkActivated, ui->logView, &LogView::bookmarkActivated);
 
-    searchController = new SearchController(searchBar, ui->logView, this);
+    searchController = new SearchController(searchBar->getSearchBar(), ui->logView, this);
     connect(searchController, &SearchController::searchResults, searchResults, &SearchResultsWidget::showResults);
 
-    Settings settings;
-    qDebug() << "Settings location: " << settings.fileName();
-
-    if (settings.contains(objectName() + "/geometry") && settings.contains(objectName() + "/state"))
-    {
-        restoreGeometry(settings.value(objectName() + "/geometry").toByteArray());
-        restoreState(settings.value(objectName() + "/state").toByteArray());
-    }
-    else
-    {
-        setWindowState(Qt::WindowState::WindowMaximized);
-    }
+    loadSettings();
 
     for (const auto& format : formatManager.getFormats())
         addFormat(format.first);
 
     setLogActionsEnabled(!selectedFormats.empty());
 
-    recentItems = settings.value("recentItems").toStringList();
     updateRecentMenu();
 
     auto app = qobject_cast<Application*>(QApplication::instance());
@@ -131,7 +120,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(this, &MainWindow::openTimeline, timelineService, &TimelineService::showTimeline);
     connect(timelineService, &TimelineService::timelineReady, this, &MainWindow::timelineReady);
 
-    connect(searchBar, &SearchBar::handleError, this, &MainWindow::handleError);
+    connect(searchBar->getSearchBar(), &SearchBar::handleError, this, &MainWindow::handleError);
     connect(ui->logView, &LogView::handleError, this, &MainWindow::handleError);
     connect(searchResults, &SearchResultsWidget::handleError, this, &MainWindow::handleError);
 }
@@ -440,6 +429,15 @@ void MainWindow::on_actionShow_bookmarks_triggered()
     QT_SLOT_END
 }
 
+void MainWindow::on_actionShow_search_bar_triggered(bool checked)
+{
+    QT_SLOT_BEGIN
+
+    searchBar->setVisible(checked);
+
+    QT_SLOT_END
+}
+
 void MainWindow::logManagerCreated(const QString& source)
 {
     QT_SLOT_BEGIN
@@ -501,6 +499,7 @@ void MainWindow::logManagerCreated(const QString& source)
 
     switchModel(proxyModel);
     setCloseActionEnabled(true);
+    searchBar->getSearchBar()->handleColumnCountChanged(logModel->columnCount());
     searchBar->show();
 
     Settings settings;
@@ -547,6 +546,45 @@ void MainWindow::handleProgress(const QString& message, int percent)
         progressBar->setVisible(false);
     else
         progressBar->setVisible(true);
+}
+
+void MainWindow::openRecent()
+{
+    QT_SLOT_BEGIN
+
+        auto action = qobject_cast<QAction*>(sender());
+    if (!action)
+        return;
+
+    QString path = action->data().toString();
+    if (QFileInfo(path).isDir())
+    {
+        openFolder(path, selectedFormats);
+    }
+    else
+    {
+        QMap<QString, QStringList> extToFormatNames;
+        for (const auto& formatName : std::as_const(selectedFormats))
+        {
+            auto format = formatManager.getFormats().at(formatName.toStdString());
+            if (!format)
+                continue;
+            extToFormatNames[format->extension].append(format->name);
+        }
+
+        QString extension = path.mid(path.lastIndexOf('.'));
+        QStringList formats;
+        if (extension == ".zip")
+            formats = selectedFormats;
+        else
+            formats = extToFormatNames.value(extension);
+
+        openFile(path, formats);
+    }
+
+    addRecentItem(path);
+
+    QT_SLOT_END
 }
 
 void MainWindow::handleError(const QString& message)
@@ -671,41 +709,20 @@ void MainWindow::updateRecentMenu()
     menu->setEnabled(!recentItems.isEmpty());
 }
 
-void MainWindow::openRecent()
+void MainWindow::loadSettings()
 {
-    QT_SLOT_BEGIN
+    Settings settings;
+    qDebug() << "Settings location: " << settings.fileName();
 
-    auto action = qobject_cast<QAction*>(sender());
-    if (!action)
-        return;
-
-    QString path = action->data().toString();
-    if (QFileInfo(path).isDir())
+    if (settings.contains(objectName() + "/geometry") && settings.contains(objectName() + "/state"))
     {
-        openFolder(path, selectedFormats);
+        restoreGeometry(settings.value(objectName() + "/geometry").toByteArray());
+        restoreState(settings.value(objectName() + "/state").toByteArray());
     }
     else
     {
-        QMap<QString, QStringList> extToFormatNames;
-        for (const auto& formatName : std::as_const(selectedFormats))
-        {
-            auto format = formatManager.getFormats().at(formatName.toStdString());
-            if (!format)
-                continue;
-            extToFormatNames[format->extension].append(format->name);
-        }
-
-        QString extension = path.mid(path.lastIndexOf('.'));
-        QStringList formats;
-        if (extension == ".zip")
-            formats = selectedFormats;
-        else
-            formats = extToFormatNames.value(extension);
-
-        openFile(path, formats);
+        setWindowState(Qt::WindowState::WindowMaximized);
     }
 
-    addRecentItem(path);
-
-    QT_SLOT_END
+    recentItems = settings.value("recentItems").toStringList();
 }

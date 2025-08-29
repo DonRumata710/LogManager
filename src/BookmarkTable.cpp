@@ -19,6 +19,13 @@ BookmarkTable::BookmarkTable(QWidget* parent) : QDockWidget(parent), mTable(new 
     mTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeMode::ResizeToContents);
     mTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeMode::Stretch);
 
+    QSizePolicy sizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
+    sizePolicy.setHorizontalStretch(1);
+    sizePolicy.setVerticalStretch(1);
+    mTable->setSizePolicy(sizePolicy);
+
+    setAllowedAreas(Qt::DockWidgetArea::TopDockWidgetArea | Qt::DockWidgetArea::BottomDockWidgetArea);
+
     connect(mTable, &QTableWidget::cellActivated, this, &BookmarkTable::handleCellActivated);
 }
 
