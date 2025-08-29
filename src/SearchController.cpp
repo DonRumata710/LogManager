@@ -139,8 +139,8 @@ void SearchController::search(const QModelIndex& from, const QString& searchTerm
             QStringList results;
             for (int i = 0; i < model->rowCount(); ++i)
             {
-                bool lastColumn = (column == model->columnCount() - 1);
                 bool specifiedColumn = (column >= 0 && column < model->columnCount() - 1);
+                bool lastColumn = (column == model->columnCount() - 1);
                 QModelIndex index{ model->index(i, specifiedColumn ? column : 0) };
                 if (proxyModel && !proxyModel->filterAcceptsRow(i, QModelIndex()))
                     continue;
@@ -160,8 +160,8 @@ void SearchController::search(const QModelIndex& from, const QString& searchTerm
         bool found = false;
         for (size_t i = start; i < model->rowCount(); backward ? --i : ++i)
         {
-            bool lastColumn = (column == model->columnCount() - 1);
             bool specifiedColumn = (column >= 0 && column < model->columnCount() - 1);
+            bool lastColumn = (column == model->columnCount() - 1);
             QModelIndex index{ model->index(i, specifiedColumn ? column : 0) };
             if (proxyModel && !proxyModel->filterAcceptsRow(i, QModelIndex()))
                 continue;

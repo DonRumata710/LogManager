@@ -47,7 +47,7 @@ void SearchService::search(const std::chrono::system_clock::time_point& time, co
         }
 
         bool specificColumn = column >= 0 && column < entry->line.size();
-        bool lastColumn = column == -1;
+        bool lastColumn = specificColumn && column == fields.size() - 1;
         QString textToSearch = (specificColumn ? entry->values[fields[column]].toString() : (lastColumn ? entry->values[fields[column]].toString() + entry->additionalLines : entry->line));
 
         if (SearchController::checkEntry(entry->line, searchTerm, regexEnabled))
@@ -113,7 +113,7 @@ void SearchService::searchWithFilter(const std::chrono::system_clock::time_point
         }
 
         bool specificColumn = column >= 0 && column < entry->line.size();
-        bool lastColumn = column == -1;
+        bool lastColumn = specificColumn && column == fields.size() - 1;
         QString textToSearch = (specificColumn ? entry->values[fields[column]].toString() : (lastColumn ? entry->values[fields[column]].toString() + entry->additionalLines : entry->line));
 
         if (SearchController::checkEntry(entry->line, searchTerm, regexEnabled) && filter.check(entry.value()))
