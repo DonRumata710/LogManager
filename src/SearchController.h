@@ -1,7 +1,6 @@
 #pragma once
 
-#include "SearchBar.h"
-#include "LogManagement/LogEntry.h"
+#include "UtilWidgets/SearchBar.h"
 #include "LogFilter.h"
 
 #include <QObject>
@@ -27,17 +26,15 @@ signals:
     void startGlobalSearchWithFilter(const std::chrono::system_clock::time_point& startTime, const QString& searchTerm, bool regexEnabled, bool backward, bool findAll, int column, const QStringList& fields, const LogFilter& filter);
 
     void handleError(const QString& message);
-    void searchResults(const QStringList& results);
+    void searchResults(const QMap<std::chrono::system_clock::time_point, QString>& results);
 
 public slots:
-    void localSearch(const QString& searchTerm, bool regexEnabled, bool backward, bool useFilters, bool findAll, int column);
-    void commonSearch(const QString& searchTerm, bool regexEnabled, bool backward, bool useFilters, bool findAll, int column);
+    void search(const QString& searchTerm, bool regexEnabled, bool backward, bool useFilters, bool global, bool findAll, int column);
 
     void handleSearchResult(const QString& searchTerm, const std::chrono::system_clock::time_point& entryTime);
-    void handleLoadingFinished(const QModelIndex& index);
 
 private:
-    void search(const QModelIndex& from, const QString& searchTerm, bool regexEnabled, bool backward, bool useFilters, bool globalSearch, bool findAll, int column);
+    void searchImpl(const QModelIndex& from, const QString& searchTerm, bool regexEnabled, bool backward, bool useFilters, bool globalSearch, bool findAll, int column);
 
 private:
     QAbstractItemView* logView;

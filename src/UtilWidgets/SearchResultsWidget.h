@@ -1,10 +1,13 @@
 #pragma once
 
+#include "EntryLinkView.h"
+
 #include <QDockWidget>
 #include <QStringList>
 
 
-class QListWidget;
+class QListView;
+class EntryLinkModel;
 
 class SearchResultsWidget : public QDockWidget
 {
@@ -17,14 +20,17 @@ public:
     void clearResults();
 
 signals:
+    void selectedResult(const std::chrono::system_clock::time_point& result);
     void handleError(const QString& msg);
 
 public slots:
-    void showResults(const QStringList& results);
+    void showResults(const QMap<std::chrono::system_clock::time_point, QString>& results);
 
 private:
     void hideEvent(QHideEvent* event) override;
 
+    void resetModel(EntryLinkModel* newModel);
+
 private:
-    QListWidget* mResults = nullptr;
+    EntryLinkView* mResults = nullptr;
 };

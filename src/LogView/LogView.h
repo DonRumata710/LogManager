@@ -21,6 +21,7 @@ public:
 
 public slots:
     void bookmarkActivated(const std::chrono::system_clock::time_point& time);
+    void requestedItemHandle(const QModelIndex& index);
 
 signals:
     void handleError(const QString& message);

@@ -31,7 +31,7 @@ void SearchService::search(const std::chrono::system_clock::time_point& time, co
     auto totalMs = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
     auto iterator = LogEntryIterator<>(session->getIterator<true>(startTime, endTime));
     int lastPercent = 0;
-    QStringList foundEntries;
+    QMap<std::chrono::system_clock::time_point, QString> foundEntries;
     while(iterator.hasLogs())
     {
         auto entry = iterator.next();
@@ -54,7 +54,7 @@ void SearchService::search(const std::chrono::system_clock::time_point& time, co
         {
             if (findAll)
             {
-                foundEntries.append(entry->line);
+                foundEntries.insert(entry->time, entry->line);
             }
             else
             {
@@ -97,7 +97,7 @@ void SearchService::searchWithFilter(const std::chrono::system_clock::time_point
     auto totalMsF = std::chrono::duration_cast<std::chrono::milliseconds>(endTimeF - startTimeF).count();
     auto iterator = LogEntryIterator<>(session->getIterator<true>(startTimeF, endTimeF));
     int lastPercentF = 0;
-    QStringList foundEntries;
+    QMap<std::chrono::system_clock::time_point, QString> foundEntries;
     while(iterator.hasLogs())
     {
         auto entry = iterator.next();
@@ -120,7 +120,7 @@ void SearchService::searchWithFilter(const std::chrono::system_clock::time_point
         {
             if (findAll)
             {
-                foundEntries.append(entry->line);
+                foundEntries.insert(entry->time, entry->line);
             }
             else
             {

@@ -73,6 +73,9 @@ void FilterHeader::updateEditors()
         return;
     }
 
+    if (model()->rowCount() == 0)
+        return;
+
     for (int i = 0; i < model()->columnCount(); ++i)
     {
         auto cb = qobject_cast<MultiSelectComboBox*>(editors[i]);

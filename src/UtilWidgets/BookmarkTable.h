@@ -1,6 +1,7 @@
 #pragma once
 
 #include "LogManagement/LogEntry.h"
+#include "EntryLinkView.h"
 
 #include <QDockWidget>
 #include <QTableWidget>
@@ -10,6 +11,7 @@
 class BookmarkTable : public QDockWidget
 {
     Q_OBJECT
+
 public:
     explicit BookmarkTable(QWidget* parent = nullptr);
 
@@ -19,10 +21,10 @@ public:
 signals:
     void bookmarkActivated(const std::chrono::system_clock::time_point& time);
 
-private slots:
-    void handleCellActivated(int row, int column);
+private:
+    void resetModel(QAbstractItemModel* model);
 
 private:
-    QTableWidget* mTable;
+    EntryLinkView* mTable;
 };
 

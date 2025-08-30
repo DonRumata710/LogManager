@@ -60,11 +60,7 @@ void SearchBar::on_bFindNext_clicked()
 {
     QT_SLOT_BEGIN
 
-    bool global = !ui->cbGlobalSearch->isChecked();
-    if (global)
-        emit commonSearch(ui->lineEdit->text(), ui->cbRegExpSuppor->isChecked(), ui->cbBackward->isChecked(), ui->cbUseFilters->isChecked(), false, ui->cbSpecificColumn->isChecked() ? ui->sbColumn->value() : -1);
-    else
-        emit localSearch(ui->lineEdit->text(), ui->cbRegExpSuppor->isChecked(), ui->cbBackward->isChecked(), ui->cbUseFilters->isChecked(), false, ui->cbSpecificColumn->isChecked() ? ui->sbColumn->value() : -1);
+    triggerSearch(false);
 
     QT_SLOT_END
 }
@@ -74,11 +70,7 @@ void SearchBar::on_bFindAll_clicked()
 {
     QT_SLOT_BEGIN
 
-    bool global = !ui->cbGlobalSearch->isChecked();
-    if (global)
-        emit commonSearch(ui->lineEdit->text(), ui->cbRegExpSuppor->isChecked(), ui->cbBackward->isChecked(), ui->cbUseFilters->isChecked(), true, ui->cbSpecificColumn->isChecked() ? ui->sbColumn->value() : -1);
-    else
-        emit localSearch(ui->lineEdit->text(), ui->cbRegExpSuppor->isChecked(), ui->cbBackward->isChecked(), ui->cbUseFilters->isChecked(), true, ui->cbSpecificColumn->isChecked() ? ui->sbColumn->value() : -1);
+    triggerSearch(true);
 
     QT_SLOT_END
 }
@@ -90,5 +82,16 @@ void SearchBar::on_cbSpecificColumn_toggled(bool checked)
     ui->sbColumn->setEnabled(checked);
 
     QT_SLOT_END
+}
+
+void SearchBar::triggerSearch(bool findAll)
+{
+    QString text = ui->lineEdit->text();
+    bool regexSupport = ui->cbRegExpSuppor->isChecked();
+    bool backward = ui->cbBackward->isChecked();
+    bool useFilters = ui->cbUseFilters->isChecked();
+    bool global = ui->cbGlobalSearch->isChecked();
+    int column = ui->cbSpecificColumn->isChecked() ? ui->sbColumn->value() : -1;
+    emit search(text, regexSupport, backward, useFilters, global, findAll, column);
 }
 

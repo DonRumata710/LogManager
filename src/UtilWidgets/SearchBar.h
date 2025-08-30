@@ -3,6 +3,7 @@
 #include <QDockWidget>
 #include <QStringList>
 
+
 namespace Ui {
 class SearchBar;
 }
@@ -16,8 +17,7 @@ public:
     ~SearchBar();
 
 signals:
-    void localSearch(const QString& searchTerm, bool regexEnabled, bool backward, bool useFilters, bool findAll, int column);
-    void commonSearch(const QString& searchTerm, bool regexEnabled, bool backward, bool useFilters, bool findAll, int column);
+    void search(const QString& searchTerm, bool regexEnabled, bool backward, bool useFilters, bool findAll, bool global, int column);
 
     void handleError(const QString& message);
 
@@ -31,6 +31,9 @@ private slots:
     void on_bFindAll_clicked();
 
     void on_cbSpecificColumn_toggled(bool checked);
+
+private:
+    void triggerSearch(bool findAll);
 
 private:
     Ui::SearchBar *ui;

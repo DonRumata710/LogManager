@@ -429,7 +429,7 @@ QVariant LogModel::data(const QModelIndex& index, int role) const
         if (index.internalPointer() == nullptr)
         {
             const auto& log = logs[index.row()];
-            return convertToQDateTime(log.entry.time);
+            return QVariant::fromValue(log.entry.time);
         }
         break;
     }

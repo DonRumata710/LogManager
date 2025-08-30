@@ -15,10 +15,10 @@
 #include "services/SearchService.h"
 #include "services/ExportService.h"
 #include "services/TimelineService.h"
-#include "SearchBarDockWidget.h"
-#include "BookmarkTable.h"
+#include "UtilWidgets/SearchBarDockWidget.h"
+#include "UtilWidgets/BookmarkTable.h"
+#include "UtilWidgets/SearchResultsWidget.h"
 #include "ExportSettingsDialog.h"
-#include "SearchResultsWidget.h"
 
 #include <utility>
 #include <QScrollBar>
@@ -54,6 +54,7 @@ MainWindow::MainWindow(QWidget *parent) :
     searchResults = new SearchResultsWidget(this);
     searchResults->setWindowTitle(tr("Search Results"));
     searchResults->hide();
+    connect(searchResults, &SearchResultsWidget::selectedResult, ui->logView, &LogView::bookmarkActivated);
 
     addDockWidget(Qt::BottomDockWidgetArea, searchBar);
     splitDockWidget(searchBar, searchResults, Qt::Vertical);

@@ -13,8 +13,7 @@ SearchController::SearchController(SearchBar* searchBar, QAbstractItemView* logV
     QObject(parent),
     logView(logView)
 {
-    connect(searchBar, &SearchBar::localSearch, this, &SearchController::localSearch);
-    connect(searchBar, &SearchBar::commonSearch, this, &SearchController::commonSearch);
+    connect(searchBar, &SearchBar::search, this, &SearchController::search);
 
     auto app = qobject_cast<Application*>(qApp);
     if (!app)
@@ -41,8 +40,6 @@ void SearchController::updateModel()
     auto model = qobject_cast<LogModel*>(logView->model());
     if (!model && proxyModel)
         model = qobject_cast<LogModel*>(proxyModel->sourceModel());
-
-    connect(model, &LogModel::requestedTimeAvailable, this, &SearchController::handleLoadingFinished);
 }
 
 bool SearchController::checkEntry(const QString& textToSearch, const QString& searchTerm, bool regexEnabled)
@@ -62,20 +59,11 @@ bool SearchController::checkEntry(const QString& textToSearch, const QString& se
     return false;
 }
 
-void SearchController::localSearch(const QString& searchTerm, bool regexEnabled, bool backward, bool useFilters, bool findAll, int column)
+void SearchController::search(const QString& searchTerm, bool regexEnabled, bool backward, bool useFilters, bool global, bool findAll, int column)
 {
     QT_SLOT_BEGIN
 
-    search(logView->currentIndex(), searchTerm, regexEnabled, backward, useFilters, false, findAll, column);
-
-    QT_SLOT_END
-}
-
-void SearchController::commonSearch(const QString& searchTerm, bool regexEnabled, bool backward, bool useFilters, bool findAll, int column)
-{
-    QT_SLOT_BEGIN
-
-    search(logView->currentIndex(), searchTerm, regexEnabled, backward, useFilters, true, findAll, column);
+    searchImpl(logView->currentIndex(), searchTerm, regexEnabled, backward, useFilters, global, findAll, column);
 
     QT_SLOT_END
 }
@@ -100,21 +88,7 @@ void SearchController::handleSearchResult(const QString& searchTerm, const std::
     QT_SLOT_END
 }
 
-void SearchController::handleLoadingFinished(const QModelIndex& index)
-{
-    QT_SLOT_BEGIN
-
-    if (!currentSearchTerm.isEmpty())
-    {
-        logView->selectionModel()->setCurrentIndex(index, QItemSelectionModel::SelectionFlag::SelectCurrent | QItemSelectionModel::SelectionFlag::Rows);
-        logView->scrollTo(index, QTreeView::ScrollHint::PositionAtCenter);
-        currentSearchTerm.clear();
-    }
-
-    QT_SLOT_END
-}
-
-void SearchController::search(const QModelIndex& from, const QString& searchTerm, bool regexEnabled, bool backward, bool useFilters, bool globalSearch, bool findAll, int column)
+void SearchController::searchImpl(const QModelIndex& from, const QString& searchTerm, bool regexEnabled, bool backward, bool useFilters, bool globalSearch, bool findAll, int column)
 {
     QT_SLOT_BEGIN
 
@@ -136,7 +110,7 @@ void SearchController::search(const QModelIndex& from, const QString& searchTerm
         }
         else
         {
-            QStringList results;
+            QMap<std::chrono::system_clock::time_point, QString> results;
             for (int i = 0; i < model->rowCount(); ++i)
             {
                 bool specifiedColumn = (column >= 0 && column < model->columnCount() - 1);
@@ -147,7 +121,11 @@ void SearchController::search(const QModelIndex& from, const QString& searchTerm
 
                 QString textToSearch = model->data(index, specifiedColumn ? Qt::DisplayRole : static_cast<int>((lastColumn ? LogModel::MetaData::Message : LogModel::MetaData::Line))).toString();
                 if (checkEntry(textToSearch, searchTerm, regexEnabled))
-                    results << model->data(index, static_cast<int>(LogModel::MetaData::Line)).toString();
+                {
+                    auto time = model->data(index, static_cast<int>(LogModel::MetaData::Time)).value<std::chrono::system_clock::time_point>();
+                    auto line = model->data(index, static_cast<int>(LogModel::MetaData::Line)).toString();
+                    results.insert(time, line);
+                }
             }
 
             emit searchResults(results);

@@ -53,6 +53,7 @@ void LogView::setLogModel(QAbstractItemModel* newModel)
 
     connect(currentLogModel, &LogModel::modelReset, this, &LogView::handleReset);
     connect(currentLogModel, &LogModel::modelReset, this, &LogView::handleFirstDataLoaded);
+    connect(currentLogModel, &LogModel::requestedTimeAvailable, this, &LogView::requestedItemHandle);
 
     connect(currentLogModel, &LogModel::rowsAboutToBeInserted, this, &LogView::handleFirstLineChangeStart);
     connect(currentLogModel, &LogModel::rowsAboutToBeRemoved, this, &LogView::handleFirstLineChangeStart);
@@ -65,6 +66,16 @@ void LogView::bookmarkActivated(const std::chrono::system_clock::time_point& tim
     QT_SLOT_BEGIN
     if (currentLogModel)
         currentLogModel->goToTime(time);
+    QT_SLOT_END
+}
+
+void LogView::requestedItemHandle(const QModelIndex& index)
+{
+    QT_SLOT_BEGIN
+
+    selectionModel()->setCurrentIndex(index, QItemSelectionModel::SelectionFlag::SelectCurrent | QItemSelectionModel::SelectionFlag::Rows);
+    scrollTo(index, QTreeView::ScrollHint::PositionAtCenter);
+
     QT_SLOT_END
 }
 

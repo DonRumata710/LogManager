@@ -24,7 +24,7 @@ public slots:
 signals:
     void progressUpdated(const QString& message, int percent);
     void searchFinished(const QString& searchTerm, const std::chrono::system_clock::time_point& entryTime);
-    void searchResults(const QStringList& results);
+    void searchResults(const QMap<std::chrono::system_clock::time_point, QString>& results);
     void handleError(const QString& message);
 
 private:

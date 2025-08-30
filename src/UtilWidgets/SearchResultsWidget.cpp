@@ -1,15 +1,16 @@
 #include "SearchResultsWidget.h"
 
 #include "Utils.h"
+#include "EntryLinkModel.h"
 
-#include <QListWidget>
+#include <QListView>
 #include <QHideEvent>
 
 
 SearchResultsWidget::SearchResultsWidget(QWidget* parent) :
     QDockWidget(parent)
 {
-    mResults = new QListWidget(this);
+    mResults = new EntryLinkView(this);
 
     QSizePolicy sizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
     sizePolicy.setHorizontalStretch(1);
@@ -20,25 +21,27 @@ SearchResultsWidget::SearchResultsWidget(QWidget* parent) :
     hide();
 
     setAllowedAreas(Qt::DockWidgetArea::TopDockWidgetArea | Qt::DockWidgetArea::BottomDockWidgetArea);
+
+    connect(mResults, &EntryLinkView::entryActivated, this, &SearchResultsWidget::selectedResult);
 }
 
 void SearchResultsWidget::clearResults()
 {
-    mResults->clear();
+    mResults->setModel(nullptr);
 }
 
-void SearchResultsWidget::showResults(const QStringList& results)
+void SearchResultsWidget::showResults(const QMap<std::chrono::system_clock::time_point, QString>& results)
 {
     QT_SLOT_BEGIN
 
-    mResults->clear();
     if (results.isEmpty())
     {
+        resetModel(nullptr);
         hide();
     }
     else
     {
-        mResults->addItems(results);
+        resetModel(new EntryLinkModel(results, this));
         show();
     }
 
@@ -49,4 +52,13 @@ void SearchResultsWidget::hideEvent(QHideEvent* event)
 {
     QDockWidget::hideEvent(event);
     clearResults();
+}
+
+void SearchResultsWidget::resetModel(EntryLinkModel* newModel)
+{
+    auto oldModel = mResults->model();
+    mResults->setModel(newModel);
+
+    if (oldModel)
+        oldModel->deleteLater();
 }
